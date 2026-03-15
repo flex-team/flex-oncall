@@ -59,7 +59,7 @@ git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <director
 ```
 이슈 접수 (Linear/Slack)
   → 도메인 파악 (이 문서의 키워드 매핑 참조)
-  → 쿡북 확인 (~/.claude/operation-notes/COOKBOOK.md)
+  → 쿡북 확인 (operation-notes/COOKBOOK.md)
   → 데이터 조사 (DB/OpenSearch/Kafka 스킬)
   → 원인 분석 및 해결
   → 운영 노트 기록 (~/.claude/operation-notes/{ticket-id}.md)
@@ -80,6 +80,6 @@ git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <director
 
 ## 운영 지식 참조
 
-- **쿡북**: `~/.claude/operation-notes/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
+- **쿡북**: `operation-notes/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
 - **티켓 노트**: `~/.claude/operation-notes/{ticket-id}.md` — 개별 티켓 분석/해결 기록
 - **티켓 노트 작성 규칙**: `~/.claude/operation-notes/CLAUDE.md`
