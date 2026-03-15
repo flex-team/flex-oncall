@@ -50,3 +50,7 @@
 	path = flex-work-event-transmitter-backend
 	url = git@github.com:flex-team/flex-work-event-transmitter-backend.git
 	branch = develop
+[submodule "flex-openapi-backend"]
+	path = flex-openapi-backend
+	url = git@github.com:flex-team/flex-openapi-backend.git
+	branch = develop
