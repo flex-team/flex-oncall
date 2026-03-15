@@ -1,0 +1,294 @@
+= Ops Commands Guide
+:toc: macro
+:toc-title: 목차
+:sectnums:
+
+운영/CS 이슈를 체계적으로 처리하기 위한 Claude Code 커맨드 모음.
+
+Linear 이슈 조회부터 조사, 코드 수정, PR 생성, 지식 축적까지 일관된 파이프라인을 제공한다.
+
+toc::[]
+
+== 커맨드 개요
+
+[mermaid]
+....
+graph LR
+    A["🎫 Linear 이슈"] --> B["📝 note-issue"]
+    B --> C["🔍 investigate-issue"]
+    C --> D["🔧 fix-issue"]
+    D --> E["📚 update-cookbook"]
+    E --> F["🧪 sync-scenario-agents-md"]
+....
+
+[cols="1,3,1"]
+|===
+| 커맨드 | 역할 | 인자
+
+| `/ops:note-issue`
+| Linear 이슈 → operation-note 생성/동기화
+| `<ticket-id>`
+
+| `/ops:investigate-issue`
+| 이슈 원인 조사 + 가설 소거 + 해결안 도출
+| `<ticket-id>`
+
+| `/ops:fix-issue`
+| 코드 조사 → 구현 → PR 생성
+| `<ticket-id>`
+
+| `/ops:update-cookbook`
+| 이슈 기록에서 반복 가능한 지식을 COOKBOOK.md로 추출
+| `[ticket-id]` (생략 시 전체 스캔)
+
+| `/ops:sync-scenario-agents-md`
+| operation-notes에서 유저 대면 API를 찾아 scenario-test AGENTS.md에 반영
+| 없음
+|===
+
+== 각 커맨드 상세
+
+=== note-issue
+
+**목적**: Linear 티켓 내용을 `~/.claude/operation-notes/{ticket-id}.md`에 기록한다. 문서 작성/동기화에 집중하며, 조사 자체는 수행하지 않는다.
+
+**주요 기능**:
+
+* 신규 이슈: 이슈 상태(해결 완료 / 진행 중)에 따른 템플릿으로 operation-note 생성
+* 기존 문서: Linear 최신 정보(새 코멘트, 상태 변경)와 동기화
+* 해결 완료 건: Gherkin 시나리오 작성 (스펙 확인/변경 건)
+* 연관 이슈 자동 탐색 및 양방향 링크
+
+**산출물**: `~/.claude/operation-notes/{ticket-id}.md`
+
+**사용 예시**:
+[source]
+----
+/ops:note-issue CI-3861
+----
+
+=== investigate-issue
+
+**목적**: 이슈를 실제로 조사하여 원인을 파악하고 해결안을 도출한다. 소거법 기반의 체계적 조사 프로세스를 따른다.
+
+**주요 기능**:
+
+* 5 Whys 기반 근본 원인 추적
+* 가설 목록 수립 → 우선순위 순 소거
+* COOKBOOK.md 참조로 과거 경험 활용
+* SQL 쿼리 / 로그 검색 조건 작성하여 데이터 확인 요청
+* 스펙 vs 버그 판별
+* 사이드이펙트 분석 (버그 판정 시)
+
+**산출물**: `~/.claude/operation-notes/{ticket-id}.md`에 조사 결과 추가 (원인 분석, 배제된 가설, 해결안 등)
+
+**사용 예시**:
+[source]
+----
+/ops:investigate-issue CI-3861
+----
+
+=== fix-issue
+
+**목적**: Linear 이슈를 기반으로 코드 조사 → 설계 승인 → 구현 → PR 생성까지 수행한다.
+
+**주요 기능**:
+
+* Linear 이슈 조회 + 상태를 In Progress로 변경
+* gitflow 브랜치 자동 생성 (fix/, feature/, chore/)
+* 코드 조사 및 설계 옵션 제시 → 사용자 승인 후 구현
+* 빌드/테스트 검증
+* Draft PR 생성 + Linear 이슈에 PR 링크 코멘트
+
+**산출물**: Draft PR + `/tmp/` 아래 조사 문서
+
+**사용 예시**:
+[source]
+----
+/ops:fix-issue CI-3861
+----
+
+=== update-cookbook
+
+**목적**: operation-notes에 쌓인 이슈 기록에서 반복 가능한 지식(진단 체크리스트, SQL 쿼리 템플릿, 과거 사례)을 추출하여 `COOKBOOK.md`에 정리한다.
+
+**두 가지 모드**:
+
+* **전체 스캔 모드**: 인자 없이 호출. 모든 노트를 읽고 COOKBOOK.md 전체 재구성.
+* **증분 모드**: 이슈 ID 전달. 해당 노트만 읽고 COOKBOOK.md에 증분 반영.
+
+**산출물**: `~/.claude/operation-notes/COOKBOOK.md`
+
+**사용 예시**:
+[source]
+----
+# 전체 재구성
+/ops:update-cookbook
+
+# 특정 이슈만 반영
+/ops:update-cookbook CI-3914
+----
+
+=== sync-scenario-agents-md
+
+**목적**: operation-notes에서 유저 대면 API를 찾아 `scenario-test/AGENTS.md`에 누락된 도메인/API를 추가한다.
+
+**제약**: `flex-team/flex-timetracking-backend` 레포지토리에서만 실행 가능.
+
+**주요 기능**:
+
+* Operation notes에서 API 경로 / Controller / MappingService 참조 추출
+* AGENTS.md와 갭 분석
+* 코드베이스에서 실제 존재 여부 검증
+* 변경 사항 미리보기 → 사용자 승인 → PR 생성
+
+**산출물**: AGENTS.md 업데이트 PR
+
+**사용 예시**:
+[source]
+----
+/ops:sync-scenario-agents-md
+----
+
+== 워크플로우
+
+=== 기본 워크플로우: 이슈 접수 → 해결
+
+일반적인 운영 이슈 처리 흐름.
+
+[mermaid]
+....
+graph LR
+    A["이슈 접수"] --> B["note-issue"]
+    B --> C["investigate-issue"]
+    C --> D["fix-issue"]
+    D --> E["update-cookbook"]
+....
+
+[cols="1,4,2"]
+|===
+| 단계 | 설명 | 커맨드
+
+| 1. 기록
+| 이슈 내용을 operation-note로 문서화
+| `/ops:note-issue CI-XXXX`
+
+| 2. 조사
+| 원인 가설 수립 → 소거법 조사 → 해결안 도출
+| `/ops:investigate-issue CI-XXXX`
+
+| 3. 수정
+| 승인된 설계로 코드 수정 → PR 생성
+| `/ops:fix-issue CI-XXXX`
+
+| 4. 축적
+| 조사에서 얻은 지식을 COOKBOOK에 반영
+| `/ops:update-cookbook CI-XXXX`
+|===
+
+=== 조사만 필요한 경우 (코드 수정 불필요)
+
+스펙 확인, 데이터 패치, 설정 변경 등으로 해결되는 이슈.
+
+[mermaid]
+....
+graph LR
+    A["note-issue"] --> B["investigate-issue"]
+    B --> C["해결"]
+    C --> D["note-issue"]
+    D --> E["update-cookbook"]
+....
+
+* `investigate-issue`로 원인 파악 후, 코드 수정이 아닌 다른 방법으로 해결
+* 해결 후 `note-issue`를 다시 실행하여 해결 완료 상태로 문서 업데이트
+* 스펙 확인 건이면 Gherkin 시나리오도 자동 생성됨
+
+=== 간단한 이슈 (원인이 명확한 경우)
+
+과거 사례가 있거나 원인이 바로 파악되는 경우.
+
+[mermaid]
+....
+graph LR
+    A["fix-issue"] --> B["update-cookbook"]
+....
+
+* `fix-issue`가 내부적으로 Linear 이슈를 조회하고 코드를 조사하므로, 별도 note/investigate 없이 바로 진행 가능
+* 단, operation-note가 생성되지 않으므로 지식 축적이 필요하면 `note-issue`를 먼저 실행
+
+=== 정기 지식 정리
+
+이슈가 여러 건 쌓인 후 일괄 정리.
+
+[source]
+----
+/ops:update-cookbook          # COOKBOOK.md 전체 재구성
+/ops:sync-scenario-agents-md # AGENTS.md 갭 보완
+----
+
+== 커맨드 간 관계
+
+[mermaid]
+....
+graph TD
+    A["🎫 Linear 이슈"] --> B["📝 note-issue<br/><i>문서 생성/동기화</i>"]
+    B --> C["🔍 investigate-issue<br/><i>원인 조사 + 해결안</i>"]
+    C --> D["🔧 fix-issue<br/><i>코드 수정 + PR</i>"]
+    C --> E["🛠 수동 해결<br/><i>데이터 패치 등</i>"]
+    D --> F["📚 update-cookbook<br/><i>지식 축적</i>"]
+    E --> F
+    F --> G["🧪 sync-scenario-agents-md<br/><i>시나리오 테스트 반영</i>"]
+....
+
+=== 데이터 흐름
+
+* **note-issue** → `operation-notes/{ticket-id}.md` 생성
+* **investigate-issue** → 같은 파일에 조사 결과 추가 (note-issue가 만든 섹션은 보존)
+* **fix-issue** → `/tmp/` 아래 조사 문서 + Draft PR
+* **update-cookbook** → `operation-notes/COOKBOOK.md` 업데이트
+* **sync-scenario-agents-md** → `scenario-test/AGENTS.md` 업데이트 PR
+
+== 공통 규칙
+
+=== 티켓 ID 자동 인식
+
+모든 커맨드에서 티켓 ID를 생략하면:
+
+1. 현재 git 브랜치명에서 패턴 추출 시도 (예: `fix/CI-3861-desc` → `CI-3861`)
+2. 브랜치에서 못 찾으면 디렉토리명에서 추출 시도
+3. 찾으면 사용자 확인 후 진행, 못 찾으면 종료
+
+=== 문서 작성 원칙
+
+`note-issue`에 정의된 원칙이 모든 커맨드에 적용된다:
+
+* **출처 표기**: 모든 사실 정보에 출처 필수 (Linear 코멘트, 코드 분석, DB 데이터 등)
+* **과정 기록**: 결론뿐 아니라 판단에 도달한 과정도 기록
+* **용어 설명**: 도메인 특화 용어를 처음 사용할 때 설명 추가
+* **포맷팅 규칙**: 테이블, mermaid, blockquote 등 상황별 시각 요소 사용 기준 준수
+
+=== investigate-issue가 작성한 섹션 보호
+
+`note-issue`로 문서를 업데이트할 때, `investigate-issue`가 추가한 섹션(원인 분석, 해결안, 참고 자료 등)은 건드리지 않는다. 역방향으로도 마찬가지.
+
+== 활용 팁
+
+=== COOKBOOK.md를 먼저 참조
+
+`investigate-issue`는 조사 시작 시 자동으로 COOKBOOK.md를 참조하여 과거 경험을 활용한다. COOKBOOK.md가 잘 정리되어 있을수록 조사 시간이 단축된다.
+
+=== 연관 이슈 활용
+
+`note-issue`와 `investigate-issue`는 operation-notes 전체를 스캔하여 동일 회사/기능 영역/증상의 이슈를 자동으로 찾는다. 과거에 같은 유형의 문의가 있었다면 해결 방법을 참고할 수 있다.
+
+=== 증분 쿡북 업데이트
+
+이슈 해결 직후 `/ops:update-cookbook CI-XXXX`로 증분 반영하면 지식이 바로 축적된다. 나중에 한꺼번에 하면 누락되기 쉽다.
+
+=== fix-issue 전에 investigate-issue
+
+복잡한 이슈는 `fix-issue`로 바로 가기보다 `investigate-issue`로 원인을 충분히 파악한 뒤 진행하는 것이 효율적이다. `investigate-issue`의 해결안이 `fix-issue`의 설계 옵션 선택에 도움이 된다.
+
+=== 근로기준법 관련 이슈
+
+근태/근무/휴가 관련 이슈에서는 `note-issue`와 `investigate-issue` 모두 관련 법령을 자동 조사한다. 해결안 선택 시 **근로자에게 유리한 방향**이 우선 권장된다.
