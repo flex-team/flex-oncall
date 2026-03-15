@@ -22,8 +22,8 @@ git submodule update --remote
 ### 서브모듈 추가하기
 
 ```bash
-git submodule add <repo-url> <directory-name>
-# 예: git submodule add https://github.com/flex-team/flex-timetracking-backend.git flex-timetracking-backend
+git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <directory-name>
+# 예: git submodule add -b develop git@github.com:flex-team/flex-timetracking-backend.git flex-timetracking-backend
 ```
 
 ## 서브모듈 맵

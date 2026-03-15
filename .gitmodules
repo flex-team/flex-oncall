@@ -1,0 +1,4 @@
+[submodule "flex-timetracking-backend"]
+	path = flex-timetracking-backend
+	url = git@github.com:flex-team/flex-timetracking-backend.git
+	branch = develop
