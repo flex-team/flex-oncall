@@ -149,5 +149,7 @@ jobs:
           prompt: |
             /ops:update-cookbook --gh-issue ${{ steps.context.outputs.issue_number }}
 
+            PR 생성 시 본문에 `Closes #${{ steps.context.outputs.issue_number }}`를 포함하여 머지 시 이슈가 자동으로 닫히도록 하세요.
+
           additional-args: |
             --allowed-tools "Bash(gh issue view *),Bash(gh issue comment *),Bash(gh pr create *),Bash(git checkout -b *),Bash(git add operation-notes/COOKBOOK.md),Bash(git commit *),Bash(git push -u origin *),Agent,Read,Write(operation-notes/COOKBOOK.md),Glob,Grep,Skill"
