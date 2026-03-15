@@ -81,7 +81,8 @@
 ## 운영 지식 참조
 
 - **쿡북**: `operation-notes/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
-- **서브모듈별 운영 노트**: 각 서브모듈의 `.claude/operation-notes/` 디렉토리 참조
+- **티켓 노트**: `operation-notes/{ticket-id}.md` — 개별 티켓 분석/해결 기록
+- **티켓 노트 작성 규칙**: `operation-notes/CLAUDE.md`
+- **서브모듈별 운영 노트**: 각 서브모듈의 `.claude/operation-notes/` 디렉토리도 참조
   - 예: `flex-timetracking-backend/.claude/operation-notes/`
   - 이슈의 도메인이 파악되면 해당 서브모듈의 운영 노트를 우선 확인할 것
-- **티켓 노트 작성 규칙**: 각 서브모듈의 `.claude/operation-notes/CLAUDE.md`
