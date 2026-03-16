@@ -7,8 +7,22 @@ CI Linear 팀 티켓을 분석/해결하면서 생성되는 운영 업무 기록
 ```
 operation-notes/
 ├── CLAUDE.md          # 운영 업무 가이드 (이 파일)
-└── {ticket-id}.md     # 티켓별 분석/해결 기록
+├── COOKBOOK.md         # 도메인별 진단 가이드
+├── INDEX.md           # 키워드 → 문서 매핑 (active + archive 모두 포함)
+├── {ticket-id}.md     # 진행 중인 이슈 (active)
+└── archive/           # 해결 완료된 이슈
+    └── {ticket-id}.md
 ```
+
+## 파일 위치 규칙
+
+- **새 노트**: `operation-notes/{ticket-id}.md` (루트)에 생성
+- **해결 완료 시**: `git mv {ticket-id}.md archive/` 로 이동. 연관 이슈의 상대 링크도 함께 수정
+  - 루트 → archive 참조: `./archive/{ticket-id}.md`
+  - archive → 루트 참조: `../{ticket-id}.md`
+  - archive → archive 참조: `./{ticket-id}.md`
+- **연관 이슈 탐색**: 루트의 active 노트만 전체 스캔. archive는 INDEX.md 키워드로 찾아서 필요한 것만 읽기
+- **INDEX.md**: active/archive 구분 없이 모든 노트를 포함. 경로에 `archive/` 접두사 포함
 
 ## 파일 네이밍 규칙
 

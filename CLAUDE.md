@@ -82,7 +82,8 @@
 
 - **쿡북**: `operation-notes/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
 - **노트 인덱스**: `operation-notes/INDEX.md` — 키워드 → 문서 매핑 (전체 노트를 읽지 말고 여기서 관련 문서를 찾을 것)
-- **티켓 노트**: `operation-notes/{ticket-id}.md` — 개별 티켓 분석/해결 기록
+- **진행 중 노트**: `operation-notes/{ticket-id}.md` — 루트에 위치한 active 이슈
+- **해결 완료 노트**: `operation-notes/archive/{ticket-id}.md` — INDEX.md로 찾아서 필요한 것만 읽기
 - **티켓 노트 작성 규칙**: `operation-notes/CLAUDE.md`
 - **서브모듈별 운영 노트**: 각 서브모듈의 `.claude/operation-notes/` 디렉토리도 참조
   - 예: `flex-timetracking-backend/.claude/operation-notes/`
