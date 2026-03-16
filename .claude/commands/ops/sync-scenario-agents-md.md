@@ -22,6 +22,19 @@ operation-notes 디렉토리를 아래 우선순위로 결정한다.
 - 셋 다 존재하지 않으면 사용자에게 물어본다.
 - 해석된 경로를 이하 `{notes-dir}`로 표기한다.
 
+### Note File Resolution
+
+`{ticket-id}.md` 파일을 찾을 때 아래 순서로 탐색한다:
+1. `{notes-dir}/{ticket-id}.md` (active — 진행 중)
+2. `{notes-dir}/archive/{ticket-id}.md` (archive — 해결 완료)
+
+- 파일을 **새로 생성**할 때는 항상 `{notes-dir}/` (루트)에 생성한다.
+- 이슈가 **해결 완료**되면 `{notes-dir}/archive/`로 이동한다.
+- 상대 링크 규칙:
+  - 루트 → archive: `./archive/{ticket-id}.md`
+  - archive → 루트: `../{ticket-id}.md`
+  - archive → archive: `./{ticket-id}.md`
+
 ## Pre-check (필수)
 
 실행 전 반드시 현재 디렉토리의 git remote가 `flex-team/flex-timetracking-backend`인지 확인한다.
@@ -41,7 +54,7 @@ git remote -v | grep 'flex-team/flex-timetracking-backend'
 
 | Agent | 작업 | 상세 |
 |-------|------|------|
-| 🤖 Agent A | **Operation Notes 스캔** | `{notes-dir}/` 하위 모든 `CI-*.md` 파일 읽기 |
+| 🤖 Agent A | **Operation Notes 스캔** | `{notes-dir}/` 루트 및 `{notes-dir}/archive/` 하위 모든 `CI-*.md` 파일 읽기 |
 | 🤖 Agent B | **AGENTS.md 읽기** | `scenario-test/AGENTS.md` 전체 내용 읽기 |
 
 ### Phase 2: 갭 분석

@@ -20,6 +20,19 @@ $ARGUMENTS
   3. 찾은 경우: 사용자에게 `"티켓 ID를 {추출한ID}로 인식했습니다. 맞습니까?"` 확인 후 진행
   4. 못 찾은 경우: `"티켓 ID를 특정할 수 없습니다. 티켓 ID를 인자로 전달해주세요. (예: /ops:fix-issue CI-3861)"` 출력 후 **즉시 종료**
 
+## Note File Resolution
+
+operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한다:
+1. `{notes-dir}/{ticket-id}.md` (active — 진행 중)
+2. `{notes-dir}/archive/{ticket-id}.md` (archive — 해결 완료)
+
+- 파일을 **새로 생성**할 때는 항상 `{notes-dir}/` (루트)에 생성한다.
+- 이슈가 **해결 완료**되면 `{notes-dir}/archive/`로 이동한다.
+- 상대 링크 규칙:
+  - 루트 → archive: `./archive/{ticket-id}.md`
+  - archive → 루트: `../{ticket-id}.md`
+  - archive → archive: `./{ticket-id}.md`
+
 ## Procedure
 
 ### Phase 1: 이슈 파악 (🤖 Linear 에이전트)

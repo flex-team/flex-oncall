@@ -53,6 +53,18 @@ $ARGUMENTS
 
 기존 도메인에 해당하지 않으면 새 도메인 섹션을 추가한다.
 
+## Note File Resolution
+
+`{ticket-id}.md` 파일을 찾을 때 아래 순서로 탐색한다:
+1. `{notes-dir}/{ticket-id}.md` (active — 진행 중)
+2. `{notes-dir}/archive/{ticket-id}.md` (archive — 해결 완료)
+
+- 파일을 **새로 생성**할 때는 항상 `{notes-dir}/` (루트)에 생성한다.
+- 이슈가 **해결 완료**되면 `{notes-dir}/archive/`로 이동한다.
+- **INDEX.md 링크 경로 규칙:**
+  - active 노트 (루트): `[{ticket-id}](./{ticket-id}.md)`
+  - archive 노트: `[{ticket-id}](./archive/{ticket-id}.md)`
+
 ## 키워드 추출 기준
 
 노트에서 다음을 키워드로 추출한다:
@@ -69,7 +81,7 @@ $ARGUMENTS
 ### 증분 모드
 
 #### Step 1: 대상 노트 읽기
-`operation-notes/{ticket-id}.md` (또는 `{ticket-id}-*.md` 패턴)를 읽는다.
+Note File Resolution에 따라 `{notes-dir}/{ticket-id}.md` → `{notes-dir}/archive/{ticket-id}.md` 순서로 탐색하여 읽는다.
 파일이 없으면 `"해당 노트가 없습니다: {ticket-id}"` 출력 후 종료.
 
 #### Step 2: 정보 추출
@@ -80,9 +92,10 @@ $ARGUMENTS
 
 #### Step 3: INDEX.md 업데이트
 기존 INDEX.md를 읽고:
-- 해당 티켓이 이미 있으면 → 요약과 키워드를 갱신
+- 해당 티켓이 이미 있으면 → 요약과 키워드를 갱신 (파일 위치가 변경되었으면 링크 경로도 갱신)
 - 없으면 → 해당 도메인 섹션의 테이블에 행 추가
 - 도메인 섹션이 없으면 → 새 도메인 섹션 생성
+- **링크 경로**: 노트가 `{notes-dir}/` 루트에 있으면 `[{ticket-id}](./{ticket-id}.md)`, `{notes-dir}/archive/`에 있으면 `[{ticket-id}](./archive/{ticket-id}.md)`
 
 #### Step 4: 결과 보고
 추가/갱신한 항목을 보여준다.
@@ -92,7 +105,7 @@ $ARGUMENTS
 ### 전체 재구성 모드
 
 #### Step 1: 노트 전체 수집
-`operation-notes/` 디렉토리의 모든 `.md` 파일을 수집한다.
+`{notes-dir}/` 루트와 `{notes-dir}/archive/` 의 모든 `.md` 파일을 수집한다.
 
 **제외 대상:**
 - `CLAUDE.md` (디렉토리 가이드)
