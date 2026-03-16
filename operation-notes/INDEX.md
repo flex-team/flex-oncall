@@ -32,6 +32,8 @@
 | [CI-3949](./CI-3949.md) | 휴일대체 탭에 날짜 미표기 | 휴일대체, OpenSearch, holidayProps, sync, v2_user_work_rule, DayWorkingType |
 | [CI-3976](./CI-3976.md) | 퇴사자 휴가 사용일자 데이터 추출 | 퇴사자, 휴가, 엑셀, Operation API, departmentIds, includeResignatedUsers |
 | [CI-4048](./CI-4048.md) | 초단시간 근로자 연장근무 9시간 발생 | 초단시간, 연장근무, agreedWorkingMinutes, requiredWorkingMinutes |
+| [CI-4120](./CI-4120.md) | 휴직/휴가 검증 비대칭 — 휴직→휴가 차단되나 휴가→휴직은 허용 (스펙) | 휴직, 휴가, 비대칭 검증, LeaveOfAbsence, TimeOff, 서비스 경계, Prevention forward |
+| [CI-4121](./CI-4121.md) | sk 케미칼 근무 기록 다운로드 실패 (타임아웃 의심) | 근무 기록, 다운로드, 엑셀, 타임아웃, export, sk 케미칼 |
 
 ### 스케줄링 (Scheduling)
 
@@ -46,6 +48,13 @@
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [CI-4103](./CI-4103.md) | 교대근무 관리 화면 조회 권한 일부 누락 | 교대근무, 조회 권한, 근무 권한, 휴가 권한, 교집합, access-check |
+| [CI-4119](./CI-4119.md) | 교대근무 휴무일+스케줄 근무 시 퇴근 자동 조정 실패 | 교대근무, 휴무일, 스케줄, 퇴근 자동 조정, baseAgreedDayWorkingMinutes, 연장근무, 세콤 |
+
+### 계정/구성원 (Account / Member)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [CI-4118](./CI-4118.md) | 서울히어로즈 관리자 계정 이메일 변경 요청 (퇴사자 계정) | 관리자, 이메일 변경, 퇴사자, 스폰서십, 온보딩, Operation API, UserEmailChange |
 
 ### 외부 연동 (Integration / SECOM)
 
