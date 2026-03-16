@@ -83,3 +83,9 @@
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [CI-4107](./CI-4107.md) | 전자계약 양식 세로 가운데 정렬 미동작 — 플레이스홀더 뒤 `<br>` 태그 원인 | 전자계약, 정렬, 플레이스홀더, 렌더러, V1_13, DigiconRenderVersion |
+
+### 목표 (Goal / OKR)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [CI-4126](./CI-4126.md) | 26년 목표 필터 시 25년 목표 함께 노출 — `findRootObjectives` SQL root JOIN 시 cycle 미필터링 | 목표, OKR, cycle, root-objectives, 연도 필터, cross-year, hit |
