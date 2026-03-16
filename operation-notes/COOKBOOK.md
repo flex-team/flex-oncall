@@ -2,8 +2,6 @@
 
 > 이슈 조사 전에 이 문서를 먼저 참조하면 조사 시간을 단축할 수 있다.
 > 각 항목의 상세는 출처 이슈 노트를 참조.
->
-> 출처: `~/.claude/operation-notes/COOKBOOK.md` + `flex-timetracking-backend/.claude/operation-notes/COOKBOOK.md`
 
 ## 도메인별 진단 가이드
 
@@ -95,7 +93,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
 ### 근태/휴가 (Time Tracking)
 
 #### 진단 체크리스트
-문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요"
+문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요" / "퇴근 시간이 잘렸어요" / "휴직 기간에 휴가가 있어요"
 1. 휴일대체 탭 미표기 → 먼저 OpenSearch dev tools로 해당 유저+날짜 문서 존재 확인 [CI-3949]
    - **문서 자체가 없음** → 근무를 건드리지 않은 유저는 sync 이벤트 미발생으로 OS 문서 미생성. 수동 sync 실행: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` [CI-3949]
    - **문서는 있는데 `holidayProps`가 null** → 해당 날짜 **시점의** 활성 근무유형 확인 (현재 근무유형이 아님!). `v2_user_work_rule`에서 date_from/date_to 범위로 확인 → 해당 요일이 `WEEKLY_UNPAID_HOLIDAY`(휴무일)이면 스펙대로 제외. `WEEKLY_PAID_HOLIDAY`(주휴일)인데 null이면 버그 → 추가 조사 필요 [CI-3949]
@@ -104,6 +102,8 @@ WHERE h.customer_id = ? AND h.user_id = ?
 4. 포괄계약 공제 불일치 → 월 중 계약 변경 시 Range 분할 확인. `REGARDED_OVER`는 주기 종료일 포함 Range에만 귀속 [CI-3868]
 5. 여러날 휴가 스케줄 편집 시 소실 → FE 버그, `timeoffEventId` 기반 판별 한계 [CI-3892]
 6. 퇴사자 휴가 데이터 추출 → 웹 UI(휴가 관리 > 사용 내역)에서 "퇴직자 포함"으로 먼저 시도. 특정 구성원 누락 시 주조직 존재 여부 확인 → 주조직 없으면 Operation API 사용 (`departmentIds: null`, `includeResignatedUsers: true`) [CI-3976]
+7. 퇴근 시간이 자정(00:00)으로 잘린 경우 → 대상 구성원의 **다음날 휴가** 등록 여부 확인. 다음날 종일휴가가 있으면 휴가 시작 시간(00:00)으로 조정되는 스펙. 안내: "자정을 넘긴 퇴근 시간이 다음날 종일휴가와 겹치면 휴가 시작 시간으로 조정됩니다" [CI-3979]
+8. 휴직 기간에 휴가가 남아있는 경우 → "Prevention forward" 패턴 스펙 안내. 휴가→휴직은 허용(기존 데이터 소급 변경 안 함), 휴직→휴가는 차단. 운영 가이드: 휴직 등록 전 기존 휴가를 먼저 취소/조정 [CI-4120]
 
 #### 데이터 접근
 ```sql
@@ -149,6 +149,8 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897]
 - **여러날 휴가 스케줄 편집 시 소실**: FE 판별 로직 한계 + BE 응답에 published 휴가일 정보 누락 — **버그** [CI-3892]
 - **퇴사자 휴가 데이터 웹 UI 누락**: 주조직 없는 퇴직자가 조직 기반 필터링에서 제외됨. Operation API(`departmentIds: null`)로 우회 추출 — **스펙 (웹 UI 한계)** [CI-3976]
+- **퇴근 타각 자정 조정**: 자정 넘긴 퇴근이 다음날 종일휴가와 겹치면 휴가 시작 시간(00:00)으로 조정. `adjustWorkClockStopTime()` 휴가 겹침 체크에 의한 정상 동작 — **스펙** [CI-3979]
+- **휴직/휴가 비대칭 검증**: "Prevention forward" 패턴 — 새 액션만 사전 차단, 기존 데이터 소급 변경 안 함. 휴직(`flex-core-backend`)과 휴가(`flex-timetracking-backend`)가 서비스 경계로 분리 — **스펙** [CI-4120]
 
 ---
 
@@ -185,21 +187,22 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 ### 교대근무 (Shift)
 
 #### 진단 체크리스트
-문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다"
+문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다" / "퇴근 자동 조정이 안 돼요" / "초단시간 근로자 연장근무가 이상해요"
 
-1. 해당 관리자의 **근무 권한**과 **휴가 권한** 범위 확인 → 전체 구성원 vs 소속 및 하위 조직
-2. 문제가 발생하는 화면(조회/배치/연차배치)에 따라 **권한 조합이 다름**
-3. 두 권한 중 **범위가 좁은 쪽**이 최종 조회 범위를 결정함
-4. 조회되어야 할 구성원이 빠지는 경우 → 더 좁은 범위의 권한을 넓혀주도록 안내
-5. 권한 설정은 정상인데 여전히 누락되면 → prod access log에서 `access-check` 응답 확인 (traceId로 `user_work_schedule` READ와 `user_time_off_use` READ 각각의 통과 인원 비교) [CI-4103]
+1. 구성원 조회 누락 → 해당 관리자의 **근무 권한**과 **휴가 권한** 범위 확인 → 전체 구성원 vs 소속 및 하위 조직 [CI-4103]
+2. 두 권한 중 **범위가 좁은 쪽**이 최종 조회 범위를 결정함. 권한 범위를 맞추도록 안내
+3. 교대근무 휴무일에 스케줄 근무 시 퇴근 자동 조정 실패 → `baseAgreedDayWorkingMinutes`가 휴무일에 0이 되어 일연장 조건이 null로 평가 — **버그 (수정 예정)** [CI-4119]
+4. 초단시간 근로자 연장근무 계산 이상 → `baseAgreedDayWorkingMinutes`가 휴무일에 법적 소정근로시간(예: 168분)으로 사용되어 일연장이 과소 계산. 주휴일은 480분(8시간) 고정인데 휴무일만 비대칭 — **버그 추정** [CI-4048]
 
-**고객 안내 예시:**
+**고객 안내 예시 (구성원 누락):**
 > 교대근무 관리 화면에서는 **근무 권한**과 **휴가 권한**을 **모두** 보유한 조직의 구성원만 표시됩니다.
 > 전체 구성원을 조회하시려면 두 권한 모두 동일한 범위로 설정해 주세요.
 
 #### 과거 사례
 - **교대근무 관리 화면 구성원 일부 누락**: 근무 조회 권한(전체)과 휴가 조회 권한(소속 및 하위 조직)의 교집합으로 필터링되어 일부만 표시. 고객에게 두 권한 범위를 맞추도록 안내. — **스펙** [CI-4103]
 - **교대근무 조직 필터링 합집합 버그**: 조직 레벨에서 합집합으로 구현되어 있던 것을 교집합으로 수정 (#11994). — **버그 (수정 완료)** [CI-4103]
+- **교대근무 휴무일 퇴근 자동 조정 실패**: `baseAgreedDayWorkingMinutes=0`으로 일연장 조건이 null → 퇴근 자동 조정 불가. 유급휴일은 480분 기준 별도 처리되나 휴무일은 미고려 — **버그 (수정 예정)** [CI-4119]
+- **초단시간 근로자 연장근무 과소 계산**: 휴무일의 `baseAgreedDayWorkingMinutes` 기준 비대칭. 노무 가이드 변경("휴무일도 8시간 기준") 미반영 추정 — **버그 추정** [CI-4048]
 
 ---
 
@@ -244,6 +247,51 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 
 ---
 
+### 계정/구성원 (Account / Member)
+
+#### 진단 체크리스트
+문의: "이메일 변경해주세요" / "구성원 이메일 일괄 변경해주세요"
+1. 단건 이메일 변경 → `PATCH /action/v2/operation/core/customers/{customerId}/users/{userId}/emails/change` [CI-4118]
+2. 일괄 이메일 변경 → `PATCH /action/v2/operation/core/customers/{customerId}/emails/change/bulk` [CI-4124]
+   - ⚠️ 존재하지 않는 oldEmail이 1건이라도 포함되면 **전체 실패** (`IllegalArgumentException`)
+   - 사전에 DB에서 대상 이메일 존재 여부 확인 필수
+3. 다법인 사용자 확인 → `primary_user_id`가 NULL이 아니면 primary 회사에서만 변경 가능 [CI-4118]
+4. 검증된 이메일(verified) 확인 → 이미 검증된 이메일은 관리자가 변경 불가, Operation API 사용 필요 [CI-4118]
+
+#### 데이터 접근
+```sql
+-- 대상 구성원 조회 (이메일 변경 전 확인)
+SELECT id, customer_id, email, primary_user_id, deleted_date
+FROM user
+WHERE customer_id = ?
+  AND deleted_date IS NULL
+ORDER BY email;
+
+-- 특정 이메일 사용자 조회
+SELECT id, customer_id, email, primary_user_id, deleted_date
+FROM user
+WHERE customer_id = ?
+  AND email LIKE ?;
+```
+
+#### 과거 사례
+- **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]
+- **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124]
+
+---
+
+### 데이터 추출 (Data Export)
+
+#### 진단 체크리스트
+문의: "엑셀 다운로드가 안 돼요" / "다운로드 실패해요"
+1. 근무 기록 다운로드 실패 → consumer → core-api 내부 호출 시 OkHttp 소켓 타임아웃(3초) 확인. 대규모 데이터(수백 명) 다운로드 시 타임아웃 발생 가능 [CI-4121]
+2. 특정 구성원만 누락 → "근태/휴가" 도메인의 퇴사자 휴가 데이터 추출 항목 참조 [CI-3976]
+
+#### 과거 사례
+- **근무 기록 다운로드 타임아웃**: consumer → core-api 간 OkHttp 3초 타임아웃으로 `SocketTimeoutException`. 32건 실패 — **버그 (조사 중)** [CI-4121]
+
+---
+
 ### 급여 (Payroll)
 
 #### 진단 체크리스트
@@ -260,6 +308,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-16 | 전체 | 전체 재구성 — 신규 도메인 2개(계정/구성원, 데이터 추출) 추가, CI-3979/CI-4048/CI-4118/CI-4119/CI-4120/CI-4121/CI-4124 반영 |
 | 2026-03-15 | 전체 | 두 COOKBOOK 통합 (글로벌 + flex-timetracking-backend) → oncall repo로 이전 |
 | 2026-03-13 | CI-4103 | 교대근무 진단 가이드 추가, 스펙 코드 permalink 추가, 버그 수정 이력 반영 |
 | 2026-03-12 | 세콤 | 외부 연동(세콤) 프로토콜 진단 가이드 추가 |
