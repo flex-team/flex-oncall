@@ -30,9 +30,9 @@
 | [CI-3892](./CI-3892.md) | 교대근무 스케줄에서 여러날 휴가 미표시/배치 불가 | 교대근무, 여러날 휴가, 스케줄 편집, timeoffEventId, 소실 |
 | [CI-3897](./CI-3897.md) | 휴일대체 지정 기간 변경 요청 | 휴일대체, gap, TrackingExperimentalDynamicConfig, 기간 커스텀 |
 | [CI-3949](./CI-3949.md) | 휴일대체 탭에 날짜 미표기 | 휴일대체, OpenSearch, holidayProps, sync, v2_user_work_rule, DayWorkingType |
-| [CI-3976](./CI-3976.md) | 퇴사자 휴가 사용일자 데이터 추출 | 퇴사자, 휴가, 엑셀, Operation API, departmentIds, includeResignatedUsers |
+| [CI-3976](./archive/CI-3976.md) | 퇴사자 휴가 사용일자 데이터 추출 | 퇴사자, 휴가, 엑셀, Operation API, departmentIds, includeResignatedUsers |
 | [CI-4048](./CI-4048.md) | 초단시간 근로자 연장근무 9시간 발생 | 초단시간, 연장근무, agreedWorkingMinutes, requiredWorkingMinutes |
-| [CI-4120](./CI-4120.md) | 휴직/휴가 검증 비대칭 — 휴직→휴가 차단되나 휴가→휴직은 허용 (스펙) | 휴직, 휴가, 비대칭 검증, LeaveOfAbsence, TimeOff, 서비스 경계, Prevention forward |
+| [CI-4120](./archive/CI-4120.md) | 휴직/휴가 검증 비대칭 — 휴직→휴가 차단되나 휴가→휴직은 허용 (스펙) | 휴직, 휴가, 비대칭 검증, LeaveOfAbsence, TimeOff, 서비스 경계, Prevention forward |
 | [CI-4121](./CI-4121.md) | sk 케미칼 근무 기록 다운로드 실패 (타임아웃 의심) | 근무 기록, 다운로드, 엑셀, 타임아웃, export, sk 케미칼 |
 
 ### 스케줄링 (Scheduling)
@@ -60,10 +60,10 @@
 
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
-| [CI-3849](./CI-3849.md) | 세콤 연동 활성화 풀림 및 수동 전송 미반영 | 세콤, 연동 비활성화, 수동 전송, 소급 불가 |
+| [CI-3849](./archive/CI-3849.md) | 세콤 연동 활성화 풀림 및 수동 전송 미반영 | 세콤, 연동 비활성화, 수동 전송, 소급 불가 |
 | [CI-3861](./CI-3861.md) | 세콤 수동 전송 미반영 | 세콤, 수동 전송, 역순 수신, 위젯 draft |
-| [CI-3979](./CI-3979.md) | 세콤 퇴근 타각 시 근무 기록 시간 조정 | 세콤, 퇴근 타각, 시간 조정, 근무 기록 |
-| [external-work-clock-event-failure-20260304](./external-work-clock-event-failure-20260304.md) | 외부 타각기 위젯 이벤트 처리 실패 (53건) | 세콤, CAPS, WORK_STOP, consumer 실패, 외부 타각기 |
+| [CI-3979](./archive/CI-3979.md) | 세콤 퇴근 타각 시 근무 기록 시간 조정 | 세콤, 퇴근 타각, 시간 조정, 근무 기록 |
+| [external-work-clock-event-failure-20260304](./archive/external-work-clock-event-failure-20260304.md) | 외부 타각기 위젯 이벤트 처리 실패 (53건) | 세콤, CAPS, WORK_STOP, consumer 실패, 외부 타각기 |
 | [QNA-1842](./QNA-1842.md) | 출입연동 커넥션 수 설정 | 출입연동, 커넥션 수, PostgreSQL, 세콤 |
 
 ### 승인 (Approval)
