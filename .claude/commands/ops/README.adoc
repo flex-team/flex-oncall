@@ -50,7 +50,7 @@ graph LR
 
 === note-issue
 
-**목적**: Linear 티켓 내용을 `~/.claude/operation-notes/{ticket-id}.md`에 기록한다. 문서 작성/동기화에 집중하며, 조사 자체는 수행하지 않는다.
+**목적**: Linear 티켓 내용을 `{notes-dir}/{ticket-id}.md`에 기록한다. 문서 작성/동기화에 집중하며, 조사 자체는 수행하지 않는다.
 
 **주요 기능**:
 
@@ -59,7 +59,7 @@ graph LR
 * 해결 완료 건: Gherkin 시나리오 작성 (스펙 확인/변경 건)
 * 연관 이슈 자동 탐색 및 양방향 링크
 
-**산출물**: `~/.claude/operation-notes/{ticket-id}.md`
+**산출물**: `{notes-dir}/{ticket-id}.md`
 
 **사용 예시**:
 [source]
@@ -80,7 +80,7 @@ graph LR
 * 스펙 vs 버그 판별
 * 사이드이펙트 분석 (버그 판정 시)
 
-**산출물**: `~/.claude/operation-notes/{ticket-id}.md`에 조사 결과 추가 (원인 분석, 배제된 가설, 해결안 등)
+**산출물**: `{notes-dir}/{ticket-id}.md`에 조사 결과 추가 (원인 분석, 배제된 가설, 해결안 등)
 
 **사용 예시**:
 [source]
@@ -117,7 +117,7 @@ graph LR
 * **전체 스캔 모드**: 인자 없이 호출. 모든 노트를 읽고 COOKBOOK.md 전체 재구성.
 * **증분 모드**: 이슈 ID 전달. 해당 노트만 읽고 COOKBOOK.md에 증분 반영.
 
-**산출물**: `~/.claude/operation-notes/COOKBOOK.md`
+**산출물**: `{notes-dir}/COOKBOOK.md`
 
 **사용 예시**:
 [source]

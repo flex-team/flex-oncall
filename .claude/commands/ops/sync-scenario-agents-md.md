@@ -7,7 +7,20 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task, Skill
 
 ## Purpose
 
-`~/.claude/operation-notes/` 디렉토리의 이슈 문서들을 스캔하여, 유저 대면 API(operation API 제외)가 언급되었지만 `scenario-test/AGENTS.md`에 누락된 도메인/API를 찾아 추가하고 PR을 생성한다.
+`{notes-dir}/` 디렉토리의 이슈 문서들을 스캔하여, 유저 대면 API(operation API 제외)가 언급되었지만 `scenario-test/AGENTS.md`에 누락된 도메인/API를 찾아 추가하고 PR을 생성한다.
+
+## Operation Notes Directory Resolution
+
+operation-notes 디렉토리를 아래 우선순위로 결정한다.
+
+| 우선순위 | 경로 | 설명 |
+|---------|------|------|
+| 1 | `{repo-root}/operation-notes/` | repo 루트에 존재 |
+| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 |
+| 3 | `~/.claude/operation-notes/` | 글로벌 홈 디렉토리에 존재 |
+
+- 셋 다 존재하지 않으면 사용자에게 물어본다.
+- 해석된 경로를 이하 `{notes-dir}`로 표기한다.
 
 ## Pre-check (필수)
 
@@ -28,7 +41,7 @@ git remote -v | grep 'flex-team/flex-timetracking-backend'
 
 | Agent | 작업 | 상세 |
 |-------|------|------|
-| 🤖 Agent A | **Operation Notes 스캔** | `~/.claude/operation-notes/` 하위 모든 `CI-*.md` 파일 읽기 |
+| 🤖 Agent A | **Operation Notes 스캔** | `{notes-dir}/` 하위 모든 `CI-*.md` 파일 읽기 |
 | 🤖 Agent B | **AGENTS.md 읽기** | `scenario-test/AGENTS.md` 전체 내용 읽기 |
 
 ### Phase 2: 갭 분석

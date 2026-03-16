@@ -85,6 +85,21 @@ $ARGUMENTS
 worktree나 브랜치를 생성할 때 **`ops/{ticket-id}`** 를 브랜치명으로 사용한다. (예: `ops/CI-3861`)
 이슈 번호가 브랜치명에 포함되어야 나중에 worktree 정리 시 어떤 이슈의 작업인지 식별할 수 있다.
 
+## Operation Notes Directory Resolution
+
+operation-notes 파일을 저장할 디렉토리를 아래 우선순위로 결정한다.
+**스킬 실행 시작 시 한 번만 해석하고, 이후 모든 경로에 동일하게 적용한다.**
+
+| 우선순위 | 경로 | 설명 |
+|---------|------|------|
+| 1 | `{repo-root}/operation-notes/` | repo 루트에 operation-notes 디렉토리가 존재 |
+| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 |
+| 3 | `~/.claude/operation-notes/` | 글로벌 홈 디렉토리에 존재 |
+
+- 디렉토리 **존재 여부**로 판단한다 (파일이 아닌 디렉토리).
+- 셋 다 존재하지 않으면 사용자에게 `"operation-notes 디렉토리를 찾을 수 없습니다. 어디에 저장할까요?"` 로 물어본다.
+- 해석된 경로를 이하 `{notes-dir}`로 표기한다.
+
 ## Procedure
 
 ### Step 1-2: 데이터 수집 (🔀 병렬 처리)
@@ -97,31 +112,31 @@ worktree나 브랜치를 생성할 때 **`ops/{ticket-id}`** 를 브랜치명으
 | 🤖 Agent B | **연관 이슈 스캔** | `operation-notes/` 전체 노트 읽기 → 관련 경험 수집 |
 
 **Agent A: operation-note 준비**
-`~/.claude/operation-notes/{ticket-id}.md`를 최신 상태로 준비한다.
+`{notes-dir}/{ticket-id}.md`를 최신 상태로 준비한다.
 
 1. **Linear 이슈 정보 수집** (MCP CLI — `mcp-cli info`로 스키마 확인 후 호출):
    - `mcp-cli call linear/get_issue` (includeRelations: true) → 제목, 설명, 상태, 라벨, 회사명, Customer ID, 담당자
    - `mcp-cli call linear/list_comments` → 코멘트 전체 (시간순 정렬). bot 동기화 코멘트("This comment thread is synced to...")는 무시
-2. **문서 상태 확인**: `~/.claude/operation-notes/{ticket-id}.md` 존재 여부 확인
+2. **문서 상태 확인**: `{notes-dir}/{ticket-id}.md` 존재 여부 확인
 3. **문서 생성 또는 업데이트**:
    - **파일 없음** → `~/.claude/commands/ops/note-issue.md`의 템플릿(해결 완료 / 진행 중)에 따라 신규 생성. 이슈 상태로 템플릿 선택.
    - **파일 있음** → 기존 내용을 읽고 Linear 최신 정보와 비교. 새 코멘트/상태 변경을 반영. `investigate-issue`가 작성한 섹션(원인 분석, 해결안 등)은 건드리지 않음.
 
 **문서 작성 시 `~/.claude/commands/ops/note-issue.md`의 "문서 작성 원칙"과 "문서 포맷팅 규칙"을 반드시 읽고 준수한다.**
 
-이 단계가 끝나면 `~/.claude/operation-notes/{ticket-id}.md`가 최신 상태로 존재한다.
+이 단계가 끝나면 `{notes-dir}/{ticket-id}.md`가 최신 상태로 존재한다.
 
 **Agent B: 쿡북 참조 + 연관 이슈 탐색 및 경험 수집**
 
 **쿡북 참조 (최우선):**
-1. `~/.claude/operation-notes/COOKBOOK.md`가 존재하면 **먼저 읽는다**
+1. `{notes-dir}/COOKBOOK.md`가 존재하면 **먼저 읽는다**
 2. 현재 이슈의 도메인에 해당하는 섹션의 진단 체크리스트/과거 사례를 수집
 3. 이 정보를 Step 3 가설 수립 시 참고 자료로 전달
    - 쿡북의 진단 체크리스트 항목은 가설 우선순위 결정에 활용
    - 쿡북의 과거 사례 중 유사한 건이 있으면 가설에 반영
 
 **연관 이슈 탐색:**
-`~/.claude/operation-notes/` 디렉토리의 모든 노트(CLAUDE.md, COOKBOOK.md 제외)를 읽어 관련 경험을 수집한다.
+`{notes-dir}/` 디렉토리의 모든 노트(CLAUDE.md, COOKBOOK.md 제외)를 읽어 관련 경험을 수집한다.
 
 **연관 판단 기준:**
 - **동일 회사/Customer ID**: 같은 고객의 이전 문의
@@ -430,7 +445,7 @@ OpenSearch에서 traceId 기반으로 요청 흐름을 조회한 경우, 아래 
 4. **다음 단계 제안**: 추가 조사가 필요하면 구체적 방향 제시
 
 ### Step 7: operation-note 업데이트
-조사 결과를 `~/.claude/operation-notes/{ticket-id}.md`에 반영한다.
+조사 결과를 `{notes-dir}/{ticket-id}.md`에 반영한다.
 **`note-issue.md`의 "문서 작성 원칙"을 반드시 준수한다** (출처 표기, 과정 기록, 용어 설명, **문서 포맷팅 규칙**).
 
 **추가/업데이트하는 섹션 (Progressive Disclosure 구조 적용):**

@@ -169,6 +169,21 @@ $ARGUMENTS
 worktree나 브랜치를 생성할 때 **`ops/{ticket-id}`** 를 브랜치명으로 사용한다. (예: `ops/CI-3861`)
 이슈 번호가 브랜치명에 포함되어야 나중에 worktree 정리 시 어떤 이슈의 작업인지 식별할 수 있다.
 
+## Operation Notes Directory Resolution
+
+operation-notes 파일을 저장할 디렉토리를 아래 우선순위로 결정한다.
+**스킬 실행 시작 시 한 번만 해석하고, 이후 모든 경로에 동일하게 적용한다.**
+
+| 우선순위 | 경로 | 설명 |
+|---------|------|------|
+| 1 | `{repo-root}/operation-notes/` | repo 루트에 operation-notes 디렉토리가 존재 |
+| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 |
+| 3 | `~/.claude/operation-notes/` | 글로벌 홈 디렉토리에 존재 |
+
+- 디렉토리 **존재 여부**로 판단한다 (파일이 아닌 디렉토리).
+- 셋 다 존재하지 않으면 사용자에게 `"operation-notes 디렉토리를 찾을 수 없습니다. 어디에 저장할까요?"` 로 물어본다.
+- 해석된 경로를 이하 `{notes-dir}`로 표기한다.
+
 ## Procedure
 
 ### Step 1-2: 데이터 수집 (🔀 병렬 처리)
@@ -196,7 +211,7 @@ MCP CLI를 사용하여 Linear 이슈 정보를 수집한다. **반드시 `mcp-c
 **Agent B: 연관 이슈 탐색**
 기존 operation-notes에서 현재 이슈와 연관된 문서를 탐색한다.
 
-1. `~/.claude/operation-notes/` 디렉토리의 모든 `.md` 파일(CLAUDE.md 제외)을 읽는다.
+1. `{notes-dir}/` 디렉토리의 모든 `.md` 파일(CLAUDE.md 제외)을 읽는다.
 2. 다음 기준으로 연관성을 판단한다:
    - **동일 회사/Customer ID**: 같은 고객의 이전 문의
    - **동일 기능 영역**: 같은 기능(예: 세콤연동, 근태, 급여 등)에 대한 이슈
@@ -205,7 +220,7 @@ MCP CLI를 사용하여 Linear 이슈 정보를 수집한다. **반드시 `mcp-c
 3. 연관 이슈 목록을 저장 (Step 3, Step 4에서 사용)
 
 ### Step 3: 문서 생성 또는 업데이트
-`~/.claude/operation-notes/{ticket-id}.md` 파일을 확인한다.
+`{notes-dir}/{ticket-id}.md` 파일을 확인한다.
 
 **문서가 이미 존재하는 경우 (업데이트 모드):**
 - 기존 문서를 읽어서 현재 내용을 파악

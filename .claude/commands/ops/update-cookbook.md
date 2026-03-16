@@ -29,11 +29,18 @@ $ARGUMENTS
 - `$ARGUMENTS`가 비어있으면 → **전체 스캔 모드**
 
 ### 경로 결정
-COOKBOOK.md와 노트 파일의 베이스 경로:
-1. 레포 내 `.claude/operation-notes/COOKBOOK.md`가 존재하면 → `.claude/operation-notes/` (레포 상대경로)
-2. 없으면 → `~/.claude/operation-notes/` (홈 디렉토리 폴백, **로컬 환경 전용**)
+COOKBOOK.md와 노트 파일의 베이스 경로를 아래 우선순위로 결정한다.
 
-> CI 환경(`GITHUB_ACTIONS == "true"`)에서는 폴백 없이 레포 내 경로만 사용한다.
+| 우선순위 | 경로 | 설명 |
+|---------|------|------|
+| 1 | `{repo-root}/operation-notes/` | repo 루트에 operation-notes 디렉토리가 존재 |
+| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 |
+| 3 | `~/.claude/operation-notes/` | 글로벌 홈 디렉토리에 존재 |
+
+- 디렉토리 **존재 여부**로 판단한다 (파일이 아닌 디렉토리).
+- 셋 다 존재하지 않으면 사용자에게 `"operation-notes 디렉토리를 찾을 수 없습니다. 어디에 저장할까요?"` 로 물어본다.
+- 해석된 경로를 이하 `{notes-dir}`로 표기한다.
+- CI 환경(`GITHUB_ACTIONS == "true"`)에서는 우선순위 3(홈 디렉토리) 폴백 없이 레포 내 경로만 사용한다.
 
 ## COOKBOOK.md 구조
 
