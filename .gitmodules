@@ -58,3 +58,12 @@
 	path = flex-timetracking-config
 	url = git@github.com:flex-team/flex-timetracking-config.git
 	branch = prod
+[submodule "flex-raccoon"]
+	path = flex-raccoon
+	url = https://github.com/flex-team/flex-raccoon.git
+[submodule "flex-admin-shell"]
+	path = flex-admin-shell
+	url = https://github.com/flex-team/flex-admin-shell.git
+[submodule "flex-github-actions"]
+	path = flex-github-actions
+	url = https://github.com/flex-team/flex-github-actions.git
