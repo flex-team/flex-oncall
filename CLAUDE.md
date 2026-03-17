@@ -16,20 +16,20 @@
 
 | 서브모듈 | 브랜치 | 도메인 | 키워드 |
 |---------|--------|--------|--------|
-| `flex-timetracking-backend` | develop | 근태, 휴가, 스케줄링, 초과근무, 보상휴가, 연차촉진, 포괄임금 | 근무기록, 연차, 휴일대체, 출퇴근, 근무유형, 급여계산 |
-| `flex-pavement-backend` | develop | 알림, 푸시, 이메일 | 알림 미수신, CTA, notification |
-| `flex-digicon-backend` | develop | | |
-| `flex-core-backend` | develop | | |
-| `flex-payroll-backend` | develop | | |
-| `flex-yearend-backend` | develop | | |
-| `flex-flow-backend` | develop | | |
-| `flex-goal-backend` | develop | | |
-| `flex-fins-backend` | develop | | |
-| `flex-permission-backend` | develop | | |
+| `flex-timetracking-backend` | main | 근태, 휴가, 스케줄링, 초과근무, 보상휴가, 연차촉진, 포괄임금 | 근무기록, 연차, 휴일대체, 출퇴근, 근무유형, 급여계산 |
+| `flex-pavement-backend` | main | 알림, 푸시, 이메일 | 알림 미수신, CTA, notification |
+| `flex-digicon-backend` | main | | |
+| `flex-core-backend` | main | | |
+| `flex-payroll-backend` | main | | |
+| `flex-yearend-backend` | main | | |
+| `flex-flow-backend` | main | | |
+| `flex-goal-backend` | main | | |
+| `flex-fins-backend` | main | | |
+| `flex-permission-backend` | main | | |
 | `flex-v2-backend-commons` | main | | |
-| `flex-review-backend` | develop | | |
-| `flex-work-event-transmitter-backend` | develop | | |
-| `flex-openapi-backend` | develop | | |
+| `flex-review-backend` | main | | |
+| `flex-work-event-transmitter-backend` | main | | |
+| `flex-openapi-backend` | main | | |
 
 > 서브모듈이 추가될 때마다 이 테이블을 업데이트할 것
 

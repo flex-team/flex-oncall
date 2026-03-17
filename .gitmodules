@@ -1,43 +1,43 @@
 [submodule "flex-timetracking-backend"]
 	path = flex-timetracking-backend
 	url = git@github.com:flex-team/flex-timetracking-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-pavement-backend"]
 	path = flex-pavement-backend
 	url = git@github.com:flex-team/flex-pavement-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-digicon-backend"]
 	path = flex-digicon-backend
 	url = git@github.com:flex-team/flex-digicon-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-core-backend"]
 	path = flex-core-backend
 	url = git@github.com:flex-team/flex-core-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-payroll-backend"]
 	path = flex-payroll-backend
 	url = git@github.com:flex-team/flex-payroll-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-yearend-backend"]
 	path = flex-yearend-backend
 	url = git@github.com:flex-team/flex-yearend-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-flow-backend"]
 	path = flex-flow-backend
 	url = git@github.com:flex-team/flex-flow-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-goal-backend"]
 	path = flex-goal-backend
 	url = git@github.com:flex-team/flex-goal-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-fins-backend"]
 	path = flex-fins-backend
 	url = git@github.com:flex-team/flex-fins-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-permission-backend"]
 	path = flex-permission-backend
 	url = git@github.com:flex-team/flex-permission-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-v2-backend-commons"]
 	path = flex-v2-backend-commons
 	url = git@github.com:flex-team/flex-v2-backend-commons.git
@@ -45,12 +45,12 @@
 [submodule "flex-review-backend"]
 	path = flex-review-backend
 	url = git@github.com:flex-team/flex-review-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-work-event-transmitter-backend"]
 	path = flex-work-event-transmitter-backend
 	url = git@github.com:flex-team/flex-work-event-transmitter-backend.git
-	branch = develop
+	branch = main
 [submodule "flex-openapi-backend"]
 	path = flex-openapi-backend
 	url = git@github.com:flex-team/flex-openapi-backend.git
-	branch = develop
+	branch = main
