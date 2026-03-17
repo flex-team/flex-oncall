@@ -18,7 +18,7 @@ $ARGUMENTS
 ### Argument Resolution
 `note-issue.md`의 Argument Resolution 규칙을 그대로 따른다:
 - 티켓 ID 패턴(`[A-Z]+-\d+`)이 있으면 사용
-- 없으면 git 브랜치명 → 디렉토리명 순으로 추출 시도
+- 없으면 git 브랜치명 → 대화 세션 컨텍스트 → 디렉토리명 순으로 추출 시도
 - 못 찾으면 안내 후 즉시 종료
 
 ## Procedure
