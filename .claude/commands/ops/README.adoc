@@ -106,8 +106,11 @@ graph TD
 
 **목적**: 이슈를 실제로 조사하여 원인을 파악하고 해결안을 도출한다. 소거법 기반의 체계적 조사 프로세스를 따른다.
 
+NOTE: operation-note가 없으면 `note-issue` 를 먼저 정식 실행하여 문서를 생성한 뒤 조사를 진행한다.
+
 **주요 기능**:
 
+* operation-note 미존재 시 `note-issue` 자동 실행
 * 5 Whys 기반 근본 원인 추적
 * 가설 목록 수립 → 우선순위 순 소거
 * COOKBOOK.md 참조로 과거 경험 활용
@@ -127,8 +130,11 @@ graph TD
 
 **목적**: Linear 이슈를 기반으로 코드 조사 → 설계 승인 → 구현 → PR 생성까지 수행한다.
 
+NOTE: operation-note가 없으면 `note-issue` → `investigate-issue` 를 순차 실행한 뒤 코드 수정을 진행한다. 조사 결과가 없으면 `investigate-issue` 만 먼저 실행한다.
+
 **주요 기능**:
 
+* 선행 문서 자동 확인 — note/조사 미존재 시 자동 실행
 * Linear 이슈 조회 + 상태를 In Progress로 변경
 * gitflow 브랜치 자동 생성 (fix/, feature/, chore/)
 * 코드 조사 및 설계 옵션 제시 → 사용자 승인 후 구현
@@ -390,9 +396,14 @@ graph TD
 
 이슈가 해결되면 `/ops:close-note CI-XXXX` 로 note 동기화 + 산출물 증분 반영을 한번에 처리한다. 이슈가 여러 건 쌓였으면 `/ops:maintain-notes` 로 일괄 정리.
 
-=== fix-issue 전에 investigate-issue
+=== 어떤 커맨드로든 진입 가능
 
-복잡한 이슈는 `fix-issue` 로 바로 가기보다 `investigate-issue` 로 원인을 충분히 파악한 뒤 진행하는 것이 효율적이다. `investigate-issue` 의 해결안이 `fix-issue` 의 설계 옵션 선택에 도움이 된다.
+`investigate-issue` 와 `fix-issue` 는 선행 문서가 없으면 자동으로 생성한다. 워크플로우 순서를 반드시 지킬 필요 없이, 상황에 맞는 커맨드로 바로 진입하면 된다.
+
+* `fix-issue` 로 바로 진입 → note 없으면 `note-issue` → `investigate-issue` 자동 실행 후 코드 수정
+* `investigate-issue` 로 바로 진입 → note 없으면 `note-issue` 자동 실행 후 조사 시작
+
+단, 복잡한 이슈는 `investigate-issue` 로 원인을 충분히 파악한 뒤 `fix-issue` 를 실행하는 것이 효율적이다.
 
 === 근로기준법 관련 이슈
 
