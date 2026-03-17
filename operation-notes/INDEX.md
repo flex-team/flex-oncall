@@ -20,6 +20,7 @@
 |------|------|--------|
 | [CI-3910](./CI-3910.md) | 휴가 참조자 이메일 알림 미수신 | 알림, 이메일, 참조자, 승인자, 중복 제거, notification_deliver |
 | [CI-3914](./CI-3914.md) | 이메일 CTA 클릭 시 할 일/홈피드 이동 기준 | 알림, 이메일, CTA, approve.refer, approved.refer, locale |
+| [CI-4122](./archive/CI-4122.md) | Core 알림 title_meta_map 빈값 — 스펙 (메타베이스 쿼리 개선) | 알림, Core, title_meta_map, message_data_map, 인사정보, 메타베이스, notification_topic |
 
 ### 근태/휴가 (Time Tracking / Time Off)
 
@@ -65,6 +66,7 @@
 | [CI-3979](./archive/CI-3979.md) | 세콤 퇴근 타각 시 근무 기록 시간 조정 | 세콤, 퇴근 타각, 시간 조정, 근무 기록 |
 | [external-work-clock-event-failure-20260304](./archive/external-work-clock-event-failure-20260304.md) | 외부 타각기 위젯 이벤트 처리 실패 (53건) | 세콤, CAPS, WORK_STOP, consumer 실패, 외부 타각기 |
 | [QNA-1842](./QNA-1842.md) | 출입연동 커넥션 수 설정 | 출입연동, 커넥션 수, PostgreSQL, 세콤 |
+| [TT-16783](./TT-16783.md) | 다법인 workspace에서 SECOM 등록 시 customerKey 충돌 | 세콤, SECOM, 외부 연동, customerKey, 다법인, workspace, registerNewProvider |
 
 ### 승인 (Approval)
 
@@ -84,8 +86,15 @@
 |------|------|--------|
 | [CI-4107](./CI-4107.md) | 전자계약 양식 세로 가운데 정렬 미동작 — 플레이스홀더 뒤 `<br>` 태그 원인 | 전자계약, 정렬, 플레이스홀더, 렌더러, V1_13, DigiconRenderVersion |
 
+### 평가 (Evaluation / Performance Management)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [CI-4117](./CI-4117.md) | 평가 등급 체계 15개 초과 저장 — race condition | 평가, 등급, DRAFT, validation, race condition, DraftGradeItem |
+| [CI-4129](./CI-4129.md) | 평가 공동편집자 메뉴 노출 — FE 목록 필터링 버그 | 평가, 공동편집자, co-author, menu.options, DRAFT, title null, 목록 미노출 |
+
 ### 목표 (Goal / OKR)
 
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
-| [CI-4126](./CI-4126.md) | 26년 목표 필터 시 25년 목표 함께 노출 — `findRootObjectives` SQL root JOIN 시 cycle 미필터링 | 목표, OKR, cycle, root-objectives, 연도 필터, cross-year, hit |
+| [CI-4126](./CI-4126.md) | cross-year 트리로 이전 연도 목표 노출 — 스펙 (hit=false 회색 표시) | 목표, OKR, cycle, root-objectives, cross-year, hit, 회색 목표, 관계성 표시 |

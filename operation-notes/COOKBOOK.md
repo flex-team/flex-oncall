@@ -8,12 +8,13 @@
 ### 알림 (Notification)
 
 #### 진단 체크리스트
-문의: "알림이 안 왔어요" / "알림 클릭 시 이상한 곳으로 이동해요"
+문의: "알림이 안 왔어요" / "알림 클릭 시 이상한 곳으로 이동해요" / "메타베이스에서 알림 내용이 안 보여요"
 1. 수신자가 승인자이면서 참조자인지 확인 → 중복 제거로 참조 알림 미수신 가능 (승인 알림은 정상 수신) [CI-3910]
 2. `notification_deliver` 테이블에서 실제 발송된 `notification_type` 확인
-3. 이메일 CTA 이동 대상이 이상한 경우 → 알림 유형 확인: `approve.refer`(등록했어요) vs `approved.refer`(승인되었어요) [CI-3914]
-4. 클릭 시점에 승인이 이미 완료되었는지 확인 → 완료된 건은 할 일에 없으므로 홈피드로 리다이렉트 [CI-3914]
-5. 수신자 locale 확인 → 디폴트 KOREAN, en/ko 템플릿 CTA URL이 다를 수 있음 [CI-3914]
+3. 메타베이스에서 `title_meta_map`이 `[]`인 경우 → Core 알림은 토픽 제목이 고정("내 정보 변경" 등)이므로 정상. `notification.message_data_map`을 조회해야 실제 내용 확인 가능 [CI-4122]
+4. 이메일 CTA 이동 대상이 이상한 경우 → 알림 유형 확인: `approve.refer`(등록했어요) vs `approved.refer`(승인되었어요) [CI-3914]
+5. 클릭 시점에 승인이 이미 완료되었는지 확인 → 완료된 건은 할 일에 없으므로 홈피드로 리다이렉트 [CI-3914]
+6. 수신자 locale 확인 → 디폴트 KOREAN, en/ko 템플릿 CTA URL이 다를 수 있음 [CI-3914]
 
 #### 데이터 접근
 ```sql
@@ -30,6 +31,14 @@ FROM notification_deliver nd
   LEFT JOIN notification n ON nd.notification_id = n.id
 WHERE nd.notification_topic_id = ?;
 
+-- Core 알림 실제 내용 확인 (title_meta_map이 빈 경우)
+SELECT nd.id, n.notification_type, n.message_data_map, nt.topic_type, nt.title_meta_map,
+       FROM_UNIXTIME(nd.created_at / 1000) AS delivered_at
+FROM notification_deliver nd
+  JOIN notification n ON n.id = nd.notification_id
+  LEFT JOIN notification_topic nt ON nd.notification_topic_id = nt.id
+WHERE nd.id = ?;
+
 -- 수신자 locale 확인 (디폴트: KOREAN)
 SELECT * FROM member_setting WHERE member_id = ?;
 ```
@@ -38,6 +47,7 @@ SELECT * FROM member_setting WHERE member_id = ?;
 - **승인자=참조자 중복 알림 제거**: 동일 사용자가 승인자이면서 참조자일 때 승인 알림 1건으로 통합. 참조 알림 미수신은 정상 — **스펙** [CI-3910]
 - **이메일 CTA 이동 대상 차이**: `approve.refer` → 할 일, `approved.refer` → 홈피드. 클릭 시점에 승인 완료된 건은 홈피드로 리다이렉트 — **스펙** [CI-3914]
 - **en/ko 템플릿 CTA URL 불일치**: 3건 발견 (`approve.refer.cta-web`, `remind.work-record.missing.one.cta-web`, `workflow.task.request-view.request.cta-web`) — **별도 버그** [CI-3914]
+- **Core 알림 title_meta_map 빈값**: Core 인사정보 변경 알림(`FLEX_USER_DATA_CHANGE`)의 토픽 제목은 고정("내 정보 변경")이므로 `titleMetaMap = emptyMap()` — **스펙**. 실제 내용은 `notification.message_data_map.changedDataName`으로 확인 [CI-4122]
 
 ---
 
@@ -295,6 +305,44 @@ WHERE customer_id = ?
 
 ---
 
+### 목표 (Goal/OKR)
+
+#### 진단 체크리스트
+문의: "다른 연도 목표가 보여요" / "목표 필터가 안 먹혀요" / "회색 목표가 뭐예요?"
+1. **cross-year 트리 구조 확인** → 사용자가 이전 연도 root 목표 하위에 올해 자식 목표를 배치했는지 확인 [CI-4126]
+   - `root-objectives` API는 올해 목표의 root를 트리 탐색으로 찾으므로, root가 이전 연도면 `hit=false`로 포함
+   - FE는 `hit=false` 목표를 **회색으로 구분 표시** — 이는 의도된 스펙
+2. 회색 목표의 의미 → "직접 필터에 해당하지는 않지만, 하위에 해당하는 목표가 있어서 관계성을 보여주기 위해 표시"
+3. `root-objectives-by-aside` API는 Matrix 기반 검색이므로 cycle 필터 정상 적용 — 이 API에서는 cross-year 문제 없음
+
+#### 스펙: root-objectives API의 hit 필드
+- BE `ObjectiveSearchServiceImpl.filterRootObjective()`에서 `hitMap` 생성:
+  ```kotlin
+  // cycle 조건에 맞지 않을 수 있다. Hit 여부를 어플리케이션 레벨에서 처리
+  val cycleIds = cycles.toSet()
+  val hitMap = objectives.associate { it.identity.id.toString() to (it.cycle in cycleIds) }
+  ```
+- `findRootObjectives` SQL: 서브쿼리에서 요청 cycle에 해당하는 목표를 찾고, `root_objective_id`로 root를 JOIN하되 **root에는 cycle 필터를 적용하지 않음** (설계 의도)
+- FE: `hit=true` → 정상 표시, `hit=false` → 회색 표시
+- 스펙 문서: [Notion API 스펙](https://www.notion.so/flexnotion/API-26c0592a4a928059b6b0c1c401751d4f)
+
+#### 코드 위치
+| 파일 | 설명 |
+|------|------|
+| `flex-goal-backend` > `objective/api/.../ObjectiveSearchV3ApiController.kt:186` | `getRootObjectives` 엔드포인트 |
+| `flex-goal-backend` > `objective/service/.../ObjectiveSearchServiceImpl.kt:173` | `filterRootObjective` — hitMap 로직 |
+| `flex-goal-backend` > `objective/repository/.../ObjectiveV3JpaRepository.kt:206` | `findRootObjectives` SQL |
+
+#### 고객 안내 예시 (cross-year 트리)
+> 2025년 목표(회색)가 표시되는 이유는, 해당 목표 하위에 2026년 목표가 존재하기 때문입니다.
+> 회색 목표를 펼치시면 2026년 목표가 있는 것을 확인하실 수 있습니다.
+> 2025년 목표 하위에서 2026년 목표를 분리하시면 2025년 목표가 더 이상 표시되지 않습니다.
+
+#### 과거 사례
+- **cross-year 트리로 이전 연도 목표 노출**: 고객이 2025 root 하위에 2026 자식 배치 → `hit=false`로 회색 표시. FE·BE 모두 정상 동작 — **스펙** [CI-4126]
+
+---
+
 ### 급여 (Payroll)
 
 #### 진단 체크리스트
@@ -311,6 +359,8 @@ WHERE customer_id = ?
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-17 | CI-4122 | 알림 도메인 — Core 알림 title_meta_map 빈값 스펙, 메타베이스 쿼리 개선 사례 추가 |
+| 2026-03-17 | CI-4126 | 목표(Goal/OKR) 도메인 추가 — cross-year 트리 + hit 필드 스펙, 고객 안내 가이드 |
 | 2026-03-16 | 전체 | 전체 재구성 — QNA-1842(출입연동 커넥션 수) 외부 연동 섹션 추가 |
 | 2026-03-16 | CI-4120 | 휴직/휴가 비대칭 — 안희종 답변 반영 (유즈케이스 기반 설계, 잔여 미차감 처리) |
 | 2026-03-16 | 전체 | 전체 재구성 — 신규 도메인 2개(계정/구성원, 데이터 추출) 추가, CI-3979/CI-4048/CI-4118/CI-4119/CI-4120/CI-4121/CI-4124 반영 |
