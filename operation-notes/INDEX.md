@@ -35,6 +35,7 @@
 | [CI-4048](./CI-4048.md) | 초단시간 근로자 연장근무 9시간 발생 | 초단시간, 연장근무, agreedWorkingMinutes, requiredWorkingMinutes |
 | [CI-4120](./archive/CI-4120.md) | 휴직/휴가 검증 비대칭 — 휴직→휴가 차단되나 휴가→휴직은 허용 (스펙) | 휴직, 휴가, 비대칭 검증, LeaveOfAbsence, TimeOff, 서비스 경계, Prevention forward |
 | [CI-4121](./CI-4121.md) | sk 케미칼 근무 기록 다운로드 실패 (타임아웃 의심) | 근무 기록, 다운로드, 엑셀, 타임아웃, export, sk 케미칼 |
+| [QNA-1922](./QNA-1922.md) | 선택적 근무 실시간 휴게 기록 시 추천 휴게 미입력 — 스펙 | 선택적 근무, 휴게 시간, 추천 휴게, 실시간 기록, 근무 확정 |
 
 ### 스케줄링 (Scheduling)
 
