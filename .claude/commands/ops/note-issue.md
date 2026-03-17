@@ -444,8 +444,9 @@ Step 2에서 찾은 연관 이슈의 문서에도 현재 이슈로의 링크를 
 - 조사가 필요하면 → `ops:investigate-issue {ticket-id}` 안내
 - 코드 수정이 필요하면 → `ops:fix-issue {ticket-id}` 안내
 - 쿡북 업데이트가 필요해 보이면 → `ops:update-cookbook {ticket-id}` 안내
-  - 새로운 진단 패턴, DB 쿼리 템플릿, 코드 진입점이 발견된 경우
+  - 새로운 진단 패턴, SQL 쿼리 템플릿이 발견된 경우
   - 이슈가 해결 완료되어 "다음에 같은 문의가 오면" 섹션이 작성된 경우
+- 완료된 노트의 일괄 정리가 필요하면 → `ops:maintain-notes` 안내
 
 ## 근로기준법 참고 가이드
 
