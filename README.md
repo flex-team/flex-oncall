@@ -30,15 +30,21 @@ git clone --recurse-submodules <repo-url>
 # 이미 클론한 상태에서 서브모듈 초기화
 git submodule update --init --recursive
 
-# 서브모듈을 최신으로 업데이트
-git submodule update --remote
+# 서브모듈을 최신으로 업데이트 (각 서브모듈의 추적 브랜치에서 pull)
+git submodule update --remote --merge
 ```
+
+> **팁**: 자주 쓴다면 alias를 등록하면 편하다.
+> ```bash
+> git config alias.sup 'submodule update --remote --merge'
+> # 이후 git sup 으로 실행
+> ```
 
 ## 서브모듈 추가하기
 
 ```bash
 git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <directory-name>
-# 예: git submodule add -b develop git@github.com:flex-team/flex-timetracking-backend.git flex-timetracking-backend
+# 예: git submodule add -b main git@github.com:flex-team/flex-timetracking-backend.git flex-timetracking-backend
 ```
 
 서브모듈을 추가한 후 `CLAUDE.md`의 서브모듈 맵 테이블도 함께 업데이트할 것.
