@@ -30,6 +30,7 @@
 | `flex-review-backend` | main | | |
 | `flex-work-event-transmitter-backend` | main | | |
 | `flex-openapi-backend` | main | | |
+| `flex-timetracking-config` | prod | 근태 설정, 환경변수, 피처플래그 | config, 설정값, feature flag |
 
 > 서브모듈이 추가될 때마다 이 테이블을 업데이트할 것
 

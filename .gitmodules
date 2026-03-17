@@ -54,3 +54,7 @@
 	path = flex-openapi-backend
 	url = git@github.com:flex-team/flex-openapi-backend.git
 	branch = main
+[submodule "flex-timetracking-config"]
+	path = flex-timetracking-config
+	url = git@github.com:flex-team/flex-timetracking-config.git
+	branch = prod
