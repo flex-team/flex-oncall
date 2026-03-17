@@ -441,12 +441,10 @@ Step 2에서 찾은 연관 이슈의 문서에도 현재 이슈로의 링크를 
 - 연관 이슈가 있으면 목록 보고
 - 업데이트 모드였으면 변경된 내용 요약
 - Gherkin 시나리오를 작성했으면 시나리오 내용을 함께 보고하고, 시나리오 테스트 추가를 안내
-- **인덱스 업데이트**: `ops:update-index {ticket-id}` 를 실행하여 INDEX.md에 이 노트를 등록한다
+- **산출물 갱신**: `ops:update-artifacts {ticket-id}` 를 실행하여 INDEX.md + COOKBOOK.md 를 증분 업데이트한다
 - 조사가 필요하면 → `ops:investigate-issue {ticket-id}` 안내
 - 코드 수정이 필요하면 → `ops:fix-issue {ticket-id}` 안내
-- 쿡북 업데이트가 필요해 보이면 → `ops:update-cookbook {ticket-id}` 안내
-  - 새로운 진단 패턴, SQL 쿼리 템플릿이 발견된 경우
-  - 이슈가 해결 완료되어 "다음에 같은 문의가 오면" 섹션이 작성된 경우
+- 완료된 이슈 데이터화 → `ops:close-note {ticket-id}` 안내
 - 완료된 노트의 일괄 정리가 필요하면 → `ops:maintain-notes` 안내
 
 ## 근로기준법 참고 가이드

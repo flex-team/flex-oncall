@@ -17,7 +17,7 @@ toc::[]
 ....
 graph TD
     subgraph "Layer 2: Orchestrators"
-        CI["📦 capture-issue<br/><i>개별 이슈 원스톱</i>"]
+        CN["📦 close-note<br/><i>노트 완료 처리</i>"]
         II["🔍 investigate-issue<br/><i>심층 조사</i>"]
         FI["🔧 fix-issue<br/><i>코드 수정 → PR</i>"]
         MN["🗂 maintain-notes<br/><i>일괄 유지보수 + 아카이브</i>"]
@@ -25,19 +25,18 @@ graph TD
 
     subgraph "Layer 1: Primitives"
         NI["📝 note-issue<br/><i>Linear → note</i>"]
-        UC["📚 update-cookbook<br/><i>note → COOKBOOK.md</i>"]
-        UI["📇 update-index<br/><i>note → INDEX.md</i>"]
+        UA["📚 update-artifacts<br/><i>COOKBOOK + INDEX 증분</i>"]
     end
 
     subgraph "Specialized"
         SS["🧪 sync-scenario-agents-md<br/><i>notes → AGENTS.md</i>"]
     end
 
-    CI -->|"Phase 1"| NI
-    CI -->|"Phase 2"| UC
+    CN -->|"Phase 1"| NI
+    CN -->|"Phase 2"| UA
     II -->|"Step 1-3"| NI
-    NI -->|"Step 6"| UI
-    MN -->|"Step 4 per-ticket"| UC
+    NI -->|"Step 6"| UA
+    MN -->|"Step 4 per-ticket"| UA
 ....
 
 === 커맨드 목록
@@ -52,18 +51,13 @@ graph TD
 | `<ticket-id>`
 
 | Primitive
-| `/ops:update-cookbook`
-| 이슈 기록에서 반복 가능한 지식을 COOKBOOK.md로 추출
-| `[ticket-id]` (생략 시 전체 스캔)
-
-| Primitive
-| `/ops:update-index`
-| operation-notes INDEX.md에 새 문서 추가 또는 전체 재구성
-| `[ticket-id]` (생략 시 전체 재구성)
+| `/ops:update-artifacts`
+| COOKBOOK.md + INDEX.md 증분 업데이트
+| `<ticket-id \| --gh-issue {number}>`
 
 | Orchestrator
-| `/ops:capture-issue`
-| note-issue + update-cookbook 증분을 한번에 처리
+| `/ops:close-note`
+| 완료된 이슈 note 동기화 + 산출물 갱신
 | `<ticket-id>`
 
 | Orchestrator
@@ -79,7 +73,7 @@ graph TD
 | Orchestrator
 | `/ops:maintain-notes`
 | 활성 노트 일괄 유지보수 — 상태 갱신 → 쿡북 반영 → 아카이브
-| 없음
+| `[--rebuild]`
 
 | Specialized
 | `/ops:sync-scenario-agents-md`
@@ -149,86 +143,70 @@ graph TD
 /ops:fix-issue CI-3861
 ----
 
-=== capture-issue
+=== close-note
 
-**목적**: `note-issue` + `update-cookbook` 증분을 티켓 ID 하나로 한번에 처리한다. 개별 이슈 원스톱 처리용.
+**목적**: 완료된 이슈의 operation-note 를 동기화하고 파생 산출물(COOKBOOK + INDEX)을 갱신한다. 이슈 완료 후 데이터화 단계에서 사용한다.
 
 **실행 흐름**:
 
 * Phase 1: `note-issue` Step 1~6 수행 (operation-note 생성/업데이트)
-* Phase 2: 쿡북 반영 대상 자동 판단 → `update-cookbook` 증분 모드 수행
+* Phase 2: `update-artifacts` 로 COOKBOOK.md + INDEX.md 증분 반영
 * Phase 3: 통합 결과 보고
 
-**산출물**: `{notes-dir}/{ticket-id}.md` + `COOKBOOK.md` 업데이트 (해당 시)
+**산출물**: `{notes-dir}/{ticket-id}.md` + `COOKBOOK.md` + `INDEX.md` 업데이트 (해당 시)
 
 **사용 예시**:
 [source]
 ----
-/ops:capture-issue CI-3861
+/ops:close-note CI-3861
 ----
 
-=== update-cookbook
+=== update-artifacts
 
-**목적**: operation-notes에 쌓인 이슈 기록에서 반복 가능한 지식(진단 체크리스트, SQL 쿼리 템플릿, 과거 사례)을 추출하여 `COOKBOOK.md` 에 정리한다.
-
-**두 가지 모드**:
-
-* **전체 스캔 모드**: 인자 없이 호출. 모든 노트를 읽고 COOKBOOK.md 전체 재구성.
-* **증분 모드**: 이슈 ID 전달. 해당 노트만 읽고 COOKBOOK.md에 증분 반영.
-
-**산출물**: `{notes-dir}/COOKBOOK.md`
-
-**사용 예시**:
-[source]
-----
-# 전체 재구성
-/ops:update-cookbook
-
-# 특정 이슈만 반영
-/ops:update-cookbook CI-3914
-----
-
-=== update-index
-
-**목적**: operation-notes의 검색 인덱스(`INDEX.md`)를 갱신한다. 키워드 → 문서 매핑으로 전체 노트를 읽지 않고 관련 문서를 빠르게 찾을 수 있게 한다.
+**목적**: operation-note에서 COOKBOOK.md + INDEX.md 를 증분 업데이트한다. 반복 가능한 지식(진단 체크리스트, SQL 쿼리 템플릿, 과거 사례)을 COOKBOOK.md 로 추출하고, 키워드 → 문서 매핑을 INDEX.md 에 반영한다.
 
 **주요 기능**:
 
-* 증분 모드: 대상 노트에서 요약·도메인·키워드 추출 → INDEX.md 행 추가/갱신
-* 전체 재구성: 모든 노트 스캔 → 도메인별 그룹핑 → INDEX.md 재작성
+* 대상 노트에서 쿡북 반영 대상 자동 판단 → COOKBOOK.md 증분 반영
+* 대상 노트에서 요약·도메인·키워드 추출 → INDEX.md 행 추가/갱신
 
 NOTE: `note-issue` Step 6에서 자동 호출되므로 직접 호출할 일은 드물다.
 
-**산출물**: `{notes-dir}/INDEX.md`
+**산출물**: `{notes-dir}/COOKBOOK.md` + `{notes-dir}/INDEX.md`
 
 **사용 예시**:
 [source]
 ----
-# 특정 노트만 인덱싱
-/ops:update-index CI-3914
+# 특정 이슈만 반영
+/ops:update-artifacts CI-3914
 
-# 전체 재구성
-/ops:update-index
+# GitHub 이슈 기반
+/ops:update-artifacts --gh-issue 42
 ----
 
 === maintain-notes
 
-**목적**: 아카이브 안 된 활성 노트를 일괄 유지보수한다. Linear 이슈 상태 확인 → 노트 갱신 → 쿡북 반영 → 완료 노트 아카이브까지 한번에 처리.
+**목적**: 아카이브 안 된 활성 노트를 일괄 유지보수한다. Linear 이슈 상태 확인 → 노트 갱신 → 쿡북 반영 → 완료 노트 아카이브까지 한번에 처리. `--rebuild` 플래그를 사용하면 COOKBOOK.md + INDEX.md 전체 재구성도 수행한다.
 
 **주요 기능**:
 
 * 활성 노트 전체의 Linear 이슈 상태를 병렬 조회
 * 상태 변경된 노트의 상태 표기 자동 업데이트
-* 완료된 이슈 중 쿡북 반영 대상을 `update-cookbook` 증분 모드로 처리
+* 완료된 이슈 중 쿡북 반영 대상을 `update-artifacts` 증분 모드로 처리
 * 아카이브 조건(이슈 완료 + 쿡북 반영) 충족 시 `archive/` 로 이동
 * 관련 링크(COOKBOOK.md, INDEX.md, 연관 노트) 일괄 업데이트
+* `--rebuild`: COOKBOOK.md + INDEX.md 전체 재구성 (모든 노트 스캔)
 
 **산출물**: 노트 갱신 + COOKBOOK.md 업데이트 + archive 이동 + 최종 리포트
 
 **사용 예시**:
 [source]
 ----
+# 증분 유지보수
 /ops:maintain-notes
+
+# COOKBOOK + INDEX 전체 재구성 포함
+/ops:maintain-notes --rebuild
 ----
 
 === sync-scenario-agents-md
@@ -264,7 +242,7 @@ graph LR
     A["이슈 접수"] --> B["note-issue"]
     B --> C["investigate-issue"]
     C --> D["fix-issue"]
-    D --> E["capture-issue"]
+    D --> E["close-note"]
 ....
 
 [cols="1,4,2"]
@@ -284,11 +262,11 @@ graph LR
 | `/ops:fix-issue CI-XXXX`
 
 | 4. 데이터화
-| 완료된 이슈를 note + 쿡북 증분으로 데이터화
-| `/ops:capture-issue CI-XXXX`
+| 완료된 이슈를 note + 산출물 증분으로 데이터화
+| `/ops:close-note CI-XXXX`
 |===
 
-NOTE: `capture-issue` 는 **완료된 이슈**를 대상으로 note 동기화 + 쿡북 증분 반영을 한번에 처리한다. 이슈 접수 시점에는 쿡북에 반영할 내용이 없으므로 `note-issue` 를 사용한다.
+NOTE: `close-note` 는 **완료된 이슈** 를 대상으로 note 동기화 + COOKBOOK/INDEX 증분 반영을 한번에 처리한다. 이슈 접수 시점에는 쿡북에 반영할 내용이 없으므로 `note-issue` 를 사용한다.
 
 === 조사만 필요한 경우 (코드 수정 불필요)
 
@@ -299,11 +277,11 @@ NOTE: `capture-issue` 는 **완료된 이슈**를 대상으로 note 동기화 + 
 graph LR
     A["note-issue"] --> B["investigate-issue"]
     B --> C["해결"]
-    C --> D["capture-issue"]
+    C --> D["close-note"]
 ....
 
 * `investigate-issue` 로 원인 파악 후, 코드 수정이 아닌 다른 방법으로 해결
-* 해결 후 `capture-issue` 로 완료 상태 동기화 + 쿡북 반영
+* 해결 후 `close-note` 로 완료 상태 동기화 + 산출물 반영
 * 스펙 확인 건이면 Gherkin 시나리오도 자동 생성됨
 
 === 간단한 이슈 (원인이 명확한 경우)
@@ -313,11 +291,11 @@ graph LR
 [mermaid]
 ....
 graph LR
-    A["fix-issue"] --> B["capture-issue"]
+    A["fix-issue"] --> B["close-note"]
 ....
 
 * `fix-issue` 가 내부적으로 Linear 이슈를 조회하고 코드를 조사하므로, 별도 note/investigate 없이 바로 진행 가능
-* 완료 후 `capture-issue` 로 note + 쿡북 반영
+* 완료 후 `close-note` 로 note + 산출물 반영
 
 === 정기 유지보수
 
@@ -325,33 +303,32 @@ graph LR
 
 [source]
 ----
-/ops:maintain-notes          # 활성 노트 상태 갱신 + 쿡북 반영 + 아카이브
-/ops:update-cookbook          # COOKBOOK.md 전체 재구성 (필요 시)
-/ops:sync-scenario-agents-md # AGENTS.md 갭 보완
+/ops:maintain-notes            # 활성 노트 상태 갱신 + 쿡북 반영 + 아카이브
+/ops:maintain-notes --rebuild  # 위 + COOKBOOK.md/INDEX.md 전체 재구성
+/ops:sync-scenario-agents-md   # AGENTS.md 갭 보완
 ----
 
-NOTE: `maintain-notes` 는 완료된 이슈의 쿡북 반영 + 아카이브까지 자동 처리한다. 쿡북 전체 재구성이 필요한 경우에만 `update-cookbook` 을 인자 없이 실행.
+NOTE: `maintain-notes` 는 완료된 이슈의 산출물 반영 + 아카이브까지 자동 처리한다. COOKBOOK/INDEX 전체 재구성이 필요한 경우 `--rebuild` 플래그를 사용한다.
 
 == 커맨드 간 관계
 
 [mermaid]
 ....
 graph TD
-    LI["🎫 Linear 이슈"] --> CI["📦 capture-issue"]
+    LI["🎫 Linear 이슈"] --> CN["📦 close-note"]
     LI --> NI
 
     subgraph "Primitives"
-        NI["📝 note-issue"] -->|"Step 6"| UI["📇 update-index"]
-        UC["📚 update-cookbook"]
+        NI["📝 note-issue"] -->|"Step 6"| UA["📚 update-artifacts"]
     end
 
     subgraph "Orchestrators"
-        CI -->|"Phase 1"| NI
-        CI -->|"Phase 2"| UC
+        CN -->|"Phase 1"| NI
+        CN -->|"Phase 2"| UA
         II["🔍 investigate-issue"] -->|"Step 1-3"| NI
         II --> FI["🔧 fix-issue"]
         II --> MH["🛠 수동 해결"]
-        MN["🗂 maintain-notes"] -->|"per-ticket"| UC
+        MN["🗂 maintain-notes"] -->|"per-ticket"| UA
     end
 
     FI --> MN
@@ -369,10 +346,9 @@ graph TD
 | **note-issue** | `{notes-dir}/{ticket-id}.md` 생성 + INDEX.md 갱신
 | **investigate-issue** | 같은 파일에 조사 결과 추가 (note-issue 섹션 보존)
 | **fix-issue** | `/tmp/` 조사 문서 + Draft PR
-| **capture-issue** | note + COOKBOOK.md 증분 (note-issue + update-cookbook)
-| **update-cookbook** | `{notes-dir}/COOKBOOK.md` 업데이트
-| **update-index** | `{notes-dir}/INDEX.md` 업데이트
-| **maintain-notes** | 노트 상태 갱신 + COOKBOOK.md + archive 이동
+| **close-note** | note + COOKBOOK.md + INDEX.md 증분 (note-issue + update-artifacts)
+| **update-artifacts** | `{notes-dir}/COOKBOOK.md` + `{notes-dir}/INDEX.md` 업데이트
+| **maintain-notes** | 노트 상태 갱신 + COOKBOOK.md + INDEX.md + archive 이동
 | **sync-scenario-agents-md** | `scenario-test/AGENTS.md` 업데이트 PR
 |===
 
@@ -412,7 +388,7 @@ graph TD
 
 === 이슈 완료 후 데이터화
 
-이슈가 해결되면 `/ops:capture-issue CI-XXXX` 로 note 동기화 + 쿡북 증분 반영을 한번에 처리한다. 이슈가 여러 건 쌓였으면 `/ops:maintain-notes` 로 일괄 정리.
+이슈가 해결되면 `/ops:close-note CI-XXXX` 로 note 동기화 + 산출물 증분 반영을 한번에 처리한다. 이슈가 여러 건 쌓였으면 `/ops:maintain-notes` 로 일괄 정리.
 
 === fix-issue 전에 investigate-issue
 
