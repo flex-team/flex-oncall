@@ -103,6 +103,26 @@ jobs:
           additional-args: |
             --allowed-tools "Bash(gh issue view *),Bash(gh issue comment *),Agent,Read,Glob,Grep,Skill,mcp__linear__get_issue,mcp__linear__list_comments,mcp__linear__list_issues,mcp__slack__slack_search_public,mcp__slack__slack_search_public_and_private,mcp__slack__slack_read_thread,mcp__slack__slack_read_channel"
 
+      # TODO: 근본 수정 필요 — flex-claude-headless 액션에서 is_error:true 시 non-zero exit 처리
+      # see: flex-team/flex-github-actions/.github/actions/flex-claude-headless/action.yml
+      # Claude CLI가 API 500 에러로 실패해도 exit 0을 반환하여 Actions가 success로 판정하는 버그가 있음
+      - name: Verify Claude execution (initial)
+        if: steps.context.outputs.mode == 'initial'
+        shell: bash
+        run: |
+          if [ -f /tmp/claude-stream.jsonl ]; then
+            LAST_RESULT=$(tail -1 /tmp/claude-stream.jsonl)
+            IS_ERROR=$(echo "$LAST_RESULT" | jq -r '.is_error // false')
+            if [ "$IS_ERROR" = "true" ]; then
+              ERROR_MSG=$(echo "$LAST_RESULT" | jq -r '.result // "Unknown error"')
+              echo "::error::Claude 실행 실패: ${ERROR_MSG}"
+              exit 1
+            fi
+          else
+            echo "::error::Claude 출력 파일이 없습니다 (/tmp/claude-stream.jsonl)"
+            exit 1
+          fi
+
       - name: Run Claude Ops Investigate (continue)
         if: steps.context.outputs.mode == 'continue'
         uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
@@ -132,6 +152,24 @@ jobs:
 
           additional-args: |
             --allowed-tools "Bash(gh issue view *),Bash(gh issue comment *),Agent,Read,Glob,Grep,Skill,mcp__linear__get_issue,mcp__linear__list_comments,mcp__linear__list_issues,mcp__slack__slack_search_public,mcp__slack__slack_search_public_and_private,mcp__slack__slack_read_thread,mcp__slack__slack_read_channel"
+
+      # TODO: 근본 수정 필요 — flex-claude-headless 액션에서 is_error:true 시 non-zero exit 처리
+      - name: Verify Claude execution (continue)
+        if: steps.context.outputs.mode == 'continue'
+        shell: bash
+        run: |
+          if [ -f /tmp/claude-stream.jsonl ]; then
+            LAST_RESULT=$(tail -1 /tmp/claude-stream.jsonl)
+            IS_ERROR=$(echo "$LAST_RESULT" | jq -r '.is_error // false')
+            if [ "$IS_ERROR" = "true" ]; then
+              ERROR_MSG=$(echo "$LAST_RESULT" | jq -r '.result // "Unknown error"')
+              echo "::error::Claude 실행 실패: ${ERROR_MSG}"
+              exit 1
+            fi
+          else
+            echo "::error::Claude 출력 파일이 없습니다 (/tmp/claude-stream.jsonl)"
+            exit 1
+          fi
 
   resolve:
     # /resolve 또는 /update-cookbook 코멘트: COOKBOOK 업데이트 + PR 생성
