@@ -36,13 +36,26 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 
 ## Procedure
 
-### Phase 1: 이슈 파악 (🤖 Linear 에이전트)
-**subagent에 위임하여** MCP CLI로 Linear 이슈 정보를 수집한다. **반드시 `mcp-cli info`로 스키마를 먼저 확인한 후 호출한다.**
+### Phase 0: 선행 문서 확인
 
-1. `mcp-cli call linear/get_issue`로 이슈 조회 (includeRelations: true)
-2. `mcp-cli call linear/list_comments`로 코멘트 조회 (추가 컨텍스트 확인)
+코드 수정 전에 이슈 맥락이 정리된 문서가 필요하다. 문서 상태에 따라 선행 커맨드를 실행한다.
+
+1. `{notes-dir}/{ticket-id}.md` 또는 `{notes-dir}/archive/{ticket-id}.md` 존재 여부 확인
+2. **문서 없음** → `note-issue.md` 를 읽고 Step 1~5를 실행하여 operation-note 생성, 이어서 `investigate-issue.md` 를 읽고 조사 수행
+   ```
+   Read: .claude/commands/ops/note-issue.md
+   Read: .claude/commands/ops/investigate-issue.md
+   ```
+3. **문서 있음, 조사 결과 없음** (원인 분석/해결안 섹션 미존재) → `investigate-issue.md` 를 읽고 조사 수행
+4. **문서 있음, 조사 결과 있음** → Phase 1로 바로 진행
+
+### Phase 1: 이슈 파악 (🤖 Linear 에이전트)
+**subagent에 위임하여** MCP CLI로 Linear 이슈 정보를 수집한다. **반드시 `mcp-cli info` 로 스키마를 먼저 확인한 후 호출한다.**
+
+1. `mcp-cli call linear/get_issue` 로 이슈 조회 (includeRelations: true)
+2. `mcp-cli call linear/list_comments` 로 코멘트 조회 (추가 컨텍스트 확인)
 3. 수집 정보: 제목, 설명, 우선순위, 라벨, 코멘트
-4. `mcp-cli call linear/update_issue`로 이슈 상태를 **In Progress**로 변경
+4. `mcp-cli call linear/update_issue` 로 이슈 상태를 **In Progress**로 변경
 
 ### Phase 2: 브랜치 생성
 `git:git-branch-and-commit` 스킬을 사용하여 브랜치를 생성한다.
