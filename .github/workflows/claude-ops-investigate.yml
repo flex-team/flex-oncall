@@ -55,7 +55,7 @@ jobs:
         if: steps.context.outputs.mode == 'initial'
         uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
         with:
           email: "flex-bot+oncall@flex.team"
           model: bedrock_claude_sonnet_4_6
@@ -82,7 +82,7 @@ jobs:
         if: steps.context.outputs.mode == 'continue'
         uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
         with:
           email: "flex-bot+oncall@flex.team"
           model: bedrock_claude_sonnet_4_6
@@ -142,7 +142,7 @@ jobs:
       - name: Run Claude Update Cookbook
         uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
         with:
           email: "flex-bot+oncall@flex.team"
           model: bedrock_claude_sonnet_4_6
