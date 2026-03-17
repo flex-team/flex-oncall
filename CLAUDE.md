@@ -70,9 +70,11 @@
 
 | 스킬 | 용도 |
 |------|------|
+| `ops:capture-issue` | note-issue + update-cookbook 증분을 한번에 처리 (개별 이슈 원스톱) |
 | `ops:investigate-issue` | Linear 이슈 조회/조사 → 원인 파악 → operation-note 기록 |
 | `ops:note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
 | `ops:fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
+| `ops:maintain-notes` | 활성 노트 일괄 유지보수 — 상태 갱신 → 쿡북 반영 → 아카이브 |
 | `db:db-query` | Aurora MySQL DB 쿼리 (dev/qa/prod) |
 | `opensearch:os-query-log` | 애플리케이션 로그 검색 (Kibana) |
 | `opensearch:os-query-service` | TT 서비스 문서 조회 (근무스케줄, 휴가사용 등) |
