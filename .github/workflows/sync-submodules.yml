@@ -1,0 +1,38 @@
+name: Sync Submodules
+
+on:
+  schedule:
+    # 매일 오전 8시 KST (UTC 23시, 전날)
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
+          fetch-depth: 1
+          submodules: true
+
+      - name: Update all submodules to latest
+        run: git submodule update --remote
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "flex-dev-bot"
+          git config user.email "flex-bot@flex.team"
+
+          if git diff --quiet; then
+            echo "No submodule changes detected. Skipping."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "🔄 서브모듈 최신 상태로 갱신"
+          git push
