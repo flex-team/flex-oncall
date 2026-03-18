@@ -35,8 +35,10 @@
 | [CI-3976](./archive/CI-3976.md) | 퇴사자 휴가 사용일자 데이터 추출 | 퇴사자, 휴가, 엑셀, Operation API, departmentIds, includeResignatedUsers |
 | [CI-4048](./CI-4048.md) | 초단시간 근로자 연장근무 9시간 발생 | 초단시간, 연장근무, agreedWorkingMinutes, requiredWorkingMinutes |
 | [CI-4120](./archive/CI-4120.md) | 휴직/휴가 검증 비대칭 — 휴직→휴가 차단되나 휴가→휴직은 허용 (스펙) | 휴직, 휴가, 비대칭 검증, LeaveOfAbsence, TimeOff, 서비스 경계, Prevention forward |
-| [CI-4121](./CI-4121.md) | sk 케미칼 근무 기록 다운로드 실패 (타임아웃 의심) | 근무 기록, 다운로드, 엑셀, 타임아웃, export, sk 케미칼 |
-| [QNA-1922](./QNA-1922.md) | 선택적 근무 실시간 휴게 기록 시 추천 휴게 미입력 — 스펙 | 선택적 근무, 휴게 시간, 추천 휴게, 실시간 기록, 근무 확정 |
+| [CI-4121](./archive/CI-4121.md) | sk 케미칼 근무 기록 다운로드 실패 (타임아웃 의심) | 근무 기록, 다운로드, 엑셀, 타임아웃, export, sk 케미칼 |
+| [QNA-1922](./archive/QNA-1922.md) | 선택적 근무 실시간 휴게 기록 시 추천 휴게 미입력 — 스펙 | 선택적 근무, 휴게 시간, 추천 휴게, 실시간 기록, 근무 확정 |
+| [QNA-1920](./archive/QNA-1920.md) | 연차 사용 내역 사라짐 — 부여 시작일 이전 미표시 (스펙) | 연차, 사용 내역, 부여 시작일, 연차상세, 엑셀, 그레이스유 |
+| [QNA-1928](./archive/QNA-1928.md) | 근태기록 리포트 컬럼 문의 — 출근시각 vs 시작시간, 당일 승인상태 | 리포트, 출근시각, 시작시간, 승인상태, actorType, 근무수정권한, 엑셀 |
 
 ### 스케줄링 (Scheduling)
 
@@ -51,13 +53,13 @@
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [CI-4103](./archive/CI-4103.md) | 교대근무 관리 화면 조회 권한 일부 누락 | 교대근무, 조회 권한, 근무 권한, 휴가 권한, 교집합, access-check |
-| [CI-4119](./CI-4119.md) | 교대근무 휴무일+스케줄 근무 시 퇴근 자동 조정 실패 | 교대근무, 휴무일, 스케줄, 퇴근 자동 조정, baseAgreedDayWorkingMinutes, 연장근무, 세콤 |
+| [CI-4119](./archive/CI-4119.md) | 교대근무 휴무일+스케줄 근무 시 퇴근 자동 조정 실패 | 교대근무, 휴무일, 스케줄, 퇴근 자동 조정, baseAgreedDayWorkingMinutes, 연장근무, 세콤 |
 
 ### 계정/구성원 (Account / Member)
 
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
-| [CI-4118](./CI-4118.md) | 서울히어로즈 관리자 계정 이메일 변경 요청 (퇴사자 계정) | 관리자, 이메일 변경, 퇴사자, 스폰서십, 온보딩, Operation API, UserEmailChange |
+| [CI-4118](./archive/CI-4118.md) | 서울히어로즈 관리자 계정 이메일 변경 요청 (퇴사자 계정) | 관리자, 이메일 변경, 퇴사자, 스폰서십, 온보딩, Operation API, UserEmailChange |
 
 ### 외부 연동 (Integration / SECOM)
 
@@ -67,7 +69,7 @@
 | [CI-3861](./archive/CI-3861.md) | 세콤 수동 전송 미반영 | 세콤, 수동 전송, 역순 수신, 위젯 draft |
 | [CI-3979](./archive/CI-3979.md) | 세콤 퇴근 타각 시 근무 기록 시간 조정 | 세콤, 퇴근 타각, 시간 조정, 근무 기록 |
 | [external-work-clock-event-failure-20260304](./archive/external-work-clock-event-failure-20260304.md) | 외부 타각기 위젯 이벤트 처리 실패 (53건) | 세콤, CAPS, WORK_STOP, consumer 실패, 외부 타각기 |
-| [QNA-1842](./QNA-1842.md) | 출입연동 커넥션 수 설정 | 출입연동, 커넥션 수, PostgreSQL, 세콤 |
+| [QNA-1842](./archive/QNA-1842.md) | 출입연동 커넥션 수 설정 | 출입연동, 커넥션 수, PostgreSQL, 세콤 |
 | [TT-16783](./archive/TT-16783.md) | 다법인 workspace에서 SECOM 등록 시 customerKey 충돌 | 세콤, SECOM, 외부 연동, customerKey, 다법인, workspace, registerNewProvider |
 
 ### 승인 (Approval)
@@ -102,9 +104,26 @@
 |------|------|--------|
 | [CI-4117](./CI-4117.md) | 평가 등급 체계 15개 초과 저장 — race condition | 평가, 등급, DRAFT, validation, race condition, DraftGradeItem |
 | [CI-4129](./archive/CI-4129.md) | 평가 공동편집자 메뉴 노출 — FE 목록 필터링 버그 | 평가, 공동편집자, co-author, menu.options, DRAFT, title null, 목록 미노출 |
+| [CI-4135](./CI-4135.md) | 리뷰 테스트 중 알 수 없는 오류 지속 발생 | 평가, 리뷰, 세팅, 알 수 없는 오류, 더파운더즈, flex-review-backend |
+| [QNA-1924](./archive/QNA-1924.md) | 목표 난이도에 따른 평가 결과 산정 — 평가 세분화로 가능 | 평가, 난이도, 가중치, 평가 세분화, 점수 체계, 성과 평가 |
 
 ### 목표 (Goal / OKR)
 
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [CI-4126](./CI-4126.md) | cross-year 트리로 이전 연도 목표 노출 — 스펙 (hit=false 회색 표시) | 목표, OKR, cycle, root-objectives, cross-year, hit, 회색 목표, 관계성 표시 |
+| [CI-4125](./archive/CI-4125.md) | 목표 화면 조직도 순서 미반영 — 버그 (displayOrder 미사용) | 목표, 조직도, 순서, displayOrder, 조직설정, 정렬 |
+| [CI-4133](./archive/CI-4133.md) | 뉴목표 사용 중 동작 멈춤 — FE 이슈 에스컬레이션 | 목표, 멈춤, FE, 성과관리, 포트로직스 |
+
+### 급여 (Payroll)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [QNA-1933](./archive/QNA-1933.md) | 급여정산 해지 후 명세서 공개/알림 동작 — 스펙 확인 중 | 급여정산, 구독 해지, 명세서, 공개, 알림, payroll, pavement, 구독 여부 |
+| [QNA-1921](./archive/QNA-1921.md) | 근로소득 지급명세서 누락분 팩스 제출 방법 | 지급명세서, 근로소득, 팩스, 누락, 중도 퇴사자, 원천징수영수증, 세무서 |
+
+### 비용관리 (Expense Management)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [QNA-1926](./QNA-1926.md) | 비용관리 도입 검토 기능 문의 6건 (카드 등록 버그 포함) | 비용관리, 카드 등록, 정책 위반, 외화, 증빙, PG, 커스텀 필드 |
