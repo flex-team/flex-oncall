@@ -20,9 +20,9 @@ jobs:
           fetch-depth: 1
           submodules: true
 
-      - name: Update all submodules to latest
+      - name: Fetch tracking branches and update
         run: |
-          git submodule foreach 'git fetch origin'
+          git submodule foreach 'git fetch origin +refs/heads/*:refs/remotes/origin/*'
           git submodule update --remote
 
       - name: Commit and push if changed
