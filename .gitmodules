@@ -70,3 +70,7 @@
 	path = flex-github-actions
 	url = git@github.com:flex-team/flex-github-actions.git
 	branch = main
+[submodule "flex-timetracking-frontend"]
+	path = flex-timetracking-frontend
+	url = git@github.com:flex-team/flex-frontend-apps-time-tracking.git
+	branch = main

@@ -34,6 +34,7 @@
 | `flex-raccoon` | main | Operation API, 운영 도구 | raccoon, operation-api, 운영 API |
 | `flex-admin-shell` | main | 관리자 쉘, 운영 콘솔 | admin-shell, 운영 콘솔, 설정 변경 |
 | `flex-github-actions` | main | GitHub Actions, CI/CD | github-actions, workflow, CI, CD |
+| `flex-timetracking-frontend` | main | 근태 프론트엔드 | 근태 UI, 프론트엔드, React |
 
 > 서브모듈이 추가될 때마다 이 테이블을 업데이트할 것
 
