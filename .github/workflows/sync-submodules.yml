@@ -21,7 +21,9 @@ jobs:
           submodules: true
 
       - name: Update all submodules to latest
-        run: git submodule update --remote
+        run: |
+          git submodule foreach 'git fetch origin'
+          git submodule update --remote
 
       - name: Commit and push if changed
         run: |
