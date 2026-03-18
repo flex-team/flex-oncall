@@ -60,13 +60,13 @@
 	branch = prod
 [submodule "flex-raccoon"]
 	path = flex-raccoon
-	url = https://github.com/flex-team/flex-raccoon.git
+	url = git@github.com:flex-team/flex-raccoon.git
 	branch = main
 [submodule "flex-admin-shell"]
 	path = flex-admin-shell
-	url = https://github.com/flex-team/flex-admin-shell.git
+	url = git@github.com:flex-team/flex-admin-shell.git
 	branch = main
 [submodule "flex-github-actions"]
 	path = flex-github-actions
-	url = https://github.com/flex-team/flex-github-actions.git
+	url = git@github.com:flex-team/flex-github-actions.git
 	branch = main
