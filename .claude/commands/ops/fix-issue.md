@@ -125,6 +125,17 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 - 테스트: ✅ ({N}개 통과)
 ```
 
+### Phase 7: 메트릭스 기록
+
+> 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> ```
+> Read: .claude/commands/ops/metrics-guide.md
+> ```
+
+1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` 하단 `## Claude 활동 로그` 테이블에 행 추가
+   - subagent total_tokens/duration_ms 합산, 쿡북 참조 = `—`
+2. **METRICS.md 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
+
 ## Rules
 - **Phase 3 → Phase 4 사이에 반드시 사용자 승인**: 조사 결과를 보고하고 구현 방향 승인을 받아야 함
 - **빌드/테스트는 subagent**: gradlew 실행은 로그가 길으므로 반드시 subagent에 위임

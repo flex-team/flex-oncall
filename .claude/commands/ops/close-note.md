@@ -77,6 +77,17 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 - 일괄 아카이브가 필요하면 → `ops:maintain-notes`
 ```
 
+### Phase 4: 메트릭스 기록
+
+> 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> ```
+> Read: .claude/commands/ops/metrics-guide.md
+> ```
+
+1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` (또는 archive로 이동된 경우 해당 경로) 하단 `## Claude 활동 로그` 테이블에 행 추가
+   - subagent total_tokens/duration_ms 합산, 쿡북 참조 = `—`
+2. **METRICS.md 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
+
 ## Rules
 - Phase 1의 모든 규칙은 `note-issue.md` 를 따른다
 - Phase 2의 모든 규칙은 `update-artifacts.md` 를 따른다

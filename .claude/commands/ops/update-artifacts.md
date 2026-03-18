@@ -278,6 +278,16 @@ gh issue view {number} --comments
 | [{ticket-id}](./{파일명}) | {한 줄 요약} | {키워드1}, {키워드2}, ... |
 ```
 
+### Phase 3.5: 메트릭스 기록
+
+> 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> ```
+> Read: .claude/commands/ops/metrics-guide.md
+> ```
+
+1. **COOKBOOK 히트 동기화**: Phase 1에서 기존 플로우의 히트 카운트를 갱신했으면, METRICS.md 플로우 히트 이력도 동기화
+2. **METRICS.md 갱신**: 활동 로그(전체)에 행 추가 + 스킬별 사용량 + 월별 요약 갱신
+
 ## Rules
 
 ### 공통

@@ -283,6 +283,19 @@ Step 2에서 찾은 연관 이슈의 문서에도 현재 이슈로의 링크를 
 - 완료된 이슈 데이터화 → `ops:close-note {ticket-id}` 안내
 - 완료된 노트의 일괄 정리가 필요하면 → `ops:maintain-notes` 안내
 
+### Step 7: 메트릭스 기록
+
+> 이 스텝은 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> ```
+> Read: .claude/commands/ops/metrics-guide.md
+> ```
+
+1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` 하단 `## Claude 활동 로그` 테이블에 행 추가
+   - 이 스킬 실행 중 사용한 subagent들의 `total_tokens` 합산, `duration_ms` 합산
+   - 모델명, 쿡북 참조 = `—`, 요약 (생성/업데이트 여부)
+   - 테이블이 없으면 각주 섹션 뒤에 새로 생성
+2. **METRICS.md 갱신**: `{notes-dir}/METRICS.md` 의 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
+
 ## 근로기준법 참고 가이드
 
 이슈가 **근태/근무/휴가** 라벨이거나, 아래 키워드와 관련된 경우 **관련 근로기준법 조항을 조사**하여 문서의 "## 관련 법령" 섹션에 기록한다.

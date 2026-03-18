@@ -127,6 +127,17 @@ Read: .claude/commands/ops/update-artifacts.md
 - 아카이브된 노트 수, 활성 유지 노트 수
 - 쿡북 변경 내용 요약 (변경이 있었으면)
 
+### Step 7: 메트릭스 기록
+
+> 이 스텝은 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> ```
+> Read: .claude/commands/ops/metrics-guide.md
+> ```
+
+1. **METRICS.md 갱신**: 활동 로그(전체)에 행 추가 (이슈 = `일괄`) + 스킬별 사용량 + 월별 요약 갱신
+   - subagent total_tokens/duration_ms 합산
+   - 월별 요약의 이슈 수, 스킬 호출, 총 토큰, 쿡북 히트 수치를 활동 로그 기반으로 재계산
+
 ---
 
 ## `--rebuild` 모드: 전체 재구성
