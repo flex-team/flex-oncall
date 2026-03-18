@@ -21,6 +21,7 @@
 | [CI-3910](./archive/CI-3910.md) | 휴가 참조자 이메일 알림 미수신 | 알림, 이메일, 참조자, 승인자, 중복 제거, notification_deliver |
 | [CI-3914](./archive/CI-3914.md) | 이메일 CTA 클릭 시 할 일/홈피드 이동 기준 | 알림, 이메일, CTA, approve.refer, approved.refer, locale |
 | [CI-4122](./archive/CI-4122.md) | Core 알림 title_meta_map 빈값 — 스펙 (메타베이스 쿼리 개선) | 알림, Core, title_meta_map, message_data_map, 인사정보, 메타베이스, notification_topic |
+| [CI-4142](./CI-4142.md) | 워크플로우 승인 메일 미수신 — flex 정상, 수신 서버 문제 (SES Delivery 확인) | 알림, 메일, 이메일, 미수신, SES, Delivery, mail_send_history, BEI-151, 워크플로우, 승인 |
 
 ### 근태/휴가 (Time Tracking / Time Off)
 
@@ -80,12 +81,20 @@
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [TT-16674](./TT-16674.md) | 실시간 기록 조회 권한 분기 처리 | 권한, DomainAuthorityModel, AccessCheckApiService, 실시간 기록 |
+| [CI-4150](./CI-4150.md) | 최고관리자 권한 부여 시점 문의 — 최초 유저 자동 부여 스펙 | 권한, 최고관리자, 감사로그, flex_grant, flex_grant_subject, 자동 부여, 물리 삭제, audit log |
 
 ### 전자계약 (Digicon)
 
 | 문서 | 요약 | 키워드 |
 |------|------|--------|
 | [CI-4107](./archive/CI-4107.md) | 전자계약 양식 세로 가운데 정렬 미동작 — 플레이스홀더 뒤 `<br>` 태그 원인 | 전자계약, 정렬, 플레이스홀더, 렌더러, V1_13, DigiconRenderVersion |
+
+### 급여 (Payroll)
+
+| 문서 | 요약 | 키워드 |
+|------|------|--------|
+| [CI-4149](./CI-4149.md) | 정산 수정 시 소득세 변경 — 부양가족 수 최신화 (스펙) | 급여, 정산, 소득세, 부양가족, dependent_families_count, 간이세액표, 정산 수정, 자물쇠 해제, payee 스냅샷 |
+| [QNA-1933](./QNA-1933.md) | 구독 해지 후 명세서 알림 발송 — 스펙 (탭 접근 차단, 연장 권장) | 급여, 정산, 구독, 해지, 명세서, 공개일, 알림, payslip, subscription, cancel |
 
 ### 평가 (Evaluation / Performance Management)
 
