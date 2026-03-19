@@ -1,0 +1,169 @@
+# Brain — 온콜 지식 관리 시스템
+
+## 핵심 원칙
+
+- 이 repo는 도메인 스펙을 관리하지 않는다. 스펙은 각 서브모듈 repo에 있다.
+- brain/ 은 도메인 간 관계, 라우팅, 운영 절차만 관리한다.
+- specs/ 디렉토리를 만들지 않는다.
+
+## 디렉토리 구조
+
+```
+brain/
+├── CLAUDE.md              # 이 파일
+├── domain-map.ttl         # 중앙 도메인 지도 (Turtle/RDF)
+├── GLOSSARY.md            # 사용자 표현 → 시스템 용어
+├── COOKBOOK.md             # 진단 가이드 + 조사 플로우
+├── ontology.md            # domain-map.ttl 작성 규칙
+└── notes/                 # 이슈 노트
+    ├── {ticket-id}.md
+    └── archive/
+```
+
+## 문서 참조 우선순위
+
+1. **domain-map.ttl** — 도메인 특정 + 관련 문서 찾기
+2. **COOKBOOK.md** — 진단 플로우 (가장 먼저 시도)
+3. **GLOSSARY.md** — 사용자 표현 → 시스템 용어
+4. **notes/** — 과거 이슈 상세
+
+## 이슈 대응 워크플로우
+
+```
+이슈 인입 (Linear/Slack)
+  → domain-map.ttl에서 키워드로 도메인 특정
+  → GLOSSARY.md에서 사용자 표현 → 시스템 용어 변환
+  → COOKBOOK.md에서 진단 플로우 확인 (히트율 순)
+  → 필요한 서브모듈만 recursive update
+  → 조사 수행 → 노트 기록
+  → 해결 완료 시 → close-note로 전체 갱신
+```
+
+## 노트 파일 규칙
+
+### 파일 위치
+
+- 새 노트: `brain/notes/{ticket-id}.md` (루트)에 생성
+- 해결 완료 시: `git mv brain/notes/{ticket-id}.md brain/notes/archive/` 로 이동
+- 연관 이슈 탐색: `notes/` 루트의 active 노트만 전체 스캔. archive는 `domain-map.ttl` 로 찾기
+
+### 파일 네이밍
+
+- `{ticket-id}.md` (예: `CI-1234.md`)
+
+### 파일 템플릿
+
+```markdown
+# {ticket-id}: {제목}
+
+## 증상
+
+- 사용자 보고 내용, 에러 로그, 재현 조건 등
+
+## 원인 분석
+
+- 조사 과정과 발견 사항
+
+## 해결
+
+- 수행한 조치 (코드 수정, 데이터 패치, 설정 변경 등)
+- PR 링크 (있으면)
+
+## 비고
+
+- 관련 이슈 링크
+- 향후 주의사항
+
+## 각주
+
+- 참고한 슬랙 스레드, 문서 링크 등
+
+## Claude 활동 로그
+
+| 시각(KST) | 활동 |
+|-----------|------|
+```
+
+### 상대 링크 규칙
+
+- 루트 → archive 참조: `./archive/{ticket-id}.md`
+- archive → 루트 참조: `../{ticket-id}.md`
+- archive → archive 참조: `./{ticket-id}.md`
+
+## 운영 업무 진행 절차
+
+### 1. 티켓 확인
+
+- Linear 이슈 내용을 읽고 증상을 정리한다.
+- domain-map.ttl 키워드 매칭으로 도메인을 특정한다.
+- GLOSSARY.md에서 사용자 표현을 시스템 용어로 변환한다.
+
+### 2. 분석 기록
+
+- 노트 파일을 생성하고 증상 섹션을 작성한다.
+- domain-map.ttl에 노트 항목을 추가한다 (verdict: `"investigating"`).
+
+### 3. 원인 조사
+
+- COOKBOOK.md에서 해당 도메인 진단 플로우를 먼저 확인한다.
+- API 이슈일 때: **가설 세우기 전에 access log부터 확인**하여 요청/응답을 파악한다.
+- 필요한 서브모듈만 `git submodule update --recursive` 로 갱신한다.
+- DB, OpenSearch, Kafka 등 조사 도구를 활용한다.
+
+### 4. 해결
+
+- 코드 수정이 필요하면 해당 서브모듈 repo에서 PR을 생성한다.
+- 운영 조치(데이터 패치 등)는 노트에 상세히 기록한다.
+- 노트의 해결 섹션을 업데이트한다.
+
+### 5. 회고
+
+- close-note 스킬로 노트를 마감한다.
+  - verdict 확정
+  - domain-map.ttl 갱신
+  - GLOSSARY.md 갱신 (새 용어 매핑 발견 시)
+  - COOKBOOK.md 갱신 (재사용 가능한 진단 패턴 발견 시)
+  - 노트를 archive로 이동
+
+## 자동 갱신 규칙
+
+### ops 스킬 실행 시
+
+| 스킬 | domain-map.ttl | GLOSSARY.md | COOKBOOK.md | 노트 |
+|------|---------------|-------------|------------|------|
+| `investigate-issue` | 노트 항목 추가 | - | - | 생성/갱신 |
+| `note-issue` | 노트 항목 추가 | - | - | 생성/갱신 |
+| `close-note` | verdict 확정 | 갱신 | 갱신 | archive 이동 |
+| `fix-issue` | - | - | - | 갱신 |
+| `maintain-notes --rebuild` | 전체 재구축 | - | - | 일괄 정리 |
+
+### domain-map.ttl 갱신 시점
+
+- 노트 생성: `n:{ticket-id}` 트리플 추가
+- 노트 마감: `d:v` 를 확정 verdict로 변경
+- 새 도메인 발견: 도메인 블록 추가
+- 새 용어 발견: 용어 블록 추가
+- cross-domain 관계 발견: `d:x` 추가
+
+## domain-map.ttl 작성 규칙
+
+상세 규칙은 `ontology.md` 를 참조한다.
+
+## Claude 활동 로그
+
+활동 로그는 각 노트 최하단에 기록한다. 전체 활동 메트릭은 `.claude/METRICS.md` 에 위치한다.
+
+### 로그 형식
+
+```markdown
+## Claude 활동 로그
+
+| 시각(KST) | 활동 |
+|-----------|------|
+| 2026-03-19 09:00 | 이슈 조사 시작 |
+| 2026-03-19 09:15 | DB 조회로 원인 파악 |
+| 2026-03-19 09:30 | PR 생성 완료 |
+```
+
+- 시각은 항상 KST(UTC+9) 기준이다.
+- 주요 활동 전환점만 기록한다 (모든 명령어를 기록하지 않는다).
