@@ -82,7 +82,8 @@
   d:repo "flex-core-backend" , "flex-raccoon" ;
   d:mod "user" , "Operation API" ;
   d:kw  "이메일변경" , "관리자계정" , "퇴사자계정" , "primary_user_id" ,
-        "UserEmailChange" , "다법인" ;
+        "UserEmailChange" , "다법인" , "계열사전환" , "로그인풀림" , "exchange" ,
+        "자동로그아웃" ;
   d:x   :permission .
 
 :approval
@@ -156,7 +157,7 @@ n:CI-4048
 
 n:CI-4117
   d:in :review ;
-  d:v  "investigating" ;
+  d:v  "bug" ;
   d:s  "평가 등급 체계 — 등급 15개 생성 후 validation 에러" .
 
 n:CI-4126
@@ -171,7 +172,7 @@ n:CI-4130
 
 n:CI-4132
   d:in :shift ;
-  d:v  "investigating" ;
+  d:v  "bug" ;
   d:s  "교대근무 스케줄과 일별 근태 리포트 시간이 다름" .
 
 n:CI-4135
@@ -222,7 +223,7 @@ n:CI-4150
 
 n:CI-4151
   d:in :payroll ;
-  d:v  "investigating" ;
+  d:v  "bug" ;
   d:s  "중도정산 단계에서 건강보험료가 2배 반영됨" .
 
 n:CI-4152
@@ -670,6 +671,11 @@ g:acct-02
   d:in :account ;
   d:q  "구성원 이메일 일괄 변경해주세요" ;
   d:a  "Operation API 일괄 이메일 변경" .
+
+g:acct-03
+  d:in :account ;
+  d:q  "계열사 전환하면 로그인이 풀려요" ;
+  d:a  "exchange API 자동 로그아웃 설정 시간 차이" .
 
 # ============================================================
 # Glossary — approval

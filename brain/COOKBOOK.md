@@ -534,13 +534,14 @@ WHERE gs.customer_id = ? AND gs.subject_id = ?;
 ### 계정/구성원 (Account / Member)
 
 #### 진단 체크리스트
-문의: "이메일 변경해주세요" / "구성원 이메일 일괄 변경해주세요"
+문의: "이메일 변경해주세요" / "구성원 이메일 일괄 변경해주세요" / "계열사 전환하면 로그인이 풀려요"
 1. 단건 이메일 변경 → `PATCH /action/v2/operation/core/customers/{customerId}/users/{userId}/emails/change` [CI-4118]
 2. 일괄 이메일 변경 → `PATCH /action/v2/operation/core/customers/{customerId}/emails/change/bulk` [CI-4124]
    - ⚠️ 존재하지 않는 oldEmail이 1건이라도 포함되면 **전체 실패** (`IllegalArgumentException`)
    - 사전에 DB에서 대상 이메일 존재 여부 확인 필수
 3. 다법인 사용자 확인 → `primary_user_id`가 NULL이 아니면 primary 회사에서만 변경 가능 [CI-4118]
 4. 검증된 이메일(verified) 확인 → 이미 검증된 이메일은 관리자가 변경 불가, Operation API 사용 필요 [CI-4118]
+5. 계열사 전환 시 로그인 풀림 → 각 계열사의 **자동 로그아웃 설정 시간** 비교. 세션 시간이 긴 회사에서 짧은 회사로 전환 시 짧은 쪽 기준으로 세션 만료 판정 → 정상 동작(스펙). 두 회사 설정을 동일하게 맞추도록 안내 [CI-4166]
 
 #### 데이터 접근
 ```sql
@@ -561,6 +562,7 @@ WHERE customer_id = ?
 #### 과거 사례
 - **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]
 - **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124]
+- **계열사 전환 시 로그인 풀림**: 계열사별 자동 로그아웃 설정이 독립적. 세션 시간이 긴 회사→짧은 회사로 전환 시 exchange API가 대상 회사 기준으로 세션 만료 판정. 두 회사 설정 동일하게 맞추면 해결 — **스펙** [CI-4166]
 
 ---
 
@@ -728,15 +730,17 @@ WHERE settlement_id = ? AND user_id = ?;
 ### 평가 (Evaluation / Performance Management)
 
 #### 진단 체크리스트
-문의: "삭제한 평가가 다시 보여요" / "평가 리스트에 이상한 것이 있어요"
+문의: "삭제한 평가가 다시 보여요" / "평가 리스트에 이상한 것이 있어요" / "리뷰 마이그레이션 에러"
 1. API 응답에서 해당 평가의 `isDeleted` 값 확인 → `false`이면 삭제된 적 없는 DRAFT 평가. 고객에게 삭제 방법 안내 [CI-4158]
 2. `isDeleted: true`인 평가가 목록에 나타나면 → 실제 버그. `draft_evaluation` 테이블에서 `deleted_at` 컬럼 확인 [CI-4158]
 3. FE 배포 직후 발생한 경우 → FE에서 목록 필터링 로직이 변경되었을 가능성 확인 [CI-4158], [CI-4129]
+4. 리뷰 마이그레이션 "Failed requirement." 에러 → raccoon **prod**(`flex-raccoon.grapeisfruit.com`)를 사용하고 있는지 확인. dev raccoon에 prod 해시를 쓰면 Hashids salt 불일치로 `INVALID_NUMBER` 반환 → `require(reviewSetId > 0L)` 실패 [QNA-1936]
 
 #### 과거 사례
 - **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
 - **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
 <!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
+- **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
 
 ---
 
@@ -788,6 +792,7 @@ ORDER BY created_at DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-19 | 전체 | --rebuild 전체 재구성 — domain-map verdict 3건 수정(CI-4117/CI-4132/CI-4151 → bug), 계정 도메인에 CI-4166(계열사 전환 스펙) 추가, 평가 도메인에 QNA-1936(raccoon 환경 불일치) 추가, glossary 항목 추가 |
 | 2026-03-19 | 전체 | 전체 재구성 — 전자계약 도메인 신규 추가(CI-4152, CI-4168), 근태/휴가(CI-4130, CI-4140, CI-4147), 외부 연동(CI-4157, CI-4165), 인증(CI-4166), 평가(CI-4158), 채용(CI-4170) 반영, 급여 중복 정리 |
 | 2026-03-18 | QNA-1933 | 급여 도메인에 구독 해지 후 명세서 알림 발송 스펙 + 1달 연장 안내 권장 추가 |
 | 2026-03-18 | CI-4150 | 권한 도메인 추가 — 최고관리자 자동 부여 스펙, 감사로그 미기록 안내, grant_subject SQL 추가 |
