@@ -1,4 +1,18 @@
 {
+  "extraKnownMarketplaces": {
+    "flex-claude-skills-yj-kim": {
+      "source": {
+        "source": "github",
+        "repo": "flex-yj-kim/flex-claude-skills-yj-kim"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "flex-claude-skills-yj-kim@flex-claude-skills-yj-kim": true,
+    "db@flex-claude-skills-yj-kim": true,
+    "kafka@flex-claude-skills-yj-kim": true,
+    "opensearch@flex-claude-skills-yj-kim": true
+  },
   "hooks": {
     "PostToolUse": [
       {
