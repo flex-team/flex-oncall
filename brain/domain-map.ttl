@@ -240,6 +240,16 @@ n:CI-4157
   d:v  "investigating" ;
   d:s  "세콤 출퇴근 연동 확인 요청" .
 
+n:CI-4165
+  d:in :integration ;
+  d:v  "investigating" ;
+  d:s  "SECOM 외부 출퇴근 이벤트 중복 등록으로 진행중 블럭 다건 발생" .
+
+n:CI-4168
+  d:in :contract ;
+  d:v  "investigating" ;
+  d:s  "전자계약 서식 반복 삭제 — 삭제자 특정 불가 (감사로그 미조회)" .
+
 n:QNA-1926
   d:in :fins ;
   d:v  "investigating" ;
@@ -681,8 +691,3 @@ g:pay-03
   d:in :payroll ;
   d:q  "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:a  "구독 해지 후 payslip 공개/알림 동작 — 스펙" .
-n:CI-4165
-  d:in :integration ;
-  d:v  "investigating" ;
-  d:s  "SECOM 외부 출퇴근 이벤트 중복 등록으로 진행중 블럭 다건 발생" .
-
