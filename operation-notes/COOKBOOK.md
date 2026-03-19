@@ -8,13 +8,21 @@
 ### 알림 (Notification)
 
 #### 진단 체크리스트
-문의: "알림이 안 왔어요" / "알림 클릭 시 이상한 곳으로 이동해요" / "메타베이스에서 알림 내용이 안 보여요"
+문의: "알림이 안 왔어요" / "알림 클릭 시 이상한 곳으로 이동해요" / "메타베이스에서 알림 내용이 안 보여요" / "메일 알림을 못 받았어요"
 1. 수신자가 승인자이면서 참조자인지 확인 → 중복 제거로 참조 알림 미수신 가능 (승인 알림은 정상 수신) [CI-3910]
 2. `notification_deliver` 테이블에서 실제 발송된 `notification_type` 확인
 3. 메타베이스에서 `title_meta_map`이 `[]`인 경우 → Core 알림은 토픽 제목이 고정("내 정보 변경" 등)이므로 정상. `notification.message_data_map`을 조회해야 실제 내용 확인 가능 [CI-4122]
 4. 이메일 CTA 이동 대상이 이상한 경우 → 알림 유형 확인: `approve.refer`(등록했어요) vs `approved.refer`(승인되었어요) [CI-3914]
 5. 클릭 시점에 승인이 이미 완료되었는지 확인 → 완료된 건은 할 일에 없으므로 홈피드로 리다이렉트 [CI-3914]
 6. 수신자 locale 확인 → 디폴트 KOREAN, en/ko 템플릿 CTA URL이 다를 수 있음 [CI-3914]
+7. **메일 미수신** 문의 → 아래 순서로 확인 [CI-4142]:
+   1. `notification_deliver` + `notification` JOIN으로 인앱 알림 생성 확인
+   2. 인앱 알림 있으면 → `user_notification_type_setting` EMAIL 비활성화 여부 확인
+   3. OpenSearch `flex-app.be-consumer-*`에서 Kafka produce 로그 확인 (`prod.mail.cmd.mail-sending.v1 produced!`)
+   4. **SES 이벤트 OpenSearch** (`flex-prod-ses-feedback-*`)에서 `MessageObject.mail.destination` 필터로 Delivery/Bounce 확인 (별도 클러스터, 별도 권한 필요)
+   5. SES Delivery 확인됨 → flex 측 정상, 고객에게 수신 서버/스팸 필터 확인 요청
+
+> ⚠️ `mail_send_history` 테이블은 BEI-151(2026-02-20)로 기록 중단됨. 메일 발송 여부는 SES 이벤트 OpenSearch로 확인해야 한다.
 
 #### 조사 플로우
 
@@ -87,6 +95,11 @@ WHERE nd.id = ?;
 
 -- 수신자 locale 확인 (디폴트: KOREAN)
 SELECT * FROM member_setting WHERE member_id = ?;
+
+-- 메일 발송 확인 (mail_send_history — BEI-151 이후 기록 중단, 2026-02-20 이전 데이터만 존재)
+SELECT status, requested_at FROM flex_pavement.mail_send_history
+WHERE primary_recipient = ? ORDER BY requested_at DESC;
+-- ⚠️ 2026-02-20 이후 메일 발송 확인은 SES 이벤트 OpenSearch (flex-prod-ses-feedback-*) 사용
 ```
 
 #### 과거 사례
@@ -94,6 +107,7 @@ SELECT * FROM member_setting WHERE member_id = ?;
 - **이메일 CTA 이동 대상 차이**: `approve.refer` → 할 일, `approved.refer` → 홈피드. 클릭 시점에 승인 완료된 건은 홈피드로 리다이렉트 — **스펙** [CI-3914]
 - **en/ko 템플릿 CTA URL 불일치**: 3건 발견 (`approve.refer.cta-web`, `remind.work-record.missing.one.cta-web`, `workflow.task.request-view.request.cta-web`) — **별도 버그** [CI-3914]
 - **Core 알림 title_meta_map 빈값**: Core 인사정보 변경 알림(`FLEX_USER_DATA_CHANGE`)의 토픽 제목은 고정("내 정보 변경")이므로 `titleMetaMap = emptyMap()` — **스펙**. 실제 내용은 `notification.message_data_map.changedDataName`으로 확인 [CI-4122]
+- **메일 미수신 — SES Delivery 확인 후 고객 안내**: 인앱 알림 정상 + Kafka produce 정상 + SES Send/Delivery 확인 → flex 측 전체 정상. 수신자 메일 서버 내부 문제. `mail_send_history`는 BEI-151로 기록 중단(2026-02-20)되었으므로 SES 이벤트 OpenSearch 사용 필수 — **고객 안내** [CI-4142]
 
 ---
 
@@ -444,6 +458,34 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 
 ---
 
+### 권한 (Permission)
+
+#### 진단 체크리스트
+문의: "누가 언제 권한을 부여했는지 확인해주세요" / "감사로그에서 권한 변경이 안 보여요"
+1. `flex_authorization.flex_grant_subject`에서 대상 사용자의 grant 멤버십 확인 → `created_at`이 포함 시점, `created_by`가 수행자 [CI-4150]
+2. 대상 사용자가 grant에 없으면 → 이미 회수됨 (물리 삭제로 이력 소실). 회사 최초 유저인지 확인 → 최초 유저라면 회사 생성 시 자동 부여된 것 [CI-4150]
+3. 감사로그(Envers)는 권한 변경을 기록하지 않음 → 고객에게 "감사로그 기록 대상이 아닙니다" 안내 [CI-4150]
+
+#### 데이터 접근
+```sql
+-- 특정 회사의 최고관리자 grant 멤버 조회
+SELECT gs.subject_id, gs.created_by, gs.created_at
+FROM flex_authorization.flex_grant_subject gs
+  JOIN flex_authorization.flex_grant g ON g.id = gs.grant_id
+WHERE gs.customer_id = ? AND g.title_key = 'authority.administrator_title';
+
+-- 특정 사용자가 포함된 모든 grant 조회
+SELECT gs.subject_id, gs.created_by, gs.created_at, g.title_text, g.title_key
+FROM flex_authorization.flex_grant_subject gs
+  JOIN flex_authorization.flex_grant g ON g.id = gs.grant_id
+WHERE gs.customer_id = ? AND gs.subject_id = ?;
+```
+
+#### 과거 사례
+- **최초 유저 최고관리자 자동 부여**: 회사 생성 시 첫 유저에게 자동 부여, 감사로그에 이력 없음. `flex_grant_subject` 물리 삭제로 회수 후 이력 추적 불가 — **스펙** [CI-4150]
+
+---
+
 ### 계정/구성원 (Account / Member)
 
 #### 진단 체크리스트
@@ -542,13 +584,15 @@ WHERE customer_id = ?
 ### 급여 (Payroll)
 
 #### 진단 체크리스트
-문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요"
+문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요" / "급여정산 해지하면 명세서 공개가 되나요?"
 1. 올림 자릿수 이상 문의 → 설정 변경 시점과 정산 생성 시점 비교. 정산 생성 시 올림 설정이 스냅샷됨 → 기존 진행 중 정산은 이전 설정 유지 [CI-4131]
    - `payroll_legal_payment_setting`(현재 설정)과 `work_income_over_work_payment_calculation_basis`(정산 스냅샷) 비교
    - 불일치하면 설정 변경 전 생성된 정산 → 신규 정산 생성 안내
 2. 포괄임금계약 관련 → "근태/휴가" 도메인의 포괄계약 항목 참조 [CI-3868]
 3. 보상휴가 부여 관련 → "근태/휴가" 도메인의 보상휴가 항목 참조 [CI-3858]
 4. 주 연장근무 계산 → "스케줄링" 도메인의 연장근무 항목 참조 [CI-3839]
+5. 정산 수정 후 소득세 변경 문의 → 정산 자물쇠 해제 후 재처리 시 소득세 변경 → 1차 정산 ~ 수정 정산 사이에 기본 공제 대상(부양가족 수)이 변경되었는지 확인. `work_income_settlement_payee`의 `dependent_families_count` 조회 [CI-4149]
+6. 급여정산 해지 후 명세서 공개/알림 문의 → 알림은 해지와 무관하게 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실제 열람 불가. 1달 연장 권장 안내 [QNA-1933]
 
 #### 데이터 접근
 ```sql
@@ -561,10 +605,18 @@ WHERE customer_id = ? AND type = 'GROUP_EXCEEDED_WORK_EARNING';
 SELECT rounding_digit, rounding_method
 FROM work_income_over_work_payment_calculation_basis
 WHERE settlement_id = ?;
+
+-- 정산 대상자의 부양가족 수 스냅샷 확인
+SELECT user_id, dependent_families_count, under_age_dependent_families_count
+FROM flex_payroll.work_income_settlement_payee
+WHERE settlement_id = ? AND user_id = ?;
 ```
 
 #### 과거 사례
 - **올림 설정 변경 후 기존 정산 미반영**: 정산 생성 시 올림 설정을 스냅샷. 100의 자리 → 10의 자리로 변경해도 기존 정산은 이전 설정 유지. 신규 정산에서 정상 반영 — **스펙** [CI-4131]
+- **정산 재처리 시 소득세 변경 — 부양가족 수 최신화**: 정산 자물쇠 해제 후 재처리 시 PAYEES 단계에서 전체 대상자의 payee 스냅샷 최신화. 1차 정산 이후 부양가족 추가/변경이 있었으면 소득세 재계산됨 — **스펙** [CI-4149]
+<!-- TODO: 시나리오 테스트 추가 권장 — 정산 재처리 시 payee 스냅샷 최신화로 소득세 변경 검증 -->
+- **구독 해지 후 명세서 알림 발송**: payroll 스케줄러/pavement 모두 구독 상태 미체크. 알림은 정상 발송되나 급여 탭 접근 차단으로 실제 열람 불가. 1달 연장 안내 권장 — **스펙** [QNA-1933]
 
 5. 급여정산 구독 해지 후 명세서 공개/알림 문의 → payroll/pavement 모두 구독 여부 체크 없음. 알림은 발송되나, 구독 해지 시 웹/모바일 급여 탭 권한 차단으로 구성원이 급여 조회 불가. 공개 이후까지 1달 연장 권장 안내 [QNA-1933]
 
@@ -579,6 +631,10 @@ WHERE settlement_id = ?;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-18 | QNA-1933 | 급여 도메인에 구독 해지 후 명세서 알림 발송 스펙 + 1달 연장 안내 권장 추가 |
+| 2026-03-18 | CI-4150 | 권한 도메인 추가 — 최고관리자 자동 부여 스펙, 감사로그 미기록 안내, grant_subject SQL 추가 |
+| 2026-03-18 | CI-4149 | 급여 도메인에 정산 재처리 시 부양가족 수 최신화로 소득세 변경 스펙 추가 |
+| 2026-03-18 | CI-4142 | 알림 도메인에 메일 미수신 SES 진단 흐름·mail_send_history 중단 안내·사례 추가 |
 | 2026-03-18 | 일괄 유지보수 | 근태/휴가 도메인 — QNA-1920(연차 부여 시작일 스펙), QNA-1928(리포트 컬럼 스펙) 추가 |
 | 2026-03-18 | QNA-1933 | 급여 도메인 — 구독 해지 후 명세서 공개/알림 동작 스펙 추가 |
 | 2026-03-18 | 전체 | 조사 플로우 섹션 추가 — 알림(F1-F3), 근태/휴가(F1-F3), 교대근무(F1), 외부 연동(F1-F2) |
