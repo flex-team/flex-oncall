@@ -83,15 +83,48 @@
   d:mod "user" , "Operation API" ;
   d:kw  "이메일변경" , "관리자계정" , "퇴사자계정" , "primary_user_id" ,
         "UserEmailChange" , "다법인" , "계열사전환" , "로그인풀림" , "exchange" ,
-        "자동로그아웃" ;
-  d:x   :permission .
+        "자동로그아웃" , "입사일변경" , "company_join_date" , "삭제된구성원" ,
+        "정보복구" , "DB Snapshot" , "개인정보현황" , "이메일대량변경" ,
+        "bullseye" , "opensearch싱크" ;
+  d:x   :permission , :department .
+
+:department
+  d:n   "조직 관리 (Department)" ;
+  d:cb  "조직 관리 (Department)" ;
+  d:repo "flex-core-backend" , "flex-raccoon" ;
+  d:mod "department" , "department_time_series_segment" , "department_time_series_snapshot" ;
+  d:kw  "조직삭제" , "조직종료" , "조직변경예약" , "발령예약" , "데드락" ,
+        "department_time_series_segment" , "department_change_history_set" ,
+        "조직시계열" , "조직코드" , "조직종료일" , "종료된조직" , "하위조직" ,
+        "end_date_time" , "begin_date_time" , "parent_id" ;
+  d:x   :personnel-appointment , :account .
+
+:personnel-appointment
+  d:n   "인사발령 (Personnel Appointment)" ;
+  d:cb  "인사발령 (Personnel Appointment)" ;
+  d:repo "flex-core-backend" , "flex-raccoon" ;
+  d:mod "personnel-appointment" , "user_position_time_series_segment" ;
+  d:kw  "인사발령" , "발령엑셀" , "발령데이터" , "조직추출" ,
+        "user_position_time_series_segment" , "personnel-appointment" ,
+        "발령취소" , "예약발령" ;
+  d:x   :department , :account .
+
+:checklist
+  d:n   "체크리스트/온보딩 (Checklist / Onboarding)" ;
+  d:cb  "체크리스트/온보딩 (Checklist / Onboarding)" ;
+  d:repo "flex-core-backend" ;
+  d:mod "checklist" ;
+  d:kw  "체크리스트" , "온보딩" , "checklist" , "template" , "task" ,
+        "체크리스트미발송" , "온보딩완료" ;
+  .
 
 :approval
   d:n   "승인 (Approval)" ;
   d:cb  "승인 (Approval)" ;
-  d:repo "flex-timetracking-backend" ;
-  d:mod "approval" ;
-  d:kw  "승인" , "퇴직자승인자교체" , "고아승인요청" , "승인정책" , "target_uid" ;
+  d:repo "flex-timetracking-backend" , "flex-core-backend" ;
+  d:mod "approval" , "cloud_event_entity" ;
+  d:kw  "승인" , "퇴직자승인자교체" , "고아승인요청" , "승인정책" , "target_uid" ,
+        "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ;
   d:x   :notification , :time-tracking .
 
 :data-export
@@ -676,6 +709,82 @@ g:acct-03
   d:in :account ;
   d:q  "계열사 전환하면 로그인이 풀려요" ;
   d:a  "exchange API 자동 로그아웃 설정 시간 차이" .
+
+g:acct-04
+  d:in :account ;
+  d:q  "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ;
+  d:a  "Operation API update-join-date (라쿤 core)" .
+
+g:acct-05
+  d:in :account ;
+  d:q  "삭제된 구성원 복구해주세요" , "구성원 정보가 마스킹됐어요" ;
+  d:a  "DB Snapshot 복구 → bullseye/opensearch sync" .
+
+g:acct-06
+  d:in :account ;
+  d:q  "개인정보 보유현황 파악해주세요" ;
+  d:a  "user/user_employee/member/user_personal 테이블별 count 쿼리" .
+
+# ============================================================
+# Glossary — department
+# ============================================================
+
+g:dept-01
+  d:in :department ;
+  d:q  "조직 삭제해주세요" , "조직을 지울 수 있나요?" ;
+  d:a  "시작일=오늘이면 제품에서 처리(일반설정), 아니면 Operation API" .
+
+g:dept-02
+  d:in :department ;
+  d:q  "조직 변경 예약을 취소할 수 없어요" , "발령과 조직변경이 꼬였어요" ;
+  d:a  "발령+조직변경 동시예약 데드락 — SQL 임시 종료일 제거 후 취소" .
+
+g:dept-03
+  d:in :department ;
+  d:q  "조직 시계열 데이터 뽑아주세요" ;
+  d:a  "metabase #5082 또는 department_time_series_segment 쿼리" .
+
+g:dept-04
+  d:in :department ;
+  d:q  "조직 종료일 변경 시 오류가 나요" ;
+  d:a  "퇴직자 포함 여부 확인 + 400 응답 body 확인" .
+
+g:dept-05
+  d:in :department ;
+  d:q  "종료된 조직에 조직코드 넣어주세요" ;
+  d:a  "엑셀→이름으로 ID 찾기→DML 수행" .
+
+# ============================================================
+# Glossary — personnel-appointment
+# ============================================================
+
+g:pa-01
+  d:in :personnel-appointment ;
+  d:q  "인사발령 엑셀 데이터 뽑아주세요" ;
+  d:a  "워크플로우 작성 후 Operation API personnel-appointment export" .
+
+g:pa-02
+  d:in :personnel-appointment ;
+  d:q  "특정 시점의 조직 정보 추출해주세요" ;
+  d:a  "user_position_time_series_segment + department JOIN 쿼리" .
+
+# ============================================================
+# Glossary — checklist
+# ============================================================
+
+g:chk-01
+  d:in :checklist ;
+  d:q  "체크리스트가 발송되지 않았어요" , "온보딩 체크리스트 안 왔어요" ;
+  d:a  "템플릿 변경은 기존 체크리스트 미적용 + 온보딩 완료 처리 여부 확인" .
+
+# ============================================================
+# Glossary — approval (추가)
+# ============================================================
+
+g:appr-02
+  d:in :approval ;
+  d:q  "승인은 완료됐는데 데이터가 안 바뀌었어요" ;
+  d:a  "cloud_event_entity 이벤트 ID → re-produce-messages Operation API" .
 
 # ============================================================
 # Glossary — approval

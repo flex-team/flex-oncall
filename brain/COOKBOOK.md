@@ -788,10 +788,325 @@ ORDER BY created_at DESC;
 
 ---
 
+### 조직 관리 (Department)
+
+> 출처: [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) — Core Squad
+
+#### 진단 체크리스트
+문의: "조직 삭제해주세요" / "조직 변경 예약을 취소할 수 없어요" / "조직 시계열 데이터 뽑아주세요" / "조직 종료일 변경 시 오류" / "종료된 조직에 조직코드 넣어주세요"
+1. **조직 삭제 요청** → 시작일이 오늘인지 확인
+   - 오늘이면 → 제품 상에서 처리 가능 (⚠️ **일반 설정**에서만 가능, 고급 설정은 종료일 처리가 다름). 일반 설정에서 오늘로 종료 처리 시 시작일=종료일이 되면서 삭제됨
+   - 오늘이 아니면 → Operation API로 삭제. 사전에 구성원/하위조직 확인 필수
+2. **조직 삭제 전 확인사항**:
+   - `user_position_time_series` — 해당 조직에 **모든 시점**에 걸쳐 소속된 구성원이 없어야 함 (현재 시점뿐 아니라 과거 포함)
+   - 하위 조직 존재 여부 → 있으면 CS를 통해 관리자와 처리 방향 합의
+   - 변경 대상 테이블: `department`, `department_time_series_segment`, `department_time_series_snapshot`, `department_change_history_set`
+3. **발령 예약 + 조직 변경 예약 데드락** → 미래 날짜 기준으로 발령과 조직 변경(삭제/생성)을 동시에 냈을 때:
+   - 조직 변경 취소 → 발령이 해당 조직을 참조하므로 불가
+   - 발령 취소 → 삭제된 조직으로 발령을 이어줘야 하므로 불가
+   - 고급 설정 → 발령 걸려있으면 수정 불가
+   - **해결**: SQL로 조직 종료일 임시 제거 → 발령 취소 → 종료일 복구 (아래 SQL 참조)
+4. **조직 종료일 변경 시 오류** → 구성원 목록 필터에서 퇴직 상태 제외가 기본이므로 "아무도 없다"고 착각하는 경우 많음. 퇴직자 포함 여부 확인 + 400 응답 body 확인
+   - 간혹 발령 처리가 안 되는 경우 → 조직 종료일을 수동으로 먼저 조정 → 발령 처리 → 종료일 다시 조정
+5. **조직 시계열 데이터 조회** → metabase로 전환됨. [Metabase #5082](https://metabase.dp.grapeisfruit.com/question/5082?customerId=44879) 링크로 안내
+6. **종료된 조직 코드 일괄 마이그레이션** → 엑셀을 받아서 이름으로 ID를 찾고 DML 수행. 팁: 시작일/이름 정렬 후 이름을 긁어서 쿼리하면 편함
+
+#### 조사 플로우
+
+**F1: 조직 삭제 처리** · [코어 런북]
+> 트리거: "조직 삭제해주세요"
+
+```
+① 시작일이 오늘인지 확인
+   ├─ 오늘 → 제품 일반 설정에서 오늘로 종료 처리 (시작일=종료일 → 자동 삭제)
+   └─ 오늘 아님 → ②로
+   ↓
+② 조직에 소속된 구성원 확인 (모든 시점)
+   user_position_time_series WHERE department_id = ?
+   ├─ 있음 → CS 통해 관리자와 처리 방향 합의
+   └─ 없음 → ③으로
+   ↓
+③ 하위 조직 확인 (시점별)
+   department_time_series_segment WHERE parent_id = ?
+   ├─ 있음 → 하위 조직도 함께 정리 필요
+   └─ 없음 → ④로
+   ↓
+④ Operation API로 삭제
+```
+
+**F2: 발령+조직변경 데드락 해소** · [코어 런북]
+> 트리거: "발령 예약과 조직 변경을 취소할 수 없어요"
+
+```
+① 문제 조직의 종료일 SQL 임시 제거
+   UPDATE department SET end_date_time = '9999-12-31 23:59:59.999999'
+   UPDATE department_time_series_segment SET end_date_time = '9999-12-31 23:59:59.999999'
+   ↓
+② 고객사에 예약 발령 취소 요청
+   ↓
+③ 발령 취소 확인 후 종료일 복구
+   UPDATE department SET end_date_time = {원래 종료일}
+   UPDATE department_time_series_segment SET end_date_time = {원래 종료일}
+```
+
+#### 데이터 접근
+```sql
+-- 조직 삭제 전: 해당 조직에 소속된 구성원 확인 (전 시점)
+SELECT * FROM user_position_time_series
+WHERE department_id = ? AND deleted_date_time IS NULL;
+
+-- 조직 삭제 전: 하위 조직 확인
+SELECT id, name, parent_id, begin_date_time, end_date_time
+FROM department_time_series_segment
+WHERE parent_id = ? AND deleted_date_time IS NULL;
+
+-- 조직 시계열 데이터 조회 (Metabase #5082)
+SELECT
+    d.id AS '조직 ID', d.code AS '조직 코드',
+    DATE_FORMAT(DATE_ADD(IF(d.begin_date_time = '1000-01-01 00:00:00', NULL, d.begin_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '조직 시작일',
+    DATE_FORMAT(DATE_ADD(IF(d.end_date_time = '9999-12-31 23:59:59', NULL, d.end_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '조직 종료일',
+    d_seg.id AS '시점별 정보 ID', d_seg.name AS '조직명', d_seg.parent_id AS '상위조직 ID',
+    DATE_FORMAT(DATE_ADD(IF(d_seg.begin_date_time = '1000-01-01 00:00:00', NULL, d_seg.begin_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '시점별 정보 시작일',
+    DATE_FORMAT(DATE_ADD(IF(d_seg.end_date_time = '9999-12-31 23:59:59', NULL, d_seg.end_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '시점별 정보 종료일'
+FROM flex.department_time_series_segment d_seg
+  JOIN flex.department d ON d_seg.department_id = d.id
+WHERE d.customer_id = ? AND d_seg.deleted_date_time IS NULL AND d.deleted_at IS NULL
+ORDER BY d.id, d_seg.begin_date_time;
+
+-- 발령+조직변경 데드락: 예약 발령일 기준 종료되는 조직 조회
+SELECT id FROM department
+WHERE customer_id = ? AND end_date_time = ? AND deleted_at IS NULL;
+
+SELECT id FROM department_time_series_segment
+WHERE department_id IN (?) AND deleted_date_time IS NULL AND end_date_time = ?;
+
+-- 조직 종료일 임시 제거 (데드락 해소용)
+UPDATE flex.department SET end_date_time = '9999-12-31 23:59:59.999999'
+WHERE customer_id = ? AND id IN (?) AND end_date_time = ?;
+
+UPDATE flex.department_time_series_segment SET end_date_time = '9999-12-31 23:59:59.999999'
+WHERE customer_id = ? AND id IN (?) AND department_id IN (?) AND end_date_time = ?;
+```
+
+> ⚠️ **일반 설정 vs 고급 설정의 종료일 처리 차이**: 일반 설정은 오늘의 00:00, 고급 설정은 해당 날짜의 23:59.999999로 종료일 적용
+
+#### 과거 사례
+- **발령+조직변경 데드락**: 미래 날짜 기준 발령과 조직 삭제/생성 동시 예약 → 상호 참조로 양쪽 다 취소 불가. SQL로 종료일 임시 제거→발령 취소→종료일 복구로 해소 — **운영 대응** [코어 런북]
+- **조직 삭제 — 시작일=오늘 우회**: 제품 상 삭제 기능은 없지만, 일반 설정에서 오늘 종료 처리 시 시작일=종료일이 되면서 삭제됨 — **스펙 (우회 경로)**
+- **조직 시계열 조회 → Metabase 전환**: 쿼리 대응에서 Metabase #5082로 전환. 문의 시 링크 안내 — **운영 요청**
+- **종료된 조직 코드 마이그레이션**: 과거 발령 마이그레이션 위해 종료된 조직에 코드 입력 필요. 엑셀→DML — **운영 요청**
+
+---
+
+### 인사발령 (Personnel Appointment)
+
+> 출처: [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) — Core Squad
+
+#### 진단 체크리스트
+문의: "인사발령 엑셀 데이터 뽑아주세요" / "특정 시점의 조직 정보 추출해주세요"
+1. **인사발령 엑셀 데이터 요청** → 반드시 워크플로우(`고객사의 개인정보 접근 및 처리를 위한 검토 및 승인 요청`) 먼저 작성. 고객사 사전 동의 첨부 권장
+   - Operation API: `POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel`
+   - 전체 요청 시 body 없이 요청
+   - 타임아웃 발생 시 → user id 기준으로 적절히 나눠서 여러 번 호출 후 엑셀 병합
+2. **특정 시점 조직 추출** → `user_position_time_series_segment` + `department` JOIN으로 `union all` 쿼리 구성 (아래 SQL 참조)
+
+#### 데이터 접근
+```sql
+-- 인사발령 엑셀 추출 (Operation API)
+POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel
+
+-- 유저별 특정 시점 조직 추출
+SELECT pt.user_id, GROUP_CONCAT(d.name ORDER BY pt.is_primary DESC SEPARATOR ', ') AS names
+FROM user_position_time_series_segment pt, department d
+WHERE pt.department_id = d.id
+  AND pt.customer_id = ?
+  AND pt.deleted_date_time IS NULL
+  AND pt.user_id = ?
+  AND pt.begin_date_time < ?  -- target_date
+  AND (pt.end_date_time > ? OR pt.end_date_time = '9999-12-31 23:59:59.999999')
+-- 여러 유저는 UNION ALL로 연결
+```
+
+#### 과거 사례
+- **인사발령 엑셀 타임아웃**: 대규모 고객사에서 타임아웃 발생 → user id 기준 분할 호출 후 병합 — **운영 요청**
+- **특정 시점 조직 추출**: 유저 리스트+시점 기반 union all 쿼리로 대응 — **운영 요청**
+
+---
+
+### 체크리스트/온보딩 (Checklist / Onboarding)
+
+> 출처: [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) — Core Squad
+
+#### 진단 체크리스트
+문의: "체크리스트가 발송되지 않았어요"
+1. **언급한 Task가 존재하지 않는 경우** → 템플릿을 변경했을 때 기존 체크리스트에 자동 적용되지 않음. 이미 생성된 체크리스트에 템플릿의 task를 추가할 수 없음 (스펙)
+2. **온보딩 완료 처리 여부** → 온보딩 완료 기능으로 완료 처리된 경우 체크리스트가 발송되지 않음
+
+#### 과거 사례
+- **체크리스트 미발송 — 템플릿 변경**: 관리자가 템플릿을 변경 후 기존 체크리스트에도 적용될 것으로 기대했으나, 이미 생성된 체크리스트에는 반영 안 됨 — **스펙**
+- **체크리스트 미발송 — 온보딩 완료 처리**: 온보딩 완료 처리된 구성원에게는 체크리스트 미발송 — **스펙**
+
+---
+
+### 계정/구성원 (Account / Member) — 코어 런북 보강
+
+> 아래는 기존 계정/구성원 섹션에 추가되는 코어 런북 항목
+
+#### 진단 체크리스트 (추가)
+문의: "입사일 변경해주세요" / "삭제된 구성원 복구해주세요" / "개인정보 보유현황 파악" / "이메일 대량 변경해주세요"
+1. **입사일 변경 요청** → 입사일을 미래로 설정해 접속 불가한 경우. 어드민 페이지 생성됨 (확인 필요)
+   - Operation API: `PATCH /action/operation/v2/core/bundle/user-basic/update-join-date`
+   - ⚠️ patch 스펙이 아니므로 `company_join_date`, `company_group_join_date`, `is_company_group_join_date_used`를 모두 채워야 함
+   - [Metabase #7227](https://metabase.dp.grapeisfruit.com/question/7227?userId=911010&userEmail=)로 기존 값 확인
+2. **삭제된 구성원 정보 복구** →
+   1. 삭제 처리 시기 파악 → DB Snapshot 복구 요청
+   2. Snapshot에서 삭제된 정보 확인 및 복구 ([복구 가이드 참조](https://www.notion.so/1df7b0f913a94fbaa0c2fd2610f6b95f))
+   3. opensearch, bullseye 동기화:
+      - bullseye: `/action/operation/v2/bullseye/users/produce`
+      - opensearch: `/action/operation/v2/workspace/users/produce`
+3. **개인정보 보유현황 파악** → 시즈널, 대기업 컴플라이언스 목적. 아래 SQL 참조
+4. **이메일 대량 변경** (기존 일괄 변경 보강) → `PATCH /action/v2/operation/core/customers/{customerId}/emails/change/bulk`
+   - 자동화됨 (Operation API Y)
+
+#### 데이터 접근 (추가)
+```sql
+-- 입사일 변경 전 기존 값 확인 (Metabase #7227)
+SELECT c.name AS '고객사명', u.id, u.email,
+       ue.company_join_date, m.company_group_join_date, m.is_company_group_join_date_used
+FROM user u
+  LEFT JOIN user_employee ue ON u.id = ue.user_id
+  LEFT JOIN member_user_mapping ON u.id = member_user_mapping.user_id
+  LEFT JOIN flex.member m ON member_user_mapping.member_id = m.id
+  LEFT JOIN customer c ON u.customer_id = c.id
+WHERE ue.user_id = ?;
+
+-- 개인정보 보유현황: 이름/이메일 (user 테이블 — 필수값이므로 유저 수와 동일)
+-- name_in_office (닉네임)
+SELECT COUNT(*) FROM user
+WHERE customer_id = ? AND deleted_date IS NULL
+  AND name_in_office != '{cipher}44062be3131a4b6ffcdc870e02696817';
+
+-- 사번
+SELECT COUNT(*) FROM user_employee
+WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL)
+  AND employee_number IS NOT NULL;
+
+-- 주민등록번호
+SELECT COUNT(*) FROM member
+WHERE id IN (SELECT member_id FROM member_user_mapping
+             WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL))
+  AND ssn IS NOT NULL;
+
+-- 생년월일 / 휴대폰번호 / 국적 / 집주소
+SELECT COUNT(*) FROM user_personal
+WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL)
+  AND birth_date IS NOT NULL;
+-- phone_number: != '{cipher}44062be3131a4b6ffcdc870e02696817'
+-- nationality: != 'UNKNOWN'
+-- address_full: != '{cipher}44062be3131a4b6ffcdc870e02696817'
+
+-- 계좌번호
+SELECT COUNT(*) FROM user_bank_account
+WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
+
+-- 경력사항 / 학력사항
+SELECT COUNT(*) FROM user_work_experience
+WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
+
+SELECT COUNT(*) FROM user_education_experience
+WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
+```
+
+> ⚠️ `{cipher}44062be3131a4b6ffcdc870e02696817`은 공백을 의미
+
+#### 과거 사례 (추가)
+- **입사일 변경 — 미래 입사일로 접속 불가**: 최고관리자 1명인 고객사에서 미래 입사일 설정 → 접속 차단 → CS 인입. Operation API로 입사일 변경 — **운영 요청** [코어 런북]
+- **삭제된 구성원 복구**: 휴먼 에러로 마스킹 처리 → DB Snapshot에서 복구 → opensearch/bullseye 동기화 — **운영 요청** [코어 런북]
+- **개인정보 보유현황 파악**: 시즈널 요청. 삭제되지 않은 유저 대상 테이블별 count — **운영 요청** [코어 런북]
+
+---
+
+### 승인 (Approval) — 코어 런북 보강
+
+> 아래는 기존 승인 섹션에 추가되는 코어 런북 항목
+
+#### 진단 체크리스트 (추가)
+문의: "승인은 완료됐는데 데이터가 안 바뀌었어요"
+1. **승인 완료 후 데이터 반영 오류** → 승인 라인 모든 승인 완료 후 실제 코어 데이터 변경 과정에서 오류 발생
+   - 승인은 아직 ONGOING 상태로 남아있음
+   - 코어 데이터는 변경되지 않은 채 남아있음
+   - 대응: `cloud_event_entity`에서 문제 이벤트 ID 조회 → `/action/operation/v2/approval/re-produce-messages` Operation API로 이벤트 재발행
+   - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
+
+#### 과거 사례 (추가)
+- **승인 완료 후 데이터 반영 오류**: 승인 완료 이벤트 처리 중 오류 → ONGOING 상태 잔류. `re-produce-messages` Operation API로 이벤트 재발행하여 정상 처리 — **운영 대응** [코어 런북]
+
+---
+
+### OpenSearch sync / 조직도 통계 — 코어 런북 보강
+
+> 아래는 기존 도메인에 추가되는 항목
+
+#### 진단 체크리스트 (추가)
+문의: "검색에서 구성원이 안 나와요" / "조직도 월별 통계 오류"
+1. **OpenSearch sync 깨진 경우 보정** → Operation API로 대응
+   - produce type: `USER` → `userIds`만, `CUSTOMER` → `customerId` (null이면 `customerIdRange`), `ALL` → 전체 싱크
+   - `deletedUsersOnly: true` → 삭제된 유저만 필터링 sync
+   - ⚠️ 구성원 삭제 → 퇴직 정보 삭제 과정에서 `user data changed` 이벤트 발행으로 다시 생성될 수 있음
+2. **조직도 월별 통계 오류** (`Key XXX is missing in the map`) → 삭제된 구성원 데이터가 ES에 남아서 발생. projection은 삭제된 구성원 포함, search는 제외 → 불일치. ES 싱크 한 번 맞추면 해결
+3. **청구일 구성원 수 불일치** → 매월 5일 09:05 청구 시점 vs 이후 조회 시점 차이
+   - 줄어드는 경우: 청구일 이후 퇴직일을 청구일 이전으로 설정 / 구성원 삭제
+   - 늘어나는 경우: 청구일 이후 입사일을 청구일 이전으로 설정 / 입사 예정자 포함(as-is)
+
+#### 데이터 접근 (추가)
+```sql
+-- 청구일 구성원 수 불일치: 청구일 이후 퇴직 처리된 구성원
+SELECT * FROM flex.user_resignation
+WHERE status = 'VALID' AND customer_id = ?
+  AND db_updated_at > ?  -- paid_date
+  AND begin_date < ?     -- paid_date
+ORDER BY db_updated_at DESC;
+
+-- 청구일 이후 입사 처리된 구성원 (입사일이 청구일 이전)
+SELECT * FROM flex.user_employee
+WHERE deleted_at IS NULL AND customer_id = ?
+  AND db_created_at > ?      -- paid_date
+  AND company_join_date < ?  -- paid_date
+ORDER BY db_updated_at DESC;
+
+-- 이메일 인증 요청 조회
+SELECT * FROM flex_auth.email_verification
+WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
+```
+
+#### 과거 사례 (추가)
+- **조직도 월별 통계 오류**: 삭제된 구성원이 ES에 잔존 → projection/search 결과 불일치. ES 싱크로 즉시 해결 — **버그 (설계 한계)** [코어 런북]
+- **청구일 구성원 수 불일치**: 청구 시점 스냅샷 vs 현재 시점 조회 차이. 퇴직/입사 처리 시점 확인으로 원인 설명 — **스펙** [코어 런북]
+
+---
+
+### 메일 미수신 — 코어 런북 보강
+
+> 아래는 기존 알림 도메인 보강
+
+#### 진단 체크리스트 (추가)
+문의: "메일이 오지 않아요" (코어 런북 관점)
+1. opensearch mgmt에서 해당 email의 발송 이력 확인 (별도 권한 필요)
+   - `MessageObject.mail.destination`에 문제 이메일 검색
+   - EventType: Send(전송 요청 성공) → Delivery(메일 서버 전송 성공) → Bounce(수신 거부) → Open(클라이언트 확인)
+2. 해당 email 도메인의 MX record 확인 → [MX Lookup](https://mxtoolbox.com/)
+3. **주로 문제가 되는 케이스**:
+   - 수신 메일 서버 문제 → Send만 찍히고 Delivery 없음 → MX record로 서버 상태 확인
+   - 유효하지 않은 이메일로 초대메일 발송 → 즉시 suppress list 등록 → CS팀이 수동 초대메일 발송하도록 유도
+4. ⚠️ flex team 내부 메일은 **Mailgun**으로 발송 → opensearch mgmt의 SES 인덱스에서 확인 불가
+
+---
+
 ## 변경 이력
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-19 | [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) | Core Squad 온콜 런북 18개 항목 반영 — 신규 도메인 3개(조직 관리, 인사발령, 체크리스트), 기존 도메인 보강(계정/구성원, 승인, OpenSearch/통계, 메일), domain-map.ttl 도메인·키워드·glossary 추가 |
 | 2026-03-19 | 전체 | --rebuild 전체 재구성 — domain-map verdict 3건 수정(CI-4117/CI-4132/CI-4151 → bug), 계정 도메인에 CI-4166(계열사 전환 스펙) 추가, 평가 도메인에 QNA-1936(raccoon 환경 불일치) 추가, glossary 항목 추가 |
 | 2026-03-19 | 전체 | 전체 재구성 — 전자계약 도메인 신규 추가(CI-4152, CI-4168), 근태/휴가(CI-4130, CI-4140, CI-4147), 외부 연동(CI-4157, CI-4165), 인증(CI-4166), 평가(CI-4158), 채용(CI-4170) 반영, 급여 중복 정리 |
 | 2026-03-18 | QNA-1933 | 급여 도메인에 구독 해지 후 명세서 알림 발송 스펙 + 1달 연장 안내 권장 추가 |
