@@ -163,7 +163,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
 ### 근태/휴가 (Time Tracking)
 
 #### 진단 체크리스트
-문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요" / "퇴근 시간이 잘렸어요" / "퇴근이 정시로 찍혀요" / "휴직 기간에 휴가가 있어요" / "추천 휴게가 안 들어가요" / "연차 사용 내역이 사라졌어요" / "근태기록 리포트 컬럼이 이상해요"
+문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요" / "퇴근 시간이 잘렸어요" / "퇴근이 정시로 찍혀요" / "휴직 기간에 휴가가 있어요" / "추천 휴게가 안 들어가요" / "연차 사용 내역이 사라졌어요" / "근태기록 리포트 컬럼이 이상해요" / "휴일대체 사후신청이 안 돼요" / "월별 잔여연차가 달라요" / "보상휴가 회수했는데 잠금이 안 풀려요"
 1. 휴일대체 탭 미표기 → 먼저 OpenSearch dev tools로 해당 유저+날짜 문서 존재 확인 [CI-3949]
    - **문서 자체가 없음** → 근무를 건드리지 않은 유저는 sync 이벤트 미발생으로 OS 문서 미생성. 수동 sync 실행: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` [CI-3949]
    - **문서는 있는데 `holidayProps`가 null** → 해당 날짜 **시점의** 활성 근무유형 확인 (현재 근무유형이 아님!). `v2_user_work_rule`에서 date_from/date_to 범위로 확인 → 해당 요일이 `WEEKLY_UNPAID_HOLIDAY`(휴무일)이면 스펙대로 제외. `WEEKLY_PAID_HOLIDAY`(주휴일)인데 null이면 버그 → 추가 조사 필요 [CI-3949]
@@ -183,6 +183,9 @@ WHERE h.customer_id = ? AND h.user_id = ?
 10. 추천 휴게 시간이 자동 입력 안 됨 → **실시간 기록 중**인지 **근무 확정 후**인지 구분. 실시간 기록 중에는 추천 휴게 미반영이 스펙 (근무 확정 시 판단). 확정 후에도 미입력이면 별도 등록 휴게와 시간 겹침 여부 확인 → 겹치면 추천 휴게 미등록이 정상 [QNA-1922]
 11. 연차 사용 내역 사라짐 → 구성원에게 매핑된 연차 정책의 **부여 시작일** 확인. 부여 시작일 이전의 사용 내역은 제품 내에서 미표시(스펙). 엑셀에는 원시 데이터 존재. Metabase #5078로 부여 시작일 히스토리 확인 가능 [QNA-1920]
 12. 근태기록 리포트 컬럼 문의 → 출근시각/퇴근시각(`realCheckInTime`)과 시작시간/종료시간(`startTime`)은 다른 데이터 소스. 승인 내역 없이 시작/종료시간만 존재 → 근무수정권한자(`ADMIN`)가 직접 수정한 기록(`ForceUserWorkRecordRegisterServiceImpl`). '당일 승인상태'의 '당일'은 해당 근무일 기준, 다운로드 시점에 조회한 현재 상태 [QNA-1928]
+13. 휴일대체 사후신청 버튼 표시되나 승인 불가 → 1차 조직장 미배치(또는 퇴사자/휴직자 등 8가지 에러 사유) 여부 확인. 승인라인 리졸브 오류 시 버튼은 노출되지만 실제 승인 불가. 관리자가 근태관리 > 휴일대체에서 직접 대체일 지정 안내 [CI-4130]
+14. 월별 연차 사용내역 vs 내휴가 잔여 차이 → 기준 시점 차이 확인. 월별 연차 사용내역은 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 정상 [CI-4140]
+15. 보상휴가 회수 후 잠금(🔒) 미해제 → 해당 날짜의 lock 이벤트를 assign별로 조회. 고객이 모든 assign을 회수했는지 확인. 미회수 assign이 있으면 회수 안내. 단일 부여에서 추출 0분 날짜에도 lock이 생성되는 비대칭 존재 (조사 중) [CI-4147]
 
 #### 조사 플로우
 
@@ -299,6 +302,10 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **선택적 근무 추천 휴게 미입력**: 추천 휴게는 실시간 기록 시점이 아닌 **근무 확정 시점**에 판단/입력. 별도 등록 휴게와 겹치지 않으면 자동 등록, 겹치면 미등록 — **스펙** [QNA-1922]
 - **연차 사용 내역 사라짐**: 연차 정책 부여 시작일 이전 사용 내역은 제품 내 미표시. 엑셀에는 원시 데이터 존재. — **스펙** [QNA-1920]
 - **근태기록 리포트 컬럼 차이**: 출근시각/퇴근시각(Work Clock)과 시작/종료시간(이벤트 블록)은 다른 소스. 승인 없는 기록은 관리자 직접 수정. 당일 승인상태는 다운로드 시점 기준 — **스펙** [QNA-1928]
+- **휴일대체 사후신청 버튼 — 승인라인 미검증 노출**: `original-holiday-info` API가 승인라인 유효성을 체크하지 않아, 1차 조직장 미배치 등 승인 불가 구성원에게도 사후신청 버튼 표시. 관리자 직접 대체일 지정으로 우회 — **버그** [CI-4130]
+- **월별 연차 사용내역 vs 내휴가 잔여 차이**: `totalRemainingDays`는 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 — **스펙** [CI-4140]
+<!-- TODO: 시나리오 테스트 추가 권장 — 입사 1주년 전후 월별 연차 사용내역 vs 내휴가 잔여 검증 -->
+- **보상휴가 회수 후 잠금 미해제 — 고아 lock**: 단일 부여 경로에서 추출 0분인 날짜에도 lock 생성 (벌크 부여는 필터링됨). 미회수 assign의 lock이 잔존하여 근무 수정 차단 — **조사 중 (버그 추정)** [CI-4147]
 <!-- TODO: 시나리오 테스트 추가 권장 — 선택적 근무 추천 휴게 자동 입력 조건 검증 -->
 <!-- TODO: 시나리오 테스트 추가 권장 — 휴직 기간 휴가 등록 차단 + 휴가 기간 휴직 등록 허용 비대칭 검증 -->
 
@@ -384,7 +391,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 ### 외부 연동 (Integration)
 
 #### 진단 체크리스트
-문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요"
+문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요"
 1. 연동 비활성화 주체 확인 → 구독 해지 외 자동 변경 없음. log-dashboard에서 API 호출 이력 확인 [CI-3849]
 2. 비활성화 상태에서 수동 전송 → 비활성화 기간 데이터는 소급 불가 [CI-3849]
 3. 수동 전송 반영 안 됨 → 세콤 데이터 수신 순서 확인 (퇴근→출근 역순 수신 가능) [CI-3861]
@@ -392,6 +399,8 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 4. 프로토콜 확인 → **PostgreSQL (TCP/IP)** 고정. `CustomerExternalProviderConnectionInfoDto` 응답의 `url`, `port`, `user`, `password`, `database` 필드를 참조
 5. 출입연동 커넥션 수 변경 요청 → admin-shell에서 직접 변경. 업체별 기본값: 캡스 2, 세콤 2, KT(텔레캅) 3 [QNA-1842]
 6. 다법인 workspace에서 연동 등록 실패 (`하나의 계열사 안에 서로 다른 외부 연동 정보가 존재합니다`) → workspace 내 동일 providerType에 서로 다른 customerKey 존재 여부 확인. 다법인 지원 이전 데이터 마이그레이션 누락이 원인. 데이터 패치로 key 통일 필요 [TT-16783]
+7. 세콤 출근 미반영 + 진행중 위젯 잔존 → **먼저 잔존 위젯 확인**. 이전 근무의 위젯이 미종료 상태이면 새 출근 이벤트가 dry-run validation에서 차단됨. Operation API로 잔존 위젯 수동 종료 후 재처리 [CI-4157]
+8. 세콤/외부 이벤트로 진행중 블럭 다건 발생 → 다수 터미널에서 동시 이벤트 수신 시 Kafka 동시성 race condition으로 중복 START 등록 가능. `isDraftEventRegistrationAllowed`가 이벤트 타입(START/STOP) 미구분하여 통과시킴 [CI-4165]
 
 #### 조사 플로우
 
@@ -423,6 +432,27 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
    └─ 정상 순서 → 다른 원인, 위젯 draft 이벤트(#4716) 확인
 ```
 
+**F3: 세콤 출근 미반영 — 잔존 위젯 차단** · 히트: 1 · [CI-4157]
+> 트리거: "세콤 출근이 반영 안 돼요" + 진행중 위젯이 보임
+
+```
+① 세콤 이벤트 수신 확인
+   v2_user_external_provider_event WHERE user_id=? AND event_time >= ?
+   ├─ 이벤트 0건 → 세콤 PC/PostgreSQL 연결 확인 (transmitter 로그)
+   └─ 이벤트 있음 → ②로
+   ↓
+② consumer 로그 확인
+   OpenSearch: flex-app.be-api-{날짜}, app=time-tracking-consumer
+   → "validation 실패" 또는 "dry-run 종료" 메시지 확인
+   ├─ validation 실패 → ③으로
+   └─ 로그 없음 → Kafka 수신 자체 실패, consumer lag 확인
+   ↓
+③ 잔존 위젯 확인
+   이전 근무일의 위젯이 종료되지 않은 상태인지 확인
+   ├─ 잔존 위젯 있음 → Operation API로 수동 종료 후 세콤 수동전송
+   └─ 잔존 위젯 없음 → 다른 validation 실패 원인 조사
+```
+
 **고객사 방화벽 허용 설정 안내값:**
 
 | 항목 | 값 |
@@ -440,6 +470,19 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 
 -- 위젯 draft 이벤트 (Metabase)
 -- https://metabase.dp.grapeisfruit.com/question/4716-draft
+
+-- 특정 유저의 세콤 이벤트 조회 (수신 확인)
+SELECT id, event_time, event_type, created_at
+FROM v2_user_external_provider_event
+WHERE customer_external_provider_id = ? AND user_id = ?
+  AND event_time >= ?
+ORDER BY event_time;
+
+-- 출퇴근 위젯 draft 이벤트 (중복 등록 확인)
+SELECT id, event_time, target_time, fail_message, registered_user_work_clock_event_id
+FROM v2_user_work_clock_draft_event
+WHERE user_id = ? AND created_at >= ?
+ORDER BY created_at;
 ```
 
 **로그 확인 (연동 상태 변경 추적):**
@@ -455,6 +498,8 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 - **세콤 연동 프로토콜 타입 문의**: 고객사에서 방화벽 허용 설정을 위해 프로토콜 타입을 문의. PostgreSQL 고정 설계로 API에 별도 필드 없음. 고객사에 "TCP/PostgreSQL 프로토콜, 포트 5432" 직접 안내로 해결. — **스펙**
 - **출입연동 커넥션 수 설정**: 업체별 PC당 커넥션 수 기본값 — 캡스 2, 세콤 2, KT(텔레캅) 3. admin-shell(`https://admin-shell.flexis.team/time-tracking/admin/external-provider.html`)에서 변경 — **운영 요청** [QNA-1842]
 - **다법인 workspace customerKey 충돌**: 다법인 지원 코드 추가 시 기존 데이터 마이그레이션 누락으로 workspace 내 동일 providerType에 서로 다른 customerKey 존재 → 신규 등록 실패. 데이터 패치로 key 통일 필요 — **버그 (데이터 마이그레이션 누락)** [TT-16783]
+- **세콤 출근 미반영 — 잔존 위젯에 의한 dry-run 차단**: 이전 근무 위젯 미종료 → 새 출근 이벤트의 dry-run validation 실패(`WORK_CLOCK_START_CONTINUOUS_NOT_ALLOWED`). Operation API로 잔존 위젯 수동 종료 후 재처리 — **스펙 (정상 차단)** [CI-4157]
+- **세콤 다중 터미널 동시 이벤트 → 중복 START 등록**: Kafka 파티션 분산 + REQUIRES_NEW 트랜잭션 + REPEATABLE READ 격리 → 동시 dry-run에서 서로의 미커밋 데이터 미가시. `isDraftEventRegistrationAllowed`의 이벤트 타입 미구분도 기여 — **버그 (조사 중)** [CI-4165]
 
 ---
 
@@ -581,39 +626,61 @@ WHERE customer_id = ?
 
 ---
 
-### 인증 (Authentication)
+### 전자계약 (Contract/Digicon)
 
 #### 진단 체크리스트
-문의: "계열사 전환 시 로그인이 풀려요" / "겸직회사로 전환하면 로그아웃돼요"
-1. **자동 로그아웃 설정 비교**: 각 계열사의 자동 로그아웃 설정 시간이 동일한지 확인 [CI-4166]
-2. 설정이 다르면 → 세션 시간이 긴 회사에서 짧은 회사로 전환 시 로그인이 풀리는 것은 **정상 동작(스펙)**. 두 회사의 자동 로그아웃 설정을 맞추면 해결 [CI-4166]
-3. 설정이 같은데도 발생하면 → 다른 원인 조사 필요 (인증 수단, 세션 상태 등)
+문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요"
+1. 서명 완료(SUCCEED) 계약서 삭제/취소 요청 → **삭제 불가(스펙)**. `DigiconProgressStatus.cancelable()` = `this === IN_PROGRESS`만 허용. 올바른 내용으로 새 계약서 재발송 안내 [CI-4152]
+2. 서식(template) 삭제자 추적 → access log에서 `DELETE /api/v2/digicon/templates` 검색 → traceId로 호출 체인 추적 → permission-api 호출에서 userId 확인 → view_user 테이블로 이메일 매핑. 감사로그에 서식 삭제 미기록 [CI-4168]
+3. 양식 개수 제한 여부 → 제한 없음 [CI-4168]
+4. 삭제된 서식 복구 → Operation API: `POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates` [CI-4168]
 
 #### 조사 플로우
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
+> 여러 플로우가 후보이면 병렬로 실행하여 히트 여부를 빠르게 판별.
 
-**F1: 계열사 전환 시 로그인 풀림 — 세션 시간 차이** · 히트: 1 · [CI-4166]
-> 트리거: "계열사 전환 시 로그인이 풀려요" / "겸직회사로 이동하면 로그아웃"
+**F1: 전자계약 서식 삭제자 추적** · 히트: 1 · [CI-4168]
+> 트리거: "서식이 삭제됐어요" / "삭제자를 알고 싶어요"
 
 ```
-① 대상자의 계열사 구조 확인
-   Metabase dashboard/212?고객사_id={customerId}
-   → 소속 회사 목록 확인
+① DB: 삭제된 서식 목록 확인
+   customer_digicon_template WHERE customer_id=? AND deleted_at IS NOT NULL
+   → 삭제 시간 패턴 확인 (동일 초에 다건이면 일괄 삭제)
    ↓
-② 각 회사의 자동 로그아웃 설정 시간 비교
-   flex 제품 내 자동 로그아웃 설정 화면
-   ├─ 설정 시간 다름 → 원인 확정 (스펙). ③으로
-   └─ 설정 시간 같음 → 다른 원인, 인증 수단/세션 상태 추가 조사
+② Access log: 삭제 API 호출 추적
+   OpenSearch flex-app.be-access-{날짜} → DELETE /api/v2/digicon/templates + 서비스 digicon-api
+   → traceId 추출
    ↓
-③ 고객 안내
-   "세션 시간이 긴 회사에서 짧은 회사로 전환 시 로그인이 풀리는 것은 정상 동작.
-    두 회사의 자동 로그아웃 설정을 맞추면 해결됩니다"
+③ traceId로 호출 체인 추적
+   permission-api 호출에서 customers/{customerId}/users/{userId} 확인
+   ↓
+④ view_user 테이블에서 userId → 이메일/이름 매핑
+   ├─ 문의자 본인 → 의도하지 않은 삭제인지, 계정 공유 여부 확인 안내
+   └─ 다른 사용자 → 해당 사용자에게 확인 안내
+```
+
+#### 데이터 접근
+```sql
+-- 삭제된 서식 목록 (soft delete)
+SELECT id, name, deleted_at, created_at
+FROM customer_digicon_template
+WHERE customer_id = ? AND deleted_at IS NOT NULL
+ORDER BY deleted_at DESC;
+
+-- 서명 완료 계약서 조회 (삭제 불가 확인)
+SELECT id, progress_status, file_key, created_date_time
+FROM digicon
+WHERE customer_id = ? AND user_id = ?
+ORDER BY created_date_time DESC;
+
+-- 삭제된 서식 복구 (Operation API)
+POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates
 ```
 
 #### 과거 사례
-- **계열사 전환 시 로그인 풀림**: 두 계열사의 자동 로그아웃 설정 시간 차이로 인해, 세션 시간이 긴 회사에서 짧은 회사로 전환 시 세션 만료 판정 → 401 반환. 이전 동일 사례 존재 — **스펙** [CI-4166]
-<!-- TODO: 시나리오 테스트 추가 권장 — 계열사 전환 시 세션 만료 기준 검증 -->
+- **서명 완료 계약서 삭제 불가**: SUCCEED 상태 계약서는 `cancelable() = this === IN_PROGRESS`로 취소 불가, Operation API에도 삭제 엔드포인트 없음. 법적 효력 보존이 설계 의도. 정석: 올바른 내용으로 재계약 발송 — **스펙** [CI-4152]
+- **서식 삭제자 access log 추적**: 감사로그에 서식 삭제 미기록. access log traceId → permission-api 호출 체인으로 삭제자 특정 가능. soft delete로 Operation API 복구 가능 — **스펙 (개선 필요)** [CI-4168]
 
 ---
 
@@ -653,11 +720,6 @@ WHERE settlement_id = ? AND user_id = ?;
 - **정산 재처리 시 소득세 변경 — 부양가족 수 최신화**: 정산 자물쇠 해제 후 재처리 시 PAYEES 단계에서 전체 대상자의 payee 스냅샷 최신화. 1차 정산 이후 부양가족 추가/변경이 있었으면 소득세 재계산됨 — **스펙** [CI-4149]
 <!-- TODO: 시나리오 테스트 추가 권장 — 정산 재처리 시 payee 스냅샷 최신화로 소득세 변경 검증 -->
 - **구독 해지 후 명세서 알림 발송**: payroll 스케줄러/pavement 모두 구독 상태 미체크. 알림은 정상 발송되나 급여 탭 접근 차단으로 실제 열람 불가. 1달 연장 안내 권장 — **스펙** [QNA-1933]
-
-5. 급여정산 구독 해지 후 명세서 공개/알림 문의 → payroll/pavement 모두 구독 여부 체크 없음. 알림은 발송되나, 구독 해지 시 웹/모바일 급여 탭 권한 차단으로 구성원이 급여 조회 불가. 공개 이후까지 1달 연장 권장 안내 [QNA-1933]
-
-#### 과거 사례
-- **급여정산 해지 후 명세서 공개/알림**: payroll/pavement에서 구독 여부 미체크 → 알림 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실질 조회 불가. 오류 수정도 불가하므로 공개일까지 연장 권장 안내 — **스펙** [QNA-1933]
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -726,9 +788,7 @@ ORDER BY created_at DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
-| 2026-03-19 | CI-4166 | 인증 도메인 추가 — 계열사 전환 시 세션 시간 차이로 로그인 풀림 스펙, 진단 플로우 F1 |
-| 2026-03-19 | CI-4170 | 채용 도메인 추가 — subdomain 변경 요청 수동 승인 프로세스, 알림 채널·DB·API 가이드 |
-| 2026-03-19 | CI-4158 | 평가 도메인 추가 — DRAFT 평가 노출 스펙, 삭제 미삭제 판별 체크리스트 |
+| 2026-03-19 | 전체 | 전체 재구성 — 전자계약 도메인 신규 추가(CI-4152, CI-4168), 근태/휴가(CI-4130, CI-4140, CI-4147), 외부 연동(CI-4157, CI-4165), 인증(CI-4166), 평가(CI-4158), 채용(CI-4170) 반영, 급여 중복 정리 |
 | 2026-03-18 | QNA-1933 | 급여 도메인에 구독 해지 후 명세서 알림 발송 스펙 + 1달 연장 안내 권장 추가 |
 | 2026-03-18 | CI-4150 | 권한 도메인 추가 — 최고관리자 자동 부여 스펙, 감사로그 미기록 안내, grant_subject SQL 추가 |
 | 2026-03-18 | CI-4149 | 급여 도메인에 정산 재처리 시 부양가족 수 최신화로 소득세 변경 스펙 추가 |
