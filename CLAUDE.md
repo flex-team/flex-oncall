@@ -5,11 +5,12 @@
 온콜 업무를 위한 인덱스 repo. 관련 프로젝트들을 git submodule로 묶고, 이슈가 어느 코드베이스에 있는지 빠르게 찾는 시작점 역할을 한다. 이슈 파악과 운영 노트 기록이 목적이며, 코드 변경은 각 서브모듈 repo에서 수행한다.
 
 - Always respond in Korean
+- **이 repo는 도메인 스펙을 관리하지 않는다.** 도메인 스펙은 각 서브모듈 repo에서 관리한다. 이 repo는 운영 이슈 조사·기록·패턴 축적만 담당한다.
 - **서브모듈 변경은 이 repo에 커밋하지 않는다.** 서브모듈은 코드 탐색·조사 용도로만 사용하며, PR과 커밋은 각 서브모듈 repo에서 직접 수행한다. `git add` 시 서브모듈 경로(`flex-*`)는 항상 제외할 것.
 
 ## 용어집
 
-- **용어집**: `GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 → 서브모듈 매핑
+- **용어집**: `brain/GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 → 서브모듈 매핑
 - 이슈 인입 시 사용자의 표현이 어떤 도메인에 해당하는지 찾을 때 참조
 
 ## 서브모듈 맵
@@ -61,8 +62,8 @@
 
 ```
 이슈 접수 (Linear/Slack)
-  → 도메인 파악 (이 문서의 키워드 매핑 참조)
-  → 쿡북 확인 (operation-notes/COOKBOOK.md)
+  → 도메인 파악 (brain/domain-map.ttl + 이 문서의 키워드 매핑 참조)
+  → 쿡북 확인 (brain/COOKBOOK.md)
   → 데이터 조사 (DB/OpenSearch/Kafka 스킬)
   → 원인 분석 및 해결
   → 운영 노트 기록
@@ -89,11 +90,12 @@
 
 ## 운영 지식 참조
 
-- **쿡북**: `operation-notes/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
-- **노트 인덱스**: `operation-notes/INDEX.md` — 키워드 → 문서 매핑 (전체 노트를 읽지 말고 여기서 관련 문서를 찾을 것)
-- **진행 중 노트**: `operation-notes/{ticket-id}.md` — 루트에 위치한 active 이슈
-- **해결 완료 노트**: `operation-notes/archive/{ticket-id}.md` — INDEX.md로 찾아서 필요한 것만 읽기
-- **티켓 노트 작성 규칙**: `operation-notes/CLAUDE.md`
+- **쿡북**: `brain/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
+- **도메인 맵**: `brain/domain-map.ttl` — 키워드 → 문서 매핑 (전체 노트를 읽지 말고 여기서 관련 문서를 찾을 것)
+- **진행 중 노트**: `brain/notes/{ticket-id}.md` — notes/ 루트에 위치한 active 이슈
+- **해결 완료 노트**: `brain/notes/archive/{ticket-id}.md` — domain-map.ttl로 찾아서 필요한 것만 읽기
+- **티켓 노트 작성 규칙**: `brain/CLAUDE.md`
+- **용어집**: `brain/GLOSSARY.md`
 - **서브모듈별 운영 노트**: 각 서브모듈의 `.claude/operation-notes/` 디렉토리도 참조
   - 예: `flex-timetracking-backend/.claude/operation-notes/`
   - 이슈의 도메인이 파악되면 해당 서브모듈의 운영 노트를 우선 확인할 것

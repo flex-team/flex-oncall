@@ -1,5 +1,5 @@
 ---
-description: operation-note에서 COOKBOOK.md + INDEX.md 를 증분 업데이트
+description: operation-note에서 COOKBOOK.md 를 증분 업데이트
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id | --gh-issue {number}> (예: CI-3914, --gh-issue 11976)
 ---
@@ -7,8 +7,8 @@ argument-hint: <ticket-id | --gh-issue {number}> (예: CI-3914, --gh-issue 11976
 # Update Artifacts
 
 ## Purpose
-operation-note에서 파생 산출물(**COOKBOOK.md** + **INDEX.md**)을 증분 업데이트한다.
-티켓 ID 하나로 두 산출물을 한번에 갱신.
+operation-note에서 파생 산출물(**COOKBOOK.md**)을 증분 업데이트한다.
+티켓 ID 하나로 산출물을 갱신.
 
 > **전체 재구성은 이 커맨드의 범위가 아니다.** 전체 재구성이 필요하면 `maintain-notes --rebuild` 를 사용한다.
 
@@ -21,17 +21,18 @@ $ARGUMENTS
 - `$ARGUMENTS` 가 비어있으면 → `"티켓 ID를 인자로 전달해주세요. 전체 재구성은 /ops:maintain-notes --rebuild 를 사용하세요."` 출력 후 **즉시 종료**
 
 ### 경로 결정
-COOKBOOK.md, INDEX.md, 노트 파일의 베이스 경로를 아래 우선순위로 결정한다.
+COOKBOOK.md, 노트 파일의 베이스 경로를 아래 우선순위로 결정한다.
 
 | 우선순위 | 경로 | 설명 |
 |---------|------|------|
-| 1 | `{repo-root}/operation-notes/` | repo 루트에 operation-notes 디렉토리가 존재 |
-| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 |
+| 1 | `{repo-root}/brain/notes/` | repo 루트 brain/notes 디렉토리가 존재 |
+| 2 | `{repo-root}/.claude/operation-notes/` | .claude 하위에 존재 (서브모듈용) |
 | 3 | `~/.claude/operation-notes/` | 글로벌 홈 디렉토리에 존재 |
 
 - 디렉토리 **존재 여부**로 판단한다 (파일이 아닌 디렉토리).
 - 셋 다 존재하지 않으면 사용자에게 `"operation-notes 디렉토리를 찾을 수 없습니다."` 로 물어본다.
 - 해석된 경로를 이하 `{notes-dir}` 로 표기한다.
+- COOKBOOK.md는 `{brain-dir}/COOKBOOK.md` (`{brain-dir}` = `{notes-dir}` 의 상위, 즉 `{repo-root}/brain/`).
 - CI 환경(`GITHUB_ACTIONS == "true"`)에서는 우선순위 3(홈 디렉토리) 폴백 없이 레포 내 경로만 사용한다.
 
 ### Note File Resolution
@@ -54,7 +55,7 @@ Note File Resolution에 따라 `{notes-dir}/{ticket-id}.md` → `{notes-dir}/arc
 파일이 없으면 `"해당 이슈 노트가 없습니다: {ticket-id}"` 출력 후 종료.
 
 #### Step 2: 기존 COOKBOOK.md 읽기
-`{notes-dir}/COOKBOOK.md` 를 읽는다.
+`{brain-dir}/COOKBOOK.md` 를 읽는다.
 파일이 없으면 사용자에게 COOKBOOK.md 신규 생성 여부를 확인.
 
 #### Step 3: 쿡북 추가 대상 판별
@@ -82,36 +83,7 @@ Note File Resolution에 따라 `{notes-dir}/{ticket-id}.md` → `{notes-dir}/arc
 #### Step 5: COOKBOOK.md 업데이트
 변경 사항을 반영하고 사용자에게 diff를 보여준다.
 
-### Phase 2: INDEX 증분 반영
-
-#### Step 1: 정보 추출
-노트에서 다음을 추출:
-- **제목** (H1) → 한 줄 요약
-- **도메인** → 도메인 분류 기준표에 따라 판별
-- **키워드** → 5~10개 (도메인 용어, 증상 키워드, 기능/설정명, 테이블/필드명, 시스템 용어)
-
-**도메인 분류 기준:**
-
-| 키워드/영역 | 도메인 |
-|------------|--------|
-| 연차촉진, boost, PENDING_WRITE | 연차 촉진 (Annual Time-Off Promotion) |
-| 알림, notification, 이메일, CTA, push | 알림 (Notification) |
-| 휴가, 연차, time-off, 근태, 출퇴근, 휴일대체, 보상휴가, 포괄임금, 근로시간 | 근태/휴가 (Time Tracking / Time Off) |
-| 스케줄, 근무표, 게시, 연장근무 | 스케줄링 (Scheduling) |
-| 교대근무, shift, 배치 | 교대근무 (Shift) |
-| 세콤, CAPS, 연동, external, 타각기 | 외부 연동 (Integration / SECOM) |
-| 승인, approval, 승인자, 참조자 | 승인 (Approval) |
-| 권한, permission, access-check | 권한 (Permission) |
-| 급여, payroll, 수당, 공제 | 급여 (Payroll) |
-
-#### Step 2: INDEX.md 업데이트
-기존 `{notes-dir}/INDEX.md` 를 읽고:
-- 해당 티켓이 이미 있으면 → 요약과 키워드를 갱신 (파일 위치가 변경되었으면 링크 경로도 갱신)
-- 없으면 → 해당 도메인 섹션의 테이블에 행 추가
-- 도메인 섹션이 없으면 → 새 도메인 섹션 생성
-- **링크 경로**: 노트가 루트에 있으면 `[{ticket-id}](./{ticket-id}.md)`, archive에 있으면 `[{ticket-id}](./archive/{ticket-id}.md)`
-
-### Phase 3: 결과 보고
+### Phase 2: 결과 보고
 
 ```
 ## update-artifacts 결과: {ticket-id}
@@ -119,10 +91,6 @@ Note File Resolution에 따라 `{notes-dir}/{ticket-id}.md` → `{notes-dir}/arc
 ### COOKBOOK
 - 상태: {반영 완료 | 반영할 내용 없음 | 코드 수정으로 해결 — 스킵}
 - (반영 시) 변경 내용 요약
-
-### INDEX
-- 상태: {추가 | 갱신 | 변경 없음}
-- 키워드: {추출된 키워드 목록}
 ```
 
 ---
@@ -261,32 +229,16 @@ gh issue view {number} --comments
 - 노트의 조사 흐름이 **기존 플로우의 변형** → 기존 플로우에 분기 추가 또는 별도 플로우 신설
 - 노트의 조사 흐름이 **완전히 새로운 패턴** → 새 플로우 추가
 
-## INDEX.md 구조
 
-```markdown
-# 운영 노트 인덱스
-
-> 이슈 조사 시 전체 문서를 읽지 말고, 이 인덱스에서 키워드로 관련 문서를 찾아 해당 문서만 읽을 것.
-> COOKBOOK.md는 도메인별 진단 가이드이므로 항상 먼저 참조.
-
-## 도메인별 문서 목록
-
-### {도메인명}
-
-| 문서 | 요약 | 키워드 |
-|------|------|--------|
-| [{ticket-id}](./{파일명}) | {한 줄 요약} | {키워드1}, {키워드2}, ... |
-```
-
-### Phase 3.5: 메트릭스 기록
+### Phase 2.5: 메트릭스 기록
 
 > 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
 > Read: .claude/commands/ops/metrics-guide.md
 > ```
 
-1. **COOKBOOK 히트 동기화**: Phase 1에서 기존 플로우의 히트 카운트를 갱신했으면, METRICS.md 플로우 히트 이력도 동기화
-2. **METRICS.md 갱신**: 활동 로그(전체)에 행 추가 + 스킬별 사용량 + 월별 요약 갱신
+1. **COOKBOOK 히트 동기화**: Phase 1에서 기존 플로우의 히트 카운트를 갱신했으면, `.claude/METRICS.md` 플로우 히트 이력도 동기화
+2. **`.claude/METRICS.md` 갱신**: 활동 로그(전체)에 행 추가 + 스킬별 사용량 + 월별 요약 갱신
 
 ## Rules
 
@@ -304,8 +256,3 @@ gh issue view {number} --comments
 - 변경 이력은 **항상 기록**
 - **스펙 확인 시 시나리오 테스트 연계**: 스펙이 파악된 경우, 시나리오 테스트가 없으면 `<!-- TODO: 시나리오 테스트 추가 권장 -->` 코멘트를 남긴다
 
-### INDEX
-- 키워드는 **쉼표 구분**, 한 항목당 5~10개
-- 요약은 **한 줄** (50자 이내 권장)
-- 하나의 노트가 여러 도메인에 걸치면 **주 도메인 하나**에만 배치
-- 키워드는 사용자가 이슈 인입 시 사용할 만한 표현 위주로 선정

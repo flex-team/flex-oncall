@@ -1,5 +1,5 @@
 ---
-description: 완료된 이슈의 operation-note 를 동기화하고 파생 산출물(COOKBOOK + INDEX)을 갱신
+description: 완료된 이슈의 operation-note 를 동기화하고 파생 산출물(COOKBOOK)을 갱신
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id> (예: CI-3861)
 ---
@@ -7,7 +7,7 @@ argument-hint: <ticket-id> (예: CI-3861)
 # Close Note
 
 ## Purpose
-완료된 이슈에 대해 **operation-note 동기화 + 파생 산출물(COOKBOOK, INDEX) 증분 갱신**을 한번에 처리한다.
+완료된 이슈에 대해 **operation-note 동기화 + 파생 산출물(COOKBOOK) 증분 갱신**을 한번에 처리한다.
 Linear 최신 정보로 note를 업데이트하고, 쿡북과 인덱스에 반영까지 자동 진행.
 
 > 이슈 **접수** 시점에는 이 커맨드가 아닌 `note-issue` 를 사용한다.
@@ -42,7 +42,7 @@ Read: .claude/commands/ops/note-issue.md
 - Step 5: 연관 이슈 역방향 링크
 - Step 6: 결과 보고 — **단, 이 시점에서 `update-artifacts` 안내는 생략** (Phase 2에서 자동 처리)
 
-Phase 1 완료 후 산출물: `operation-notes/{ticket-id}.md`
+Phase 1 완료 후 산출물: `brain/notes/{ticket-id}.md`
 
 ### Phase 2: 파생 산출물 갱신 (자동 판단)
 
@@ -53,7 +53,6 @@ Read: .claude/commands/ops/update-artifacts.md
 ```
 
 - COOKBOOK: 반영 대상 자동 판단 (진단 가이드/SQL/원인 확정/스펙 판별 섹션 존재 여부)
-- INDEX: 항상 갱신
 
 ### Phase 3: 최종 보고
 
@@ -63,7 +62,7 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 ## close-note 결과: {ticket-id}
 
 ### Phase 1: Operation Note
-- 파일: `operation-notes/{ticket-id}.md`
+- 파일: `brain/notes/{ticket-id}.md`
 - 모드: {신규 생성 | 업데이트}
 - 핵심 내용 3줄 요약
 - 연관 이슈: {있으면 목록, 없으면 "없음"}
@@ -71,7 +70,6 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 
 ### Phase 2: Artifacts
 - COOKBOOK: {반영 완료 | 반영할 내용 없음 | 코드 수정으로 해결 — 스킵}
-- INDEX: {추가 | 갱신 | 변경 없음}
 
 ### 다음 단계
 - 일괄 아카이브가 필요하면 → `ops:maintain-notes`
@@ -86,7 +84,7 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 
 1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` (또는 archive로 이동된 경우 해당 경로) 하단 `## Claude 활동 로그` 테이블에 행 추가
    - subagent total_tokens/duration_ms 합산, 쿡북 참조 = `—`
-2. **METRICS.md 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
+2. **`.claude/METRICS.md` 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
 
 ## Rules
 - Phase 1의 모든 규칙은 `note-issue.md` 를 따른다
