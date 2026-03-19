@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Brain — Domain Knowledge Graph</title>
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; overflow: hidden; }
+#cy { width: 100vw; height: 100vh; }
+
+/* Loading overlay */
+#loading {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  background: #0d1117; color: #8b949e; font-size: 14px;
+}
+#loading.hidden { display: none; }
+#loading .spinner { width: 32px; height: 32px; border: 3px solid #21262d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Top bar */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; background: rgba(13,17,23,0.92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid #21262d;
+}
+#topbar h1 { font-size: 15px; font-weight: 600; color: #58a6ff; white-space: nowrap; }
+#search {
+  flex: 1; max-width: 360px; padding: 6px 12px; border-radius: 6px;
+  border: 1px solid #30363d; background: #161b22; color: #c9d1d9; font-size: 13px;
+  outline: none;
+}
+#search:focus { border-color: #58a6ff; }
+#search::placeholder { color: #484f58; }
+
+/* Legend */
+#legend { display: flex; gap: 12px; font-size: 11px; color: #8b949e; margin-left: auto; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* View toggles */
+#toggles { display: flex; gap: 4px; }
+.toggle-btn {
+  padding: 4px 10px; border-radius: 4px; border: 1px solid #30363d;
+  background: #161b22; color: #8b949e; font-size: 11px; cursor: pointer;
+}
+.toggle-btn.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+
+/* Detail panel */
+#panel {
+  position: fixed; top: 48px; right: 0; width: 380px; height: calc(100vh - 48px);
+  background: rgba(22,27,34,0.96); backdrop-filter: blur(8px);
+  border-left: 1px solid #21262d; overflow-y: auto; padding: 16px;
+  transform: translateX(100%); transition: transform 0.2s ease; z-index: 9;
+}
+#panel.open { transform: translateX(0); }
+#panel h2 { font-size: 16px; color: #58a6ff; margin-bottom: 12px; }
+#panel h3 { font-size: 13px; color: #8b949e; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+#panel .close-btn {
+  position: absolute; top: 12px; right: 12px; background: none; border: none;
+  color: #8b949e; font-size: 18px; cursor: pointer;
+}
+#panel .close-btn:hover { color: #c9d1d9; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin: 2px; }
+.tag-kw { background: #1c2d41; color: #58a6ff; }
+.tag-repo { background: #1c3a2d; color: #3fb950; }
+.tag-mod { background: #2d2a1c; color: #d29922; }
+.note-item {
+  padding: 6px 8px; margin: 3px 0; border-radius: 4px; font-size: 12px;
+  background: #161b22; border-left: 3px solid;
+}
+.note-item.spec { border-color: #58a6ff; }
+.note-item.bug { border-color: #f85149; }
+.note-item.investigating { border-color: #d29922; }
+.note-item.operational { border-color: #8b949e; }
+.note-id { font-weight: 600; color: #c9d1d9; }
+.note-verdict { font-size: 10px; text-transform: uppercase; margin-left: 6px; opacity: 0.7; }
+.note-summary { display: block; color: #8b949e; margin-top: 2px; }
+.glossary-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 12px; }
+.glossary-q { color: #f0883e; }
+.glossary-a { color: #8b949e; margin-top: 2px; }
+
+/* Stats bar */
+#stats { position: fixed; bottom: 12px; left: 16px; font-size: 11px; color: #484f58; z-index: 10; }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div>domain-map.ttl 로딩 중...</div>
+
+<div id="topbar">
+  <h1>Brain</h1>
+  <input id="search" type="text" placeholder="키워드 검색... (예: 알림, 세콤, 연차)">
+  <div id="toggles">
+    <button class="toggle-btn active" data-view="domains">도메인</button>
+    <button class="toggle-btn" data-view="notes">노트</button>
+    <button class="toggle-btn" data-view="glossary">용어</button>
+  </div>
+  <div id="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div>spec</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div>bug</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div>investigating</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>cross-domain</div>
+  </div>
+</div>
+
+<div id="cy"></div>
+
+<div id="panel">
+  <button class="close-btn" onclick="closePanel()">&times;</button>
+  <div id="panel-content"></div>
+</div>
+
+<div id="stats"></div>
+
+<script>
+// ── TTL Parser ──
+function parseTTL(text) {
+  const domains = {};
+  const notes = [];
+  const glossary = [];
+  const lines = text.split('\n');
+  let currentSection = 'active';
+
+  // Join continuation lines
+  const joined = [];
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith('#')) {
+      if (trimmed.includes('Notes \u2014 active') || trimmed.includes('Notes -- active')) currentSection = 'active';
+      else if (trimmed.includes('Notes \u2014 archive') || trimmed.includes('Notes -- archive')) currentSection = 'archive';
+      joined.push({ type: 'comment', text: trimmed, section: currentSection });
+      continue;
+    }
+    if (trimmed.startsWith('@prefix') || trimmed === '') {
+      joined.push({ type: 'skip', text: trimmed, section: currentSection });
+      continue;
+    }
+    if (line.match(/^\s/) && joined.length > 0 && joined[joined.length - 1].type === 'block') {
+      joined[joined.length - 1].text += ' ' + trimmed;
+    } else {
+      joined.push({ type: 'block', text: trimmed, section: currentSection });
+    }
+  }
+
+  function extractStrings(val) {
+    return [...(val || '').matchAll(/"([^"]*)"/g)].map(m => m[1]);
+  }
+  function extractRefs(val) {
+    return [...(val || '').matchAll(/:([a-zA-Z0-9_-]+)/g)].map(m => m[1]);
+  }
+  function parseProps(text) {
+    const props = {};
+    const re = /d:(\w+)\s+([\s\S]*?)(?=\s*d:\w|\s*[.;]\s*$|$)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      props[m[1]] = m[2].replace(/[.;]\s*$/, '').trim();
+    }
+    return props;
+  }
+
+  for (const item of joined) {
+    if (item.type !== 'block') continue;
+    const t = item.text;
+
+    const dm = t.match(/^:([a-zA-Z0-9_-]+)\s/);
+    if (dm && !t.startsWith('d:')) {
+      const id = dm[1];
+      const p = parseProps(t);
+      domains[id] = {
+        n: extractStrings(p.n)[0] || id,
+        cb: extractStrings(p.cb)[0] || '',
+        repos: extractStrings(p.repo),
+        mods: extractStrings(p.mod),
+        kw: extractStrings(p.kw),
+        x: p.x ? extractRefs(p.x) : [],
+      };
+      continue;
+    }
+
+    const nm = t.match(/^n:([a-zA-Z0-9_-]+)\s/);
+    if (nm) {
+      const p = parseProps(t);
+      notes.push({
+        id: nm[1],
+        domain: p['in'] ? extractRefs(p['in'])[0] || '' : '',
+        v: extractStrings(p.v)[0] || 'investigating',
+        s: extractStrings(p.s)[0] || '',
+        active: item.section === 'active',
+      });
+      continue;
+    }
+
+    const gm = t.match(/^g:([a-zA-Z0-9_-]+)\s/);
+    if (gm) {
+      const p = parseProps(t);
+      glossary.push({
+        id: gm[1],
+        domain: p['in'] ? extractRefs(p['in'])[0] || '' : '',
+        q: extractStrings(p.q)[0] || '',
+        a: extractStrings(p.a)[0] || '',
+      });
+    }
+  }
+
+  return { domains, notes, glossary };
+}
+
+// ── Data (loaded dynamically from domain-map.ttl) ──
+let domains = {};
+let notes = [];
+let glossary = [];
+
+let domainColors = {};
+const verdictColors = { spec:'#58a6ff', bug:'#f85149', investigating:'#d29922', operational:'#8b949e' };
+
+function buildColorPalette() {
+  domainColors = {};
+  const ids = Object.keys(domains);
+  const step = ids.length ? 360 / ids.length : 0;
+  ids.forEach((id, i) => { domainColors[id] = `hsl(${Math.round(i * step)}, 55%, 55%)`; });
+}
+
+// ── Build Cytoscape elements ──
+let currentView = 'domains';
+
+function buildElements(view) {
+  const els = [];
+  for (const [id, d] of Object.entries(domains)) {
+    const nc = notes.filter(n => n.domain === id).length;
+    els.push({ data: { id, label: d.n.split('(')[0].trim(), type: 'domain', color: domainColors[id] || '#8b949e', noteCount: nc, size: 30 + nc * 2 } });
+  }
+  const edgeSet = new Set();
+  for (const [id, d] of Object.entries(domains)) {
+    for (const target of d.x) {
+      const key = [id, target].sort().join('--');
+      if (!edgeSet.has(key)) { edgeSet.add(key); els.push({ data: { id: 'e-' + key, source: id, target, type: 'cross' } }); }
+    }
+  }
+  if (view === 'notes') {
+    for (const note of notes) {
+      els.push({ data: { id: 'n-' + note.id, label: note.id, type: 'note', verdict: note.v, active: note.active, color: verdictColors[note.v] || '#8b949e', size: note.active ? 14 : 10, summary: note.s } });
+      els.push({ data: { source: note.domain, target: 'n-' + note.id, type: 'note-edge' } });
+    }
+  }
+  if (view === 'glossary') {
+    for (const g of glossary) {
+      els.push({ data: { id: 'g-' + g.id, label: g.q, type: 'glossary', color: '#f0883e', size: 10, answer: g.a } });
+      els.push({ data: { source: g.domain, target: 'g-' + g.id, type: 'glossary-edge' } });
+    }
+  }
+  return els;
+}
+
+// ── Cytoscape ──
+let cy;
+function initCy(view) {
+  if (cy) cy.destroy();
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: buildElements(view),
+    style: [
+      { selector: 'node[type="domain"]', style: { 'background-color': 'data(color)', 'label': 'data(label)', 'width': 'data(size)', 'height': 'data(size)', 'font-size': 11, 'color': '#c9d1d9', 'text-valign': 'bottom', 'text-margin-y': 6, 'text-outline-color': '#0d1117', 'text-outline-width': 2, 'border-width': 2, 'border-color': 'data(color)', 'border-opacity': 0.5 }},
+      { selector: 'node[type="note"]', style: { 'background-color': 'data(color)', 'label': 'data(label)', 'width': 'data(size)', 'height': 'data(size)', 'font-size': 8, 'color': '#8b949e', 'text-valign': 'bottom', 'text-margin-y': 4, 'text-outline-color': '#0d1117', 'text-outline-width': 1, 'shape': 'round-rectangle', 'opacity': 0.8 }},
+      { selector: 'node[type="glossary"]', style: { 'background-color': 'data(color)', 'label': '', 'width': 'data(size)', 'height': 'data(size)', 'shape': 'diamond', 'opacity': 0.8 }},
+      { selector: 'edge[type="cross"]', style: { 'line-color': '#3fb950', 'width': 2, 'opacity': 0.4, 'curve-style': 'bezier' }},
+      { selector: 'edge[type="note-edge"]', style: { 'line-color': '#21262d', 'width': 1, 'opacity': 0.3, 'curve-style': 'bezier' }},
+      { selector: 'edge[type="glossary-edge"]', style: { 'line-color': '#f0883e', 'width': 1, 'opacity': 0.2, 'curve-style': 'bezier' }},
+      { selector: ':selected', style: { 'border-width': 3, 'border-color': '#fff' }},
+      { selector: '.highlighted', style: { 'opacity': 1, 'border-width': 3, 'border-color': '#fff' }},
+      { selector: '.dimmed', style: { 'opacity': 0.1 }},
+    ],
+    layout: view === 'domains'
+      ? { name: 'cose', animate: true, animationDuration: 800, nodeRepulsion: () => 80000, idealEdgeLength: () => 250, gravity: 0.05, numIter: 1000, nodeOverlap: 40, padding: 60 }
+      : { name: 'cose', animate: true, animationDuration: 600, nodeRepulsion: () => 4000, idealEdgeLength: () => 80, gravity: 0.5 },
+    minZoom: 0.3, maxZoom: 3, wheelSensitivity: 0.3,
+  });
+  cy.on('tap', 'node[type="domain"]', e => showDomainPanel(e.target.id()));
+  cy.on('tap', 'node[type="note"]', e => { const n = notes.find(n => n.id === e.target.id().replace('n-', '')); if (n) showNoteDetail(n); });
+  cy.on('tap', 'node[type="glossary"]', e => { const g = glossary.find(x => x.id === e.target.id().replace('g-', '')); if (g) showGlossaryDetail(g); });
+  updateStats();
+}
+
+// ── Panel ──
+function showDomainPanel(domainId) {
+  const d = domains[domainId]; if (!d) return;
+  const dn = notes.filter(n => n.domain === domainId);
+  const an = dn.filter(n => n.active), ar = dn.filter(n => !n.active);
+  const dg = glossary.filter(g => g.domain === domainId);
+  let h = `<h2 style="color:${domainColors[domainId]}">${d.n}</h2>`;
+  h += '<h3>Repos</h3>' + d.repos.map(r => `<span class="tag tag-repo">${r}</span>`).join('');
+  h += '<h3>Modules</h3>' + d.mods.map(m => `<span class="tag tag-mod">${m}</span>`).join('');
+  h += '<h3>Keywords</h3>' + d.kw.map(k => `<span class="tag tag-kw">${k}</span>`).join('');
+  if (d.x.length) { h += '<h3>Cross-domain</h3>' + d.x.map(x => `<span class="tag" style="background:#1a2e1a;color:#3fb950;cursor:pointer" onclick="showDomainPanel('${x}')">${domains[x]?.n.split('(')[0].trim() || x}</span>`).join(''); }
+  if (an.length) { h += `<h3>Active Notes (${an.length})</h3>` + an.map(n => `<div class="note-item ${n.v}"><span class="note-id">${n.id}</span><span class="note-verdict">${n.v}</span><span class="note-summary">${n.s}</span></div>`).join(''); }
+  if (ar.length) { h += `<h3>Archive (${ar.length})</h3>` + ar.map(n => `<div class="note-item ${n.v}"><span class="note-id">${n.id}</span><span class="note-verdict">${n.v}</span><span class="note-summary">${n.s}</span></div>`).join(''); }
+  if (dg.length) { h += `<h3>Glossary (${dg.length})</h3>` + dg.map(g => `<div class="glossary-item"><div class="glossary-q">"${g.q}"</div><div class="glossary-a">\u2192 ${g.a}</div></div>`).join(''); }
+  document.getElementById('panel-content').innerHTML = h;
+  document.getElementById('panel').classList.add('open');
+  cy.elements().removeClass('highlighted dimmed');
+  const node = cy.getElementById(domainId);
+  cy.elements().addClass('dimmed');
+  node.neighborhood().add(node).removeClass('dimmed').addClass('highlighted');
+}
+function showNoteDetail(note) {
+  let h = `<h2>${note.id}</h2><div class="note-item ${note.v}" style="margin:8px 0"><span class="note-verdict">${note.v}</span> \u00b7 ${note.active ? 'Active' : 'Archive'}<br><span class="note-summary">${note.s}</span></div>`;
+  h += `<h3>Domain</h3><span class="tag" style="background:${domainColors[note.domain]}33;color:${domainColors[note.domain]};cursor:pointer" onclick="showDomainPanel('${note.domain}')">${domains[note.domain]?.n || note.domain}</span>`;
+  document.getElementById('panel-content').innerHTML = h;
+  document.getElementById('panel').classList.add('open');
+}
+function showGlossaryDetail(g) {
+  let h = `<h2>Glossary</h2><div class="glossary-item"><div class="glossary-q" style="font-size:14px">"${g.q}"</div><div class="glossary-a" style="font-size:13px;margin-top:6px">\u2192 ${g.a}</div></div>`;
+  h += `<h3>Domain</h3><span class="tag" style="background:${domainColors[g.domain]}33;color:${domainColors[g.domain]};cursor:pointer" onclick="showDomainPanel('${g.domain}')">${domains[g.domain]?.n || g.domain}</span>`;
+  document.getElementById('panel-content').innerHTML = h;
+  document.getElementById('panel').classList.add('open');
+}
+function closePanel() { document.getElementById('panel').classList.remove('open'); cy.elements().removeClass('highlighted dimmed'); }
+
+// ── Search ──
+document.getElementById('search').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  if (!q) { cy.elements().removeClass('highlighted dimmed'); return; }
+  cy.elements().addClass('dimmed');
+  const matched = new Set();
+  for (const [id, d] of Object.entries(domains)) { if (d.kw.some(k => k.toLowerCase().includes(q)) || d.n.toLowerCase().includes(q)) matched.add(id); }
+  for (const g of glossary) { if (g.q.toLowerCase().includes(q) || g.a.toLowerCase().includes(q)) matched.add(g.domain); }
+  for (const n of notes) { if (n.id.toLowerCase().includes(q) || n.s.toLowerCase().includes(q)) { matched.add(n.domain); const nn = cy.getElementById('n-' + n.id); if (nn.length) nn.removeClass('dimmed').addClass('highlighted'); } }
+  for (const dId of matched) { const node = cy.getElementById(dId); if (node.length) node.neighborhood().add(node).removeClass('dimmed').addClass('highlighted'); }
+});
+
+// ── View toggles ──
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentView = this.dataset.view;
+    closePanel();
+    initCy(currentView);
+  });
+});
+
+function updateStats() {
+  const ac = notes.filter(n => n.active).length, arc = notes.filter(n => !n.active).length;
+  document.getElementById('stats').textContent = `${Object.keys(domains).length} domains \u00b7 ${ac} active / ${arc} archive notes \u00b7 ${notes.filter(n => n.v === 'spec').length} spec / ${notes.filter(n => n.v === 'bug').length} bug \u00b7 ${glossary.length} glossary terms`;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePanel();
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); document.getElementById('search').focus(); }
+});
+
+// ── Load domain-map.ttl dynamically & Init ──
+(async function() {
+  try {
+    const resp = await fetch('domain-map.ttl');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const data = parseTTL(await resp.text());
+    domains = data.domains; notes = data.notes; glossary = data.glossary;
+    buildColorPalette();
+    document.getElementById('loading').classList.add('hidden');
+    initCy('domains');
+  } catch (err) {
+    document.getElementById('loading').innerHTML =
+      '<div style="text-align:center;max-width:480px">' +
+      '<div style="font-size:24px;margin-bottom:12px">\u26A0\uFE0F</div>' +
+      '<div style="color:#f85149;font-size:14px;margin-bottom:8px">domain-map.ttl \uB85C\uB4DC \uC2E4\uD328</div>' +
+      '<div style="color:#8b949e;font-size:12px;margin-bottom:16px">' + err.message + '</div>' +
+      '<code style="display:block;background:#161b22;padding:12px;border-radius:6px;font-size:12px;color:#c9d1d9;text-align:left">' +
+      'cd brain && python3 -m http.server 8847<br>open http://localhost:8847/graph.html</code></div>';
+  }
+})();
+</script>
+</body>
+</html>
