@@ -681,3 +681,8 @@ g:pay-03
   d:in :payroll ;
   d:q  "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:a  "구독 해지 후 payslip 공개/알림 동작 — 스펙" .
+n:CI-4165
+  d:in :integration ;
+  d:v  "investigating" ;
+  d:s  "SECOM 외부 출퇴근 이벤트 중복 등록으로 진행중 블럭 다건 발생" .
+
