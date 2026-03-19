@@ -140,7 +140,7 @@ Read: .claude/commands/ops/update-artifacts.md
 
 ## `--rebuild` 모드: 전체 재구성
 
-`$ARGUMENTS` 에 `--rebuild` 가 포함되면 **COOKBOOK.md 를 전체 재구성**한다.
+`$ARGUMENTS` 에 `--rebuild` 가 포함되면 **COOKBOOK.md + domain-map.ttl 을 전체 재구성**한다.
 활성 노트 유지보수/아카이브는 수행하지 않는다.
 
 ### Step 1: 노트 전체 수집 (🤖 subagent)
@@ -148,7 +148,14 @@ Read: .claude/commands/ops/update-artifacts.md
 
 **제외 대상:** CLAUDE.md, COOKBOOK.md
 
-### Step 2: COOKBOOK.md 전체 재구성
+### Step 2: domain-map.ttl 전체 재구축
+각 노트에서 다음을 확인하여 domain-map.ttl을 갱신한다:
+1. 모든 노트가 domain-map.ttl에 `n:{ticket-id}` 항목으로 존재하는지 확인 → 없으면 추가
+2. 각 노트의 상태(진행 중/해결 완료 등)와 domain-map의 `d:v` (verdict)가 일치하는지 확인 → 불일치하면 갱신
+3. domain-map에 있지만 notes/ 에 파일이 없는 항목을 제거 (orphan 정리)
+4. active 노트는 "Notes — active" 섹션에, archive 노트는 "Notes — archive" 섹션에 위치하도록 정리
+
+### Step 3: COOKBOOK.md 전체 재구성
 각 노트에서 다음 섹션을 추출:
 - `## 다음에 같은 문의가 오면` → 진단 체크리스트
 - SQL 쿼리 블록 → 데이터 접근 템플릿
@@ -158,7 +165,7 @@ Read: .claude/commands/ops/update-artifacts.md
 도메인별로 분류하여 `{brain-dir}/COOKBOOK.md` 를 전체 재작성한다.
 `update-artifacts.md` 의 COOKBOOK 구조 및 규칙을 따른다.
 
-### Step 3: 사용자 확인
+### Step 4: 사용자 확인
 재구성 결과를 보여주고 확인을 받은 후 커밋한다.
 
 ---

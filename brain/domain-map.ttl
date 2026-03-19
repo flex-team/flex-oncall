@@ -237,8 +237,8 @@ n:CI-4153
 
 n:CI-4157
   d:in :integration ;
-  d:v  "investigating" ;
-  d:s  "세콤 출퇴근 연동 확인 요청" .
+  d:v  "spec" ;
+  d:s  "세콤 출퇴근 연동 — 잔존 위젯 dry-run validation 실패 (스펙)" .
 
 n:CI-4165
   d:in :integration ;
@@ -247,8 +247,8 @@ n:CI-4165
 
 n:CI-4168
   d:in :contract ;
-  d:v  "investigating" ;
-  d:s  "전자계약 서식 반복 삭제 — 삭제자 특정 불가 (감사로그 미조회)" .
+  d:v  "spec" ;
+  d:s  "전자계약 서식 반복 삭제 — 삭제자는 본인, 감사로그 미구현은 스펙" .
 
 n:QNA-1926
   d:in :fins ;
@@ -259,6 +259,36 @@ n:QNA-1933
   d:in :payroll ;
   d:v  "spec" ;
   d:s  "구독 해지 후 명세서 알림 발송" .
+
+n:CI-4158
+  d:in :review ;
+  d:v  "spec" ;
+  d:s  "삭제한 평가 리스트 재노출 — FE 핫픽스로 DRAFT 정상 노출 (스펙)" .
+
+n:CI-4159
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "사회보험료 연말정산 휴직자 건강보험 근무월수 오집계 — 연속 휴직 병합 누락" .
+
+n:CI-4164
+  d:in :review ;
+  d:v  "bug" ;
+  d:s  "평가 '지금 시작' 클릭 시 예약 상태로 저장 — FE-BE 시간차 tolerance 부재" .
+
+n:CI-4166
+  d:in :account ;
+  d:v  "spec" ;
+  d:s  "계열사 전환 시 로그인 풀림 — 자동 로그아웃 설정 시간 차이 (스펙)" .
+
+n:CI-4170
+  d:in :account ;
+  d:v  "operational" ;
+  d:s  "채용사이트 subdomain 변경 검토중 방치 — 수동 승인 누락" .
+
+n:QNA-1936
+  d:in :review ;
+  d:v  "operational" ;
+  d:s  "리뷰 마이그레이션 오류 — dev/prod raccoon 환경 불일치 (운영 오류)" .
 
 n:TT-16674
   d:in :permission ;
