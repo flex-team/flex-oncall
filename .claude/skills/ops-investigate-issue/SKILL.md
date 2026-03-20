@@ -648,6 +648,37 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 - [ ] 잘못된 과거 분석/판단이 `<details>`로 접혀 있는가?
 - [ ] 5 Whys 체인이 5단계 이상이면 중간 단계가 `<details>`에 있는가?
 
+### Step 8-2: 코드-TTL 대조 검증 (피드백 루프)
+
+조사 과정에서 코드를 읽었으므로, **자연스럽게 발견한 불일치**를 기록하고 즉시 수정한다.
+명시적 체크리스트를 돌리지 않는다 — 조사 중 "어라, 이거 다른데?" 하고 발견한 것만 처리한다.
+
+**코드가 진실이다.** TTL/쿡북은 코드에서 파생된 캐시이므로, 불일치 시 코드가 맞고 TTL/쿡북이 틀린 것이다.
+
+#### 검증 대상 (자연 발견 기반)
+
+| 불일치 유형 | 예시 | 즉시 수정 대상 |
+|------------|------|--------------|
+| `d:mod` 경로 변경 | TTL에 `/time-off`인데 코드는 `/leave`로 리네임 | domain-map.ttl `d:mod` |
+| `d:kw` 키워드 소멸 | TTL에 `v2_user_work_rule`인데 코드에서 삭제됨 | domain-map.ttl `d:kw` 제거 |
+| `d:kw` 키워드 누락 | 조사에 핵심이었던 테이블/클래스가 `d:kw`에 없음 | domain-map.ttl `d:kw` 추가 |
+| COOKBOOK SQL 불일치 | 쿡북 SQL의 테이블/컬럼명이 현재 스키마와 다름 | COOKBOOK.md 해당 SQL |
+| COOKBOOK 체크리스트 outdated | 체크리스트 항목이 코드 변경으로 더 이상 유효하지 않음 | COOKBOOK.md 해당 항목 |
+| `d:repo` 불일치 | 도메인의 코드가 다른 서브모듈로 이동됨 | domain-map.ttl `d:repo` |
+
+#### 절차
+
+1. **발견 즉시 `routing-misses.md`에 `correction` 기록**:
+   ```
+   | {YYYY-MM-DD} | correction | {불일치 내용: "d:mod /time-off → 실제 /leave"} | {올바른 값} | {조사 이슈 ID} |
+   ```
+2. **즉시 해당 산출물 수정** (domain-map.ttl 또는 COOKBOOK.md)
+   - 코드에서 확인한 사실을 기반으로 수정
+   - 수정 시 출처 코멘트: `# corrected via {ticket-id} investigation`
+3. Step 9의 ops-learn이 correction 로그의 처리 완료를 확인하고 정리
+
+> 이 단계는 조사 중 발견이 없으면 스킵한다. 강제 검증이 아닌 자연 발견 기반이다.
+
 ### Step 9: 결과 보고 + 산출물 갱신
 - 조사 결과 요약 (3-5줄)
 - 스펙/버그 판별 결과
