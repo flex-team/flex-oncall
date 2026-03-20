@@ -1,7 +1,7 @@
 ---
 name: find-domain
 description: Use when a problem, question, or inquiry needs domain routing — finds relevant domains, submodules, cookbook sections, and past notes from domain-map.ttl. Triggers include '도메인 찾아줘', '어디 봐야 해', '어떤 repo야', or when starting oncall issue triage before investigation.
-allowed-tools: Read, Grep, Glob, Edit
+allowed-tools: Read, Grep, Glob, Edit, Agent
 argument-hint: <문제/질문 텍스트 또는 ticket-id> (예: "세콤 퇴근 정시로 찍혀요", CI-4145)
 ---
 
@@ -26,31 +26,32 @@ $ARGUMENTS
 
 ## Execution
 
-### 1. 라우팅 로직 수행
+### 1. domain-router 에이전트 호출
 
-> **공통 가이드**: `domain-routing.md` 를 반드시 읽고 수행한다.
-> ```
-> Read: .claude/skills/ops-common/domain-routing.md
-> ```
-> 매칭 알고리즘(Step 1~5), 가중치 테이블, 동점 처리, 결과 구조가 모두 해당 파일에 정의되어 있다.
+TTL 파싱과 매칭 알고리즘은 **domain-router 에이전트**에 위임한다.
 
-**수행 순서:**
+```
+Agent(
+  subagent_type: "general-purpose",
+  description: "TTL 파싱 및 도메인 라우팅",
+  prompt: ".claude/agents/domain-router.md 의 지시를 읽고 따라라. 입력 텍스트: {$ARGUMENTS}"
+)
+```
 
-1. `brain/domain-map.ttl` 을 Read로 전체 읽기
-2. `domain-routing.md` 의 Step 1~5를 순서대로 수행
-3. 결과를 아래 출력 포맷으로 렌더링
+에이전트는 compact JSON을 반환한다. TTL 원문은 에이전트 컨텍스트 안에서만 사용되고, 호출자(이 스킬)에게는 결과 JSON만 전달된다.
 
-### 2. 결과 출력
+### 2. 결과 렌더링
 
-아래 포맷으로 마크다운 출력한다. **빈 섹션은 생략**한다.
+에이전트가 반환한 JSON을 아래 마크다운 포맷으로 변환한다. **빈 섹션은 생략**한다.
 
 ```markdown
 ## 🔍 Domain Routing Result
 
-### Primary: :{domain-id} ({도메인 이름})
+### Primary: :{domain-id} ({도메인 이름}) — score: {점수}
 - **repo**: {서브모듈 목록, 쉼표 구분}
 - **module**: {모듈 목록, 쉼표 구분}
 - **cookbook**: "{COOKBOOK 섹션 이름}"
+- **score breakdown**: {d:kw=N, g:q=N, phrase=N, ...}
 
 ### Related
 - :{domain-id} ({도메인 이름}) — `d:x` 연결
@@ -59,12 +60,12 @@ $ARGUMENTS
 ### Glossary Hits
 | ID | 사용자 표현 | 시스템 용어 |
 |----|------------|-----------|
-| {g:id} | {d:q 값} | {d:a 값} |
+| {g:id} | {question} | {answer} |
 
 ### Related Notes
 | ID | 요약 | verdict | 위치 |
 |----|------|---------|------|
-| {ticket-id} | {d:s 값} | {d:v 값} | active/archive |
+| {ticket-id} | {summary} | {verdict} | active/archive |
 ```
 
 ### 3. 다음 단계 안내
@@ -81,7 +82,7 @@ $ARGUMENTS
 
 ## 매칭 없음
 
-어떤 도메인에도 매칭되지 않으면:
+에이전트 JSON의 `no_match` 가 `true` 이면:
 1. 입력 텍스트를 그대로 출력
 2. "매칭된 도메인이 없습니다" 안내
 3. CLAUDE.md의 서브모듈 맵 키워드 테이블을 fallback으로 제시
@@ -110,10 +111,3 @@ $ARGUMENTS
 - 날짜는 KST 기준
 - 사용자가 도메인을 직접 지정했으면 "최종 도메인" 칸에 기록
 - 사용자가 지정하지 않았으면 빈칸으로 남김
-
-### 예시
-
-```
-| 2026-03-20 | 급여명세서 항목이 이상해요 | :payroll | d:kw에 "급여명세서" 없음 |
-| 2026-03-20 | 관리자가 직원 비밀번호를 초기화하려면 | | 매칭 없음 — 계정 도메인 키워드 부족 |
-```
