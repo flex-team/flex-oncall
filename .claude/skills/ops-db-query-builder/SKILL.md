@@ -40,13 +40,9 @@ flowchart TD
     B --> C{쿡북에<br/>SQL 템플릿<br/>있음?}
     C -->|있음| D[Step 2a: 템플릿 기반<br/>Entity 검증만]
     C -->|없음| E[Step 2b: Entity 탐색<br/>@Table + @Column + 컬럼 의미 파악]
-    D --> F{env<br/>알고 있음?}
-    E --> F
-    F -->|예| G[Step 3: db_show_indexes<br/>인덱스 확인]
-    F -->|모름| H[사용자에게<br/>env 질문]
-    H --> G
+    D --> G[Step 3: 인덱스 확인<br/>env 결정 → db_show_indexes]
+    E --> G
     G --> I[Step 4: SQL 구성<br/>+ 근거 각주 출력]
-    F -.->|env 확인 불가| I
 ```
 
 ### Step 1. 도메인 라우팅 + 쿡북 확인
@@ -86,7 +82,7 @@ flowchart TD
 1. 쿡북 SQL 템플릿에서 사용된 테이블명을 추출한다
 2. 대상 repo + 모듈(`d:mod`) 범위에서 Entity 검증:
    ```
-   Grep: @Table(name = "쿡북_테이블명") — path: {repo}/{module}
+   Grep: pattern=@Table(name = "쿡북_테이블명"), path={repo}/{module}
    ```
 3. Entity를 찾으면 → `@Column` 어노테이션으로 컬럼명도 교차 확인
 4. **검증 결과:**
@@ -110,7 +106,7 @@ Step 1에서 특정된 **repo + 모듈(`d:mod`) 범위** 안에서 탐색한다.
 도메인 키워드로 Entity 클래스를 검색한다. 탐색 범위는 `d:mod` 결과로 한정한다.
 
 ```
-Grep: {도메인 키워드} — path: {repo}/{module} — glob: **/*Entity*.kt
+Grep: pattern={도메인 키워드}, path={repo}/{module}, glob=**/*Entity*.kt
 ```
 
 키워드 선정: 질문에서 핵심 명사를 추출 (예: "사번" → EmployeeNumber, "구성원" → Member)
@@ -223,7 +219,7 @@ db_show_indexes(env={env}, table={테이블명}, caller_id="ops-db-query-builder
 | `db_show_indexes` 실패 | 인덱스 미확인 경고 붙이고 SQL 출력 |
 | 여러 테이블 후보 | 후보 목록 보여주고 선택 요청 |
 | 컬럼 의미 불명확 | 후보 해석 보여주고 확인 요청 |
-| cross-domain 조인 | 각 도메인 Entity 탐색 후 조인 가능 여부 판단. 불가 시 알림 |
+| cross-domain 조인 | 각 도메인 Entity 탐색 후 동일 DB 여부 확인. 서로 다른 DB면 조인 불가 알림 |
 
 ## Rules
 
