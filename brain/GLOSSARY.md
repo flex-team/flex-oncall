@@ -97,3 +97,68 @@
 | 초과근무 계산이 이상해요 | 올림 자릿수 payroll_legal_payment_setting 확인 | flex-payroll-backend |
 | 정산 수정했는데 소득세가 바뀌었어요 | 부양가족 수 최신화 dependent_families_count — 스펙 | flex-payroll-backend |
 | 급여정산 해지하면 명세서 공개가 되나요? | 구독 해지 후 payslip 공개/알림 동작 — 스펙 | flex-payroll-backend |
+
+## 출퇴근 (Work Clock)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 출근/퇴근 버튼이 안 돼요 | work-clock start/stop API dry-run 응답 확인 | flex-timetracking-backend |
+| 근무 위젯이 안 보여요 | work-clock current-status API 확인 | flex-timetracking-backend |
+| 출근 타각을 취소하고 싶어요 | work-clock 개별 취소 UI 제공 (API도 존재) | flex-timetracking-backend |
+| 자동 퇴근이 안 됐어요 | auto clock-out 설정 확인 | flex-timetracking-backend |
+
+## 근태 대시보드 (Dashboard)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 근태 대시보드가 안 맞아요 | OpenSearch work-schedule document sync 확인 | flex-timetracking-backend |
+| 휴가 사용 내역이 안 맞아요 | OpenSearch time-off-use document sync 확인 | flex-timetracking-backend |
+| 대시보드 동기화가 필요해요 | POST /action/operation/v2/time-tracking/sync-es-work-schedule | flex-timetracking-backend |
+
+## 연차 (Annual Time Off)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 잔여 연차가 이상해요 | operation API annual-time-off bucket 확인 | flex-timetracking-backend |
+| 연차 지급/사용 내역 다운로드 | 제품 6개월씩 다운로드 또는 Metabase | flex-timetracking-backend |
+| 연차 소멸일이 이상해요 | bucket 유효기간 확인 (종료일 이른 것 우선 소진) | flex-timetracking-backend |
+| 휴가 내역에 사용일수가 0일이에요 | 휴일/휴직/휴일대체/주휴일/쉬는날 겹침 확인 | flex-timetracking-backend |
+
+## 맞춤휴가 (Custom Time Off)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 맞춤휴가 잔여일이 이상해요 | v2_user_custom_time_off_assign 부여/회수/사용 확인 | flex-timetracking-backend |
+| 맞춤휴가 합치고 싶어요 | 회수 후 재부여 권장. 합쳐쓰기는 assign 속성 동일 필요 | flex-timetracking-backend |
+| 맞춤휴가 단위 변경하고 싶어요 | 회수 후 재부여 또는 assign 테이블 직접 변경 | flex-timetracking-backend |
+
+## 근무지 (Work Place)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| GPS 밖에서 출근이 됐어요 | workplace 테이블 GPS 설정 + 관리자 IP 제한 패스 확인 | flex-timetracking-backend |
+| 근무지 IP가 통과해요 | flex_auth.customer_ip_access_control_setting 확인 | flex-timetracking-backend |
+| 출근 버튼이 안 눌려요 (위치 제한) | dry-run 로그 없이 current-status만 있으면 범위 바깥 | flex-timetracking-backend |
+
+## 휴일 (Holiday)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 휴일이 안 보여요 | v2_user_holiday_group_mapping + v2_customer_holiday 확인 | flex-timetracking-backend |
+| 휴일대체 기간이 안 맞아요 | flex-timetracking-config experimental.json gap 설정 | flex-timetracking-backend |
+| 근로자의날 삭제해주세요 | operation API로 제거 (PR #7421 참조) | flex-timetracking-backend |
+| 대체휴일이 적용 안 돼요 | v2_customer_holiday support_alternative 설정 확인 | flex-timetracking-backend |
+
+## 캘린더 연동 (Calendar Integration)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 구글 캘린더에 휴가가 안 떠요 | v2_time_tracking_flex_calendar_event_map 확인 | flex-timetracking-backend |
+| 캘린더 연동이 안 돼요 | GoogleCalendarEventAdapter → FlexCalendarSyncEventConsumer 파이프라인 확인 | flex-timetracking-backend |
+
+## Kafka / 이벤트 (Event Processing)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| Kafka 컨슘 에러 발생 | message_consume_log ce_id로 operation API 재발행 | flex-timetracking-backend |
+| 사용자 변경 이벤트 실패 | Workspace Operation API /action/operation/v2/workspace/users/produce 호출 (productType=USER) | flex-core-backend |

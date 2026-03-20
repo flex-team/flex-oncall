@@ -1102,10 +1102,423 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 ---
 
+### 출퇴근 (Work Clock)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "출근이 안 돼요" / "퇴근이 안 됐어요" / "근무 위젯이 이상해요"
+1. Kibana에서 access log 확인: `json.authentication.email` + `json.ipath` 필터
+2. 주요 API 경로 확인:
+   - `/action/v2/time-tracking/work-clock/users/{userIdHash}/start/dry-run`
+   - `/api/v2/time-tracking/work-clock/users/{userIdHash}/start`
+   - `/api/v2/time-tracking/work-clock/users/{userIdHash}/stop`
+   - `/api/v2/time-tracking/work-place/users/{userIdHash}/current-status`
+3. `/current-status` 로그만 있고 `/start/dry-run` 없으면 → 근무지 범위 바깥
+4. 관리자의 경우 IP 제한 패스 가능 (확인 필요)
+
+#### 조사 플로우
+
+> 비슷한 문의가 들어오면 아래 플로우를 시도한다.
+
+**F1: 출근 불가 — 근무지 범위 확인** · [Notion 온콜 가이드]
+> 트리거: "출근이 안 돼요" / "출근 버튼이 안 눌려요"
+
+```
+① Kibana access log에서 해당 유저의 요청 흐름 확인
+   json.authentication.email + json.ipath 필터
+   ↓
+② API 호출 패턴 분석
+   ├─ /current-status만 있고 /start/dry-run 없음 → 근무지 범위 바깥
+   │   → 근무지 설정 확인 (GPS: flex.workplace / IP: flex_auth.customer_ip_access_control_setting)
+   ├─ /start/dry-run 호출됐으나 /start 없음 → dry-run 실패, 응답 body 확인
+   └─ /start 호출됐으나 에러 → 에러 응답 확인
+```
+
+#### 데이터 접근
+- 서비스: `time-tracking-api` (K8s label: `flex-prod-prod-time-tracking-api`)
+- 근무 위젯 편집기 요청 시 사용된 IP → Kibana access log에서 확인
+
+---
+
+### 근태 대시보드 (Dashboard)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "근태 대시보드 수치가 안 맞아요" / "휴가 사용 내역이 다르게 보여요"
+1. 대시보드는 OpenSearch(ES) 기반 → 원본 데이터(MySQL)와 ES 동기화 상태 확인
+2. 근무 동기화: `POST /action/operation/v2/time-tracking/sync-es-work-schedule`
+3. 휴가 삭제 동기화: `POST /action/operation/v2/time-tracking/time-off/time-off-uses/produce-delete`
+4. ES document 직접 삭제가 필요한 경우 별도 처리 (sync가 아닌 delete)
+
+#### 조사 플로우
+
+**F1: 대시보드 수치 불일치 — ES 동기화 확인** · [Notion 온콜 가이드]
+> 트리거: "근태 대시보드 수치가 안 맞아요"
+
+```
+① MySQL 원본 데이터 확인
+   해당 유저+날짜의 근무기록/휴가사용 실제 데이터 조회
+   ↓
+② OpenSearch 문서 확인
+   prod-v2-tracking-work-schedules / prod-v2-tracking-time-off-uses 인덱스
+   ├─ 문서 없음 → sync 누락, ③으로
+   └─ 문서 있으나 내용 불일치 → sync 누락, ③으로
+   ↓
+③ 수동 동기화 실행
+   ├─ 근무: POST /action/operation/v2/time-tracking/sync-es-work-schedule
+   └─ 휴가: POST /action/operation/v2/time-tracking/time-off/time-off-uses/produce-delete
+   ⚠️ ES document가 잔존하는데 원본이 삭제된 경우 → sync가 아닌 delete 처리 필요
+```
+
+---
+
+### 연차 (Annual Time Off)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요" / "사용일수가 0일이에요"
+1. operation API에서 annual-time-off bucket 확인
+2. 연차 사용 순서: (1) 유효기간 종료일 이른 것 우선 (2) 종료일 같으면 시작일 이른 것 우선
+3. 사용일수 0일 → 해당일에 다음 항목 겹침 확인:
+   - 휴일: `v2_customer_holiday`
+   - 휴직: `user_leave_of_absence`
+   - 휴일대체: `v2_time_tracking_user_alternative_holiday_event`
+   - 주휴일: `v2_customer_work_rule` 요일별 설정
+   - 쉬는날
+4. 월차는 입사 후 1년간 사용 가능, 막달 받은 연차는 그 다음달에 소멸
+5. Metabase에서 조회 후 jsongrid.com에서 가독성 확인
+
+#### 조사 플로우
+
+**F1: 잔여 연차 불일치 — 버킷 확인** · [Notion 온콜 가이드]
+> 트리거: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요"
+
+```
+① operation API에서 annual-time-off bucket 조회
+   → 부여/사용/소멸/조정 내역 전체 확인
+   ↓
+② 사용 순서 검증
+   유효기간 종료일 이른 것 우선 → 종료일 같으면 시작일 이른 것 우선
+   ↓
+③ 불일치 원인 분류
+   ├─ 조정 이력 누락 → v2_user_annual_time_off_adjust_assign 확인
+   ├─ 소멸 시점 차이 → 월차 소멸 규칙 확인 (입사 1년 기준)
+   └─ 겹침으로 인한 0일 사용 → F2 시도
+```
+
+**F2: 사용일수 0일 — 겹침 확인** · [Notion 온콜 가이드]
+> 트리거: "사용일수가 0일이에요"
+
+```
+① 해당일에 겹치는 항목 확인
+   ├─ v2_customer_holiday → 휴일 등록 여부
+   ├─ user_leave_of_absence → 휴직 기간
+   ├─ v2_time_tracking_user_alternative_holiday_event → 휴일대체
+   ├─ v2_customer_work_rule → 해당 요일이 주휴일/쉬는날
+   └─ 위 항목 중 하나라도 해당 → 사용일수 0일은 스펙
+```
+
+#### 데이터 접근
+```sql
+-- 휴직 설정 확인
+SELECT * FROM flex.user_leave_of_absence WHERE user_id = ?;
+
+-- 연차 정책 확인
+SELECT * FROM flex.v2_customer_annual_time_off_policy WHERE customer_id = ?;
+
+-- 연차 사용 이벤트
+SELECT * FROM flex.v2_user_time_off_event WHERE user_id = ? AND customer_id = ?;
+
+-- 연차 조정 이력
+SELECT * FROM flex.v2_user_annual_time_off_adjust_assign WHERE user_id = ?;
+```
+
+#### 환경 재현 시 필요 테이블
+- 입사일: `user_employee_audit`
+- 근무유형: `v2_user_work_rule`, `v2_customer_work_rule`, `v2_customer_work_record_rule`
+- 연차정책: `v2_customer_annual_time_off_policy`
+- 연차사용/조정: `v2_user_time_off_event`, `v2_user_time_off_event_block`, `v2_user_annual_time_off_adjust_assign`
+
+---
+
+### 맞춤휴가 (Custom Time Off)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "맞춤휴가 잔여가 이상해요" / "휴가 합치고 싶어요" / "단위 변경하고 싶어요"
+1. 부여 내역: Metabase question/2452
+2. 사용/취소 내역: Metabase question/2166
+3. 합쳐쓰기 조건: 서로 다른 `v2_user_custom_time_off_assign`을 코드 해석으로 묶는 것 (DB 합치기 아님). assign 속성(사용 단위 등)이 동일해야 함
+4. 합치기 요청 → 회수 후 재부여 권장. DML 직접 보정은 operation API 없어 최후의 수단
+5. 단위 변경 → 바꾸면 못 쓰는 휴가 발생 가능. 회수 후 재부여 또는 assign 테이블에서 변경
+
+#### 조사 플로우
+
+**F1: 맞춤휴가 잔여 불일치** · [Notion 온콜 가이드]
+> 트리거: "맞춤휴가 잔여가 이상해요"
+
+```
+① Metabase에서 부여/사용/취소 내역 확인
+   부여: question/2452 → 사용/취소: question/2166
+   ↓
+② 부여 총량 - 사용량 - 회수량 = 잔여 계산
+   ├─ 계산 일치 → 고객 오해, 내역 설명
+   └─ 계산 불일치 → assign/withdrawal 테이블 직접 조회
+```
+
+#### 데이터 접근
+```sql
+-- 맞춤휴가 부여 확인
+SELECT * FROM flex.v2_user_custom_time_off_assign WHERE user_id = ? AND customer_id = ?;
+
+-- 맞춤휴가 회수 확인
+SELECT * FROM flex.v2_user_custom_time_off_assign_withdrawal WHERE customer_id = ?;
+
+-- 일괄 부여 확인
+SELECT * FROM flex.v2_customer_bulk_time_off_assign WHERE customer_id = ?;
+```
+
+---
+
+### 근무지 (Work Place)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "근무지 밖에서 출근이 됐어요" / "IP 제한이 안 먹혀요" / "출근 버튼이 안 눌려요"
+1. GPS 설정: `flex.workplace` 테이블에서 좌표/반경 확인
+2. IP 설정: `flex_auth.customer_ip_access_control_setting` 확인
+3. `/current-status` 로그만 있고 `/start/dry-run` 없으면 → 범위 바깥으로 판단된 상태
+4. 관리자는 IP 제한 패스 가능 (수정 예정)
+5. 클라이언트 WorkPlaceTicket V1 파싱으로 상세 정보 확인 가능
+
+#### 데이터 접근
+```sql
+-- GPS/근무지 설정 확인
+SELECT * FROM flex.workplace WHERE customer_id = ?;
+
+-- IP 제한 설정 확인
+SELECT * FROM flex_auth.customer_ip_access_control_setting WHERE customer_id = ?;
+```
+
+---
+
+### 휴일 (Holiday)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "휴일이 안 보여요" / "대체휴일이 적용 안 돼요" / "근로자의날 삭제해주세요"
+1. 유저-휴일 매핑: `v2_user_holiday_group_mapping` → `v2_customer_holiday_group` → `v2_customer_holiday`
+2. 대체휴일: `v2_customer_holiday`의 `support_alternative`, `supports_saturday_alternative` 확인
+3. 휴일대체 범위(gap): `flex-timetracking-config` repo의 `experimental.json`
+4. 휴일대체 Metabase: question/5062
+5. 근로자의날 삭제 → operation API로 제거 (PR #7421 참조)
+6. 특정 유저의 휴일 조회 → operation API 사용
+
+#### 조사 플로우
+
+**F1: 휴일 미표시 — 매핑 확인** · [Notion 온콜 가이드]
+> 트리거: "휴일이 안 보여요"
+
+```
+① 유저-휴일그룹 매핑 확인
+   v2_user_holiday_group_mapping WHERE user_id = ?
+   ├─ 매핑 없음 → 휴일 그룹 미배정
+   └─ 매핑 있음 → ②로
+   ↓
+② 휴일 그룹에 해당 휴일 등록 여부 확인
+   v2_customer_holiday_group → v2_customer_holiday
+   ├─ 휴일 미등록 → 관리자에게 등록 안내
+   └─ 휴일 등록됨 → 날짜/타입 확인, 대체휴일 설정 확인
+```
+
+#### 데이터 접근
+```sql
+-- 유저의 휴일 그룹 매핑
+SELECT * FROM flex.v2_user_holiday_group_mapping WHERE user_id = ?;
+
+-- 휴일 그룹 상세
+SELECT * FROM flex.v2_customer_holiday_group WHERE customer_id = ?;
+
+-- 개별 휴일 목록
+SELECT * FROM flex.v2_customer_holiday WHERE customer_holiday_group_id = ?;
+
+-- 휴일대체 이벤트
+SELECT * FROM flex.v2_time_tracking_user_alternative_holiday_event WHERE user_id = ?;
+```
+
+---
+
+### 캘린더 연동 (Calendar Integration)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "구글 캘린더에 휴가가 안 떠요" / "캘린더 연동이 안 돼요"
+1. 연동 파이프라인: TT → 플렉스 캘린더 → 구글 캘린더
+2. `GoogleCalendarEventAdapter`가 토픽에 발행 → `FlexCalendarSyncEventConsumer`가 컨슘
+3. 구캘 등록 조건:
+   - 근무: 근무 정책별 상이
+   - 휴가: 승인 완료 후 구캘 등록, 취소 승인 완료 후 구캘 삭제
+4. 동기화 안 됐을 경우 담당: `@ug-team-service-platform-on-call`
+5. ⚠️ 캘린더 지원 종료 예정: 2025. 7. 9
+
+#### 조사 플로우
+
+**F1: 구글 캘린더 동기화 실패** · [Notion 온콜 가이드]
+> 트리거: "구글 캘린더에 휴가가 안 떠요"
+
+```
+① 승인 상태 확인
+   ├─ 미승인 → 승인 완료 후 동기화되는 스펙
+   └─ 승인 완료 → ②로
+   ↓
+② flex_calendar_event_map 테이블에서 이벤트 매핑 확인
+   v2_time_tracking_flex_calendar_event_map WHERE user_id = ?
+   ├─ 매핑 없음 → Kafka produce 실패 가능성, 로그 확인
+   └─ 매핑 있음 → 플렉스 캘린더 → 구글 캘린더 구간 문제
+       → 담당: @ug-team-service-platform-on-call
+```
+
+#### 데이터 접근
+```sql
+-- 캘린더 이벤트 매핑 확인
+SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
+```
+
+---
+
+### Kafka 메시지 재발행
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+1. 에러 메시지에서 `<topic>@<offset>` 값으로 offset 확인
+2. kafka-ui에서 해당 offset의 메시지를 찾아 `ce_id` (cloud_event) 확인
+3. `ce_id` 또는 `consume_log`로 operation API 호출하여 재발행
+4. `cloud_event_entity`: 프로듀싱 때 쌓임. 프로듀싱 실패 시 `produced_at`이 안 쌓임
+5. `message_consume_log`: ce_id 단위로 insert. 실패 시 백오프 후 마지막까지 실패하면 에러 로그 찍고 commit
+
+#### 조사 플로우
+
+**F1: Kafka 컨슘 실패 — 메시지 재발행** · [Notion 온콜 가이드]
+> 트리거: Kafka Consumer Error 로그 / 컨슘 실패 알림
+
+```
+① 에러 메시지에서 topic@offset 추출
+   ↓
+② kafka-ui에서 해당 offset 메시지 확인
+   → ce_id (cloud_event) 값 추출
+   ↓
+③ operation API로 재발행
+   ce_id 또는 consume_log 기반 호출
+   ↓
+④ 재발행 후 정상 처리 확인
+   message_consume_log에서 상태 확인
+```
+
+**F2: 사용자 변경 이벤트 컨슘 실패** · [Notion 온콜 가이드]
+> 트리거: `Kafka Consumer Error[userDataChangedEvent]. identities: [SimpleCustomerUserIdentity(...)]`
+
+```
+① 에러 로그에서 customerUserIdentity 추출
+   ↓
+② Workspace Operation API 호출
+   POST /action/operation/v2/workspace/users/produce
+   body: { productType: "USER", identities: [...] }
+```
+
+---
+
+### 근무 기록 삭제/복구
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+문의: "근무 기록 삭제해주세요" / "삭제한 데이터 복구해주세요" / "휴가 기록 삭제해주세요"
+
+**원칙: DB 직접 수정은 하지 않음. 고객이 직접 처리하도록 안내**
+
+근무 기록 삭제 시 영향 테이블:
+- `v2_user_work_record_event` (근무 이벤트)
+- `v2_user_work_record_event_block` (블럭)
+- `v2_user_work_record_approval_content` (승인 문서)
+- `v2_user_work_record_event_approval_mapping` (매핑)
+- `v2_time_tracking_approval_event` (승인 상태)
+
+휴가 기록 삭제 시 영향 테이블:
+- 부여/조정: `v2_user_custom_time_off_assign`, `v2_user_custom_time_off_assign_withdrawal`, `v2_customer_bulk_time_off_assign`, `v2_user_compensatory_time_off_assign`, `v2_user_compensatory_time_off_assign_times`, `v2_user_annual_time_off_adjust_assign`
+- 사용: `v2_user_time_off_use`, `v2_user_time_off_event`, `v2_user_time_off_event_block`
+- 연촉: `v2_annual_time_off_boost_setting`, `annual_time_off_boost_history`, `v2_user_annual_time_off_boost_evidence_record`
+- 승인: `v2_time_off_approval_content`, `v2_time_off_approval_content_unit`, `v2_time_tracking_time_off_approval_content`
+- ES: document 삭제 필요 (sync가 아닌 delete)
+
+#### 조사 플로우
+
+**F1: 근무/휴가 기록 삭제 요청 대응** · [Notion 온콜 가이드]
+> 트리거: "근무 기록 삭제해주세요" / "휴가 기록 삭제해주세요"
+
+```
+① 요청 유형 분류
+   ├─ 근무 기록 삭제 → 고객이 직접 처리하도록 안내 (DB 직접 수정 불가)
+   ├─ 삭제 데이터 복구 → 별도 절차 문서 참조
+   ├─ 휴가 기록 삭제 → DB 직접 건드리지 않음, 고객 안내
+   └─ 변경 예정 근무유형 삭제 → 제품에서 한 명씩 처리, 벌크는 operation API 필요
+```
+
+FAQ:
+- 근무 기록 삭제 → 안 됨. 고객이 직접 처리
+- 삭제 데이터 복구 → 별도 절차 문서 참조
+- 휴가 기록 삭제 → DB 직접 건드리지 않음
+- 변경 예정 근무유형 삭제 → 제품에서 한 명씩, 벌크는 operation API 필요
+
+---
+
+### 시스템 모니터링
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+
+#### 모니터링 도구 가이드
+| 대상 | 도구 | 비고 |
+|------|------|------|
+| 최근 10분 에러 | Kibana, Splunk(SignalFx) | |
+| SpringBoot APM | Grafana | API/CRON 별도 대시보드 |
+| Database | AWS RDS Grafana 대시보드 | |
+| Kafka consumer | Grafana Kafka consumer dashboard | |
+| 특정 API 속도 추이 | Kibana 대시보드 | |
+
+Kibana 참고:
+- prod 로그 보관: 1개월 (검색 가능)
+- 유저 액세스 로그: `json.authentication.email` 필터로 조회
+
+---
+
+### 난제 사례 (Edge Cases)
+
+> 출처: Notion 온콜 가이드
+
+#### 진단 체크리스트
+
+#### 부여된 휴가보다 더 사용한 케이스
+원인: 휴가 사용 → 해당일에 휴일 등록 → 버킷 복구 → 또 휴가 사용 → 휴일 삭제 순서로 발생
+
+#### 공동연차 패턴
+시즌오프일에 휴일 설정 → 출근자는 휴일근무로 등록 → 휴일 제거. 이 과정에서 맞춤휴가(보상휴가) 버킷 초과 사용 가능
+
+---
+
 ## 변경 이력
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-20 | Notion 온콜 가이드 | 신규 도메인 11개 추가 — 출퇴근, 근태 대시보드, 연차, 맞춤휴가, 근무지, 휴일, 캘린더 연동, Kafka 메시지 재발행, 근무 기록 삭제/복구, 시스템 모니터링, 난제 사례 |
 | 2026-03-19 | [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) | Core Squad 온콜 런북 18개 항목 반영 — 신규 도메인 3개(조직 관리, 인사발령, 체크리스트), 기존 도메인 보강(계정/구성원, 승인, OpenSearch/통계, 메일), domain-map.ttl 도메인·키워드·glossary 추가 |
 | 2026-03-19 | 전체 | --rebuild 전체 재구성 — domain-map verdict 3건 수정(CI-4117/CI-4132/CI-4151 → bug), 계정 도메인에 CI-4166(계열사 전환 스펙) 추가, 평가 도메인에 QNA-1936(raccoon 환경 불일치) 추가, glossary 항목 추가 |
 | 2026-03-19 | 전체 | 전체 재구성 — 전자계약 도메인 신규 추가(CI-4152, CI-4168), 근태/휴가(CI-4130, CI-4140, CI-4147), 외부 연동(CI-4157, CI-4165), 인증(CI-4166), 평가(CI-4158), 채용(CI-4170) 반영, 급여 중복 정리 |
