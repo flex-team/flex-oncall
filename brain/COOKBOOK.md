@@ -573,6 +573,33 @@ WHERE customer_id = ?
 1. 메타베이스 대시보드(#309)에서 `target_uid`로 승인 요청 확인 → 요청은 존재하나 대응하는 실제 휴가 사용 건이 없으면 고아 승인 요청 [CI-3951]
 2. 퇴직자가 휴가 승인 정책에 여전히 포함되어 있는지 확인 → 승인 정책에서 퇴직자 제거 안내 [CI-3951]
 
+문의: "승인 설정/라인을 확인해주세요" / "위젯 종료 시 근무 승인이 안 돼요"
+1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
+2. 위젯 종료 시 기본 근무일은 승인 미발생이 정상 동작 (스펙)
+3. 주휴일인데 휴일 근무 승인 발생 → 주휴일 설정 일시와 휴일 근무 등록 일시 간 시간차 확인
+
+#### Operation API
+- Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
+- category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진)
+
+#### 데이터 접근
+```sql
+-- 승인 설정 확인
+SELECT * FROM customer_workflow_task_template WHERE customer_id = ?;
+
+-- 승인 라인(단계) 확인
+SELECT * FROM customer_workflow_task_template_stage
+WHERE customer_id = ? AND customer_workflow_task_template_id = ?;
+
+-- VOC 해당 근무 승인 건 확인
+SELECT * FROM v2_user_work_record_approval_content
+WHERE customer_id = ? AND user_id = ?;
+
+-- 실제 승인 단계 상태 확인
+SELECT * FROM workflow_task WHERE customer_id = ? AND task_key = ?;
+SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?;
+```
+
 #### 과거 사례
 - **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
 
@@ -1259,6 +1286,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
    - 쉬는날
 4. 월차는 입사 후 1년간 사용 가능, 막달 받은 연차는 그 다음달에 소멸
 5. Metabase에서 조회 후 jsongrid.com에서 가독성 확인
+6. ⚠️ 연차는 **분(minutes) 단위**로 관리됨: 7200분=15일, 4320분=9일 (1일=480분=8시간). bucket 값 해석 시 주의
 
 #### 조사 플로우
 
@@ -1587,6 +1615,7 @@ Kibana 참고:
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-20 | Notion 3개 소스 재학습 | 승인 도메인에 SQL 템플릿·Operation API swagger·category 값 추가, 연차 도메인에 minutes 단위 스펙 추가, GLOSSARY 승인 용어 3건 추가 |
 | 2026-03-20 | Notion 온콜 가이드 | 신규 도메인 11개 추가 — 출퇴근, 근태 대시보드, 연차, 맞춤휴가, 근무지, 휴일, 캘린더 연동, Kafka 메시지 재발행, 근무 기록 삭제/복구, 시스템 모니터링, 난제 사례 |
 | 2026-03-19 | [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) | Core Squad 온콜 런북 18개 항목 반영 — 신규 도메인 3개(조직 관리, 인사발령, 체크리스트), 기존 도메인 보강(계정/구성원, 승인, OpenSearch/통계, 메일), domain-map.ttl 도메인·키워드·glossary 추가 |
 | 2026-03-19 | 전체 | --rebuild 전체 재구성 — domain-map verdict 3건 수정(CI-4117/CI-4132/CI-4151 → bug), 계정 도메인에 CI-4166(계열사 전환 스펙) 추가, 평가 도메인에 QNA-1936(raccoon 환경 불일치) 추가, glossary 항목 추가 |

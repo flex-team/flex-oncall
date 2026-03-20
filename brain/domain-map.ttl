@@ -124,7 +124,9 @@
   d:repo "flex-timetracking-backend" , "flex-core-backend" ;
   d:mod "approval" , "cloud_event_entity" ;
   d:kw  "승인" , "퇴직자승인자교체" , "고아승인요청" , "승인정책" , "target_uid" ,
-        "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ;
+        "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ,
+        "workflow_task" , "workflow_task_stage" , "customer_workflow_task_template" ,
+        "승인라인" , "위젯종료승인" ;
   d:x   :notification , :time-tracking .
 
 :data-export
@@ -805,6 +807,16 @@ g:appr-01
   d:in :approval ;
   d:q  "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ;
   d:a  "고아 승인 요청 target_uid 확인 메타베이스 #309" .
+
+g:appr-03
+  d:in :approval ;
+  d:q  "승인 설정/라인 확인해주세요" ;
+  d:a  "customer_workflow_task_template + _stage 조회" .
+
+g:appr-04
+  d:in :approval ;
+  d:q  "위젯 종료 시 승인이 안 돼요" ;
+  d:a  "기본 근무일 위젯 종료 시 승인 미발생 — 스펙" .
 
 # ============================================================
 # Glossary — data-export

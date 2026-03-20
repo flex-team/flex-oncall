@@ -78,6 +78,9 @@
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | 퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요 | 고아 승인 요청 target_uid 확인 메타베이스 #309 | flex-timetracking-backend |
+| 승인 설정/라인 확인해주세요 | customer_workflow_task_template + _stage 테이블 조회 | flex-core-backend |
+| 승인은 완료됐는데 데이터가 안 바뀌었어요 | cloud_event_entity → re-produce-messages Operation API | flex-timetracking-backend |
+| 위젯 종료 시 승인이 안 돼요 | 기본 근무일 위젯 종료 시 승인 미발생 — 스펙 | flex-timetracking-backend |
 
 ## 데이터 추출 (Data Export)
 
