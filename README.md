@@ -106,7 +106,7 @@ git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <director
 | 도메인 | 채널 |
 |---|---|
 | 트래킹 BE | [alram-system-error-tracking-be](https://flex-cv82520.slack.com/archives/C03DDNUEV29) |
-| 트래킹 FE | [alram-system-error-tracking-fe-prod]([https://flex-cv82520.slack.com/archives/C03DDNUEV29](https://flex-cv82520.slack.com/archives/C096SFWRC05)) |
+| 트래킹 FE | [alram-system-error-tracking-fe-prod](https://flex-cv82520.slack.com/archives/C096SFWRC05) |
 
 ## 참고: 도메인별 슬랙 멘션 이력
 
