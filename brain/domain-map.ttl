@@ -471,6 +471,51 @@ n:CI-4173
   d:s  "52시간 초과기록 미허용 설정인데 56시간 근무기록 — 엑셀 벌크 업로드 검증 생략 스펙" ;
   d:x  :scheduling .
 
+n:CI-3964
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "중도정산 시 납부할 건강보험료가 자동 계산되지 않음" .
+
+n:CI-3970
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "초과근무 보상주기 2개 이상일 때 승인 문서에 1개만 표현" .
+
+n:CI-3998
+  d:in :shift ;
+  d:v  "investigating" ;
+  d:s  "교대근무 엑셀 스케줄 업로드 시 연차 미반영" .
+
+n:CI-4025
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "대체휴가 잔여 일수가 부여/사용 내역 없이 증가" .
+
+n:CI-4049
+  d:in :openapi ;
+  d:v  "investigating" ;
+  d:s  "API 부서(departments) 호출 시 null 리턴" .
+
+n:CI-4073
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "중도정산 금액 수정 후 2025년 연말정산 금액이 0원으로 반영" .
+
+n:CI-4094
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "구성원 실제 근무 시작 시간과 기록 시작 시간 상이" .
+
+n:CI-4096
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "급여정산 수정 시 정산이름 입력 오류" .
+
+n:CI-4174
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "건강보험 제외 대상인데 중도정산 시 사회보험 연말정산금액에 건강보험/고용보험 포함" .
+
 # ============================================================
 # Notes — archive (brain/notes/archive/)
 # ============================================================
@@ -674,6 +719,141 @@ n:TT-16783
   d:in :integration ;
   d:v  "bug" ;
   d:s  "다법인 workspace에서 SECOM customerKey 충돌" .
+
+n:CI-3568
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "지방소득세 신고서 생성 시 법정동코드 오류" .
+
+n:CI-3764
+  d:in :fins ;
+  d:v  "bug" ;
+  d:s  "지출결의 문서 복제 시 커스텀 승인라벨이 기본값으로 초기화" .
+
+n:CI-3808
+  d:in :yearend ;
+  d:v  "bug" ;
+  d:s  "연말정산 체크리스트 반영 후 최종 세액에서 제외됨" .
+
+n:CI-3842
+  d:in :yearend ;
+  d:v  "bug" ;
+  d:s  "home 화면 접속 시 yearend settlements API 400 에러" .
+
+n:CI-3851
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "배우자 출산휴가 일수가 특정 구성원에게 10일로 표기" .
+
+n:CI-3880
+  d:in :notification ;
+  d:v  "bug" ;
+  d:s  "휴게 기록 요청 알림 텍스트 오류 — 수신자 이름 누락" .
+
+n:CI-3896
+  d:in :scheduling ;
+  d:v  "bug" ;
+  d:s  "근무지 스케줄 잘못 추가 후 삭제 불가" .
+
+n:CI-3915
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "참조 설정에 없는 구성원에게 워크플로우 알림 발송" .
+
+n:CI-3916
+  d:in :yearend ;
+  d:v  "bug" ;
+  d:s  "연말정산에서 소기업소상공인공제부금 제외 안 됨" .
+
+n:CI-3938
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "중간정산 이력 시 퇴직사유가 중간정산으로 잘못 신고" .
+
+n:CI-3961
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "급여명세서에서 연말정산 소득세 표기 문구 미표시" .
+
+n:CI-3989
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "퇴직소득 지급명세서 신고파일 음수 금액 시 파일 생성 불가" .
+
+n:CI-4004
+  d:in :annual-promotion ;
+  d:v  "bug" ;
+  d:s  "연차 촉진 대상 아닌 구성원이 메일 수신" .
+
+n:CI-4008
+  d:in :approval ;
+  d:v  "spec" ;
+  d:s  "출장 근무 승인이 발생하지 않은 원인 확인 — 등록 경로 스펙" .
+
+n:CI-4009
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "휴가 사용 시간 범위 오류 후 휴가가 등록됨" .
+
+n:CI-4019
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "승인 완료 문서가 진행중 문서함에 표시" .
+
+n:CI-4030
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "정산 급여대장 다운로드 시 건강/장기요양보험료 빈셀 출력" .
+
+n:CI-4045
+  d:in :account ;
+  d:v  "bug" ;
+  d:s  "직무 대량 삭제 후 저장 시 삭제한 직무가 복구됨" .
+
+n:CI-4052
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "모바일 앱 출퇴근 시 간헐적 네트워크 오류 — 환경 요인" .
+
+n:CI-4055
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "근무기록 다운로드 권한 오류 — 내부 보안 정책 가능성" .
+
+n:CI-4058
+  d:in :flow ;
+  d:v  "bug" ;
+  d:s  "영문 버전 품의서 결재란 이름 검색 시 문서 전체 삭제" .
+
+n:CI-4071
+  d:in :fins ;
+  d:v  "bug" ;
+  d:s  "카드 부분 취소가 전체 취소로 표시" .
+
+n:CI-4085
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "맞춤 휴가 일부 회수 시 전체 회수 발생" .
+
+n:CI-4090
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "휴가 승인 자동진행 미작동" .
+
+n:CI-4099
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "휴일대체 취소 불가 — 휴일근무 삭제 후 취소 버튼 미노출" .
+
+n:CI-4110
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "PC 근무 시작 시 시간 오류 — 환경 요인" .
+
+n:CI-4156
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "근무유형 변경 예약 취소 불가" .
 
 # ============================================================
 # Glossary — notification
