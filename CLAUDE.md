@@ -24,7 +24,7 @@
 | `flex-payroll-backend` | main | | |
 | `flex-yearend-backend` | main | | |
 | `flex-flow-backend` | main | | |
-| `flex-goal-backend` | main | | |
+| `flex-goal-backend` | main | 목표, OKR | 목표 리스트, objective, cycle, 내 목표, 전체 목표, 구성원 목표 |
 | `flex-fins-backend` | main | | |
 | `flex-permission-backend` | main | | |
 | `flex-v2-backend-commons` | main | | |
@@ -67,6 +67,7 @@
   → 데이터 조사 (DB/OpenSearch/Kafka 스킬)
   → 원인 분석 및 해결
   → 운영 노트 기록
+  → ops-learn으로 brain 산출물 갱신 (GLOSSARY/COOKBOOK/domain-map.ttl)
 ```
 
 ## 사용 가능한 조사 도구
@@ -79,7 +80,7 @@
 | `ops-investigate-issue` | Linear 이슈 조회/조사 → 원인 파악 → operation-note 기록 |
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
 | `ops-fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
-| `ops-update-artifacts` | operation-note에서 COOKBOOK.md 증분 업데이트 |
+| `ops-learn` | 지식 소스(Notion/Slack/Linear/노트)에서 brain 산출물 전체 갱신 |
 | `ops-maintain-notes` | 활성 노트 일괄 유지보수 + 아카이브. `--rebuild` 로 전체 재구성 |
 | `db:db-query` | Aurora MySQL DB 쿼리 (dev/qa/prod) |
 | `opensearch:os-query-log` | 애플리케이션 로그 검색 (Kibana) |

@@ -8,6 +8,7 @@
 | 월 | 이슈 수 | 스킬 호출 | 총 토큰 | 쿡북 히트 | 히트율 |
 |----|---------|----------|---------|----------|--------|
 | 2026-03 | 4 | 5 | 1,443,225 | 0/2 | 0% |
+| 2026-03 | 2 | 3 | 919,207 | 0/1 | 0% |
 
 ## 쿡북 플로우 히트 이력
 
@@ -28,6 +29,7 @@
 | investigate-issue | 2 | 758,935 | 379,468 |
 | close-note | 2 | 294,781 | 147,391 |
 | maintain-notes | 1 | 389,509 | 389,509 |
+| learn | 1 | 103,222 | 103,222 |
 
 ## 활동 로그 (전체)
 
@@ -36,5 +38,6 @@
 | 2026-03-20 17:30 | [CI-4174](https://linear.app/flexteam/issue/CI-4174) | close-note | opus-4-6 | 210,272 | 3m 53s | — |
 | 2026-03-20 16:50 | [CI-4176](https://linear.app/flexteam/issue/CI-4176) | close-note | opus-4-6 | 84,509 | 3m | — |
 | 2026-03-20 15:53 | [CI-4176](https://linear.app/flexteam/issue/CI-4176) | investigate-issue | opus-4-6 | 332,459 | 12m | 미스 |
+| 2026-03-20 16:00 | Notion 3개 | learn | opus-4-6 | 103,222 | 2m 54s | — |
 | 2026-03-19 23:50 | 일괄 | maintain-notes --rebuild | opus-4-6 | 389,509 | 1m 24s | — |
 | 2026-03-19 18:30 | [CI-4168](https://linear.app/flexteam/issue/CI-4168) | investigate-issue | opus-4-6 | 426,476 | 13m 13s | 미스 |

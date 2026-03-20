@@ -601,6 +601,33 @@ WHERE customer_id = ?;
 1. 메타베이스 대시보드(#309)에서 `target_uid`로 승인 요청 확인 → 요청은 존재하나 대응하는 실제 휴가 사용 건이 없으면 고아 승인 요청 [CI-3951]
 2. 퇴직자가 휴가 승인 정책에 여전히 포함되어 있는지 확인 → 승인 정책에서 퇴직자 제거 안내 [CI-3951]
 
+문의: "승인 설정/라인을 확인해주세요" / "위젯 종료 시 근무 승인이 안 돼요"
+1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
+2. 위젯 종료 시 기본 근무일은 승인 미발생이 정상 동작 (스펙)
+3. 주휴일인데 휴일 근무 승인 발생 → 주휴일 설정 일시와 휴일 근무 등록 일시 간 시간차 확인
+
+#### Operation API
+- Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
+- category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진)
+
+#### 데이터 접근
+```sql
+-- 승인 설정 확인
+SELECT * FROM customer_workflow_task_template WHERE customer_id = ?;
+
+-- 승인 라인(단계) 확인
+SELECT * FROM customer_workflow_task_template_stage
+WHERE customer_id = ? AND customer_workflow_task_template_id = ?;
+
+-- VOC 해당 근무 승인 건 확인
+SELECT * FROM v2_user_work_record_approval_content
+WHERE customer_id = ? AND user_id = ?;
+
+-- 실제 승인 단계 상태 확인
+SELECT * FROM workflow_task WHERE customer_id = ? AND task_key = ?;
+SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?;
+```
+
 #### 과거 사례
 - **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
 
@@ -620,6 +647,8 @@ WHERE customer_id = ?;
 
 ### 목표 (Goal/OKR)
 
+> 스펙 문서: [Notion 목표 리스트 API 연동 가이드](https://www.notion.so/flexnotion/API-26c0592a4a928059b6b0c1c401751d4f)
+
 #### 진단 체크리스트
 문의: "다른 연도 목표가 보여요" / "목표 필터가 안 먹혀요" / "회색 목표가 뭐예요?"
 1. **cross-year 트리 구조 확인** → 사용자가 이전 연도 root 목표 하위에 올해 자식 목표를 배치했는지 확인 [CI-4126]
@@ -627,6 +656,61 @@ WHERE customer_id = ?;
    - FE는 `hit=false` 목표를 **회색으로 구분 표시** — 이는 의도된 스펙
 2. 회색 목표의 의미 → "직접 필터에 해당하지는 않지만, 하위에 해당하는 목표가 있어서 관계성을 보여주기 위해 표시"
 3. `root-objectives-by-aside` API는 Matrix 기반 검색이므로 cycle 필터 정상 적용 — 이 API에서는 cross-year 문제 없음
+
+문의: "내 목표가 안 보여요" / "목표가 너무 많아 안 나와요"
+1. **User Grouped API 확인** → 내 목표/구성원 목표 탭에서 사용
+   - 서버가 `companyObjectives`, `departmentObjectives`, `personalObjectives`, `memberObjectives`로 그룹핑
+   - 요청자가 **대표가 아니면** `companyObjectives`는 항상 empty
+   - 요청자가 **조직장이 아니면** `departmentObjectives`는 항상 empty
+   - ⚠️ **최대 500건** 내부 제약 — 500건 초과 시 기획적 논의 필요
+2. 구성원 목표 탭은 **동일 API를 클라이언트에서 병렬 호출**하여 화면 구성
+
+문의: "전체 목표에서 조직 선택하면 다르게 보여요" / "조직 목표가 안 나와요"
+1. **전체 탭 — 전체 옵션**: Root Objectives API (pagination 적용)
+   - cycle 필수. filter 미적용 (필터 시 트리 해제)
+   - 응답: `objectiveId`, `detail`(권한 없으면 null), `hasChild`, `hit`(cycle 매치 여부)
+   - **detail null이거나 hit false인데 hasChild false인 경우는 없음** (하위에 볼 수 있는 목표가 있어야 포함)
+2. **전체 탭 — 조직 옵션**: Aside Root Objective API (한번에 반환, pagination 없음)
+   - 서버 내부에서 트리를 그려서 최상위 목표를 찾아 반환
+   - ⚠️ **서버 트리 연산 최대 5,000건** 제약 — 현재 3년치 조직 목표 5,000건 초과 고객사 없으나 추후 대응 필요
+   - 어사이드 적용 시 권한이 항상 있으므로 `detail`은 필수값
+   - 응답: `objectiveId`, `detail`, `hasChild` (hit 필드 없음)
+
+문의: "하위 목표가 안 펼쳐져요" / "목표 트리가 이상해요"
+1. **하위 목표 탐색**: Search API + `ancestorObjectiveIds` 사용
+   - 주어진 ID의 **모든 하위**를 한번에 가져옴
+   - 클라이언트에서: ① 첫 뎁스 목표 하위 전체 탐색 → ② 트리 구성 → ③ 끼인 상태 목표 추가 연산
+   - 설계 배경: 뎁스마다 hasChild 연산 반복 시 서버 부하 → 전체를 한번에 가져오는 방식 채택
+
+문의: "목표 검색 결과가 다르게 나와요"
+1. **검색 시 공통 동작**: 모든 탭에서 검색 적용 시 **트리 및 그룹핑 해제** → 플랫 리스트 반환
+2. 검색 필터 조합:
+   - 내 목표 검색: `relatedFilter.userIdHashes` + cycle
+   - 전체 목표 검색 (전체): cycle만
+   - 전체 목표 검색 (조직): `relatedFilter.departmentIdHashesWithDescendants` + cycle
+   - 구성원 목표 검색 (사용자): `relatedFilter.userIdHashes` + cycle
+   - 구성원 목표 검색 (조직): `relatedFilter.departmentIdHashes` + cycle
+
+#### API 매핑 (탭 → API)
+
+| 탭 | 조건 | API | 비고 |
+|----|------|-----|------|
+| 내 목표 | 검색 없음 | User Grouped API | 그룹핑 반환, 500건 제약 |
+| 내 목표 | 검색 있음 | Search API + `relatedFilter.userIdHashes` | 플랫 리스트 |
+| 전체 목표 | 전체 + 검색 없음 | Root Objectives API | pagination, hit 필드 |
+| 전체 목표 | 조직 + 검색 없음 | Aside Root Objective API | 한번에 반환, 5,000건 제약 |
+| 전체 목표 | 전체 + 검색 있음 | Search API + cycle | 플랫 리스트 |
+| 전체 목표 | 조직 + 검색 있음 | Search API + `relatedFilter.departmentIdHashesWithDescendants` | 플랫, 하위 조직 포함 |
+| 구성원 목표 | 검색 없음 | User Grouped API | 내 목표와 동일 API, 클라이언트 병렬 호출 |
+| 구성원 목표 | 검색 있음 (사용자) | Search API + `relatedFilter.userIdHashes` | 플랫 리스트 |
+| 구성원 목표 | 검색 있음 (조직) | Search API + `relatedFilter.departmentIdHashes` | 플랫, 해당 조직만 |
+| 하위 탐색 | 펼치기 | Search API + `ancestorObjectiveIds` | 전체 하위 일괄 반환 |
+
+#### Swagger 링크
+- [User Grouped API](https://flex-gateway.dev.flexis.team/swagger-ui/index.html?urls.primaryName=goal-v3#/objective-search-v-3-api-controller/objective.search.user.grouped)
+- [Root Objectives API](https://flex-gateway.dev.flexis.team/swagger-ui/index.html?urls.primaryName=goal-v3#/objective-search-v-3-api-controller/objective.root)
+- [Aside Root Objective API](https://flex-gateway.dev.flexis.team/swagger-ui/index.html?urls.primaryName=goal-v3#/objective-search-v-3-api-controller/objective.root.by.aside)
+- [Search API](https://flex-gateway.dev.flexis.team/swagger-ui/index.html?urls.primaryName=goal-v3#/objective-search-v-3-api-controller/objective.search)
 
 #### 스펙: root-objectives API의 hit 필드
 - BE `ObjectiveSearchServiceImpl.filterRootObjective()`에서 `hitMap` 생성:
@@ -637,7 +721,15 @@ WHERE customer_id = ?;
   ```
 - `findRootObjectives` SQL: 서브쿼리에서 요청 cycle에 해당하는 목표를 찾고, `root_objective_id`로 root를 JOIN하되 **root에는 cycle 필터를 적용하지 않음** (설계 의도)
 - FE: `hit=true` → 정상 표시, `hit=false` → 회색 표시
-- 스펙 문서: [Notion API 스펙](https://www.notion.so/flexnotion/API-26c0592a4a928059b6b0c1c401751d4f)
+
+#### 스펙: 응답 필드 Matrix
+
+| 필드 | Root Objectives | Aside Root Objective | User Grouped | Search |
+|------|----------------|---------------------|--------------|--------|
+| objectiveId | 필수 | 필수 | 그룹별 리스트 | 필수 |
+| detail | 권한 없으면 null | 필수 (항상 권한 있음) | 포함 | 포함 |
+| hasChild | ✅ | ✅ | — | — |
+| hit | ✅ (cycle 매치) | — | — | — |
 
 #### 코드 위치
 | 파일 | 설명 |
@@ -650,6 +742,10 @@ WHERE customer_id = ?;
 > 2025년 목표(회색)가 표시되는 이유는, 해당 목표 하위에 2026년 목표가 존재하기 때문입니다.
 > 회색 목표를 펼치시면 2026년 목표가 있는 것을 확인하실 수 있습니다.
 > 2025년 목표 하위에서 2026년 목표를 분리하시면 2025년 목표가 더 이상 표시되지 않습니다.
+
+#### 고객 안내 예시 (목표 건수 제약)
+> 내 목표 탭에서 최대 500건까지 표시됩니다. 500건을 초과하는 경우 검색 기능을 활용해주세요.
+> 전체 목표 > 조직 선택 시 서버 내부적으로 최대 5,000건의 목표를 처리합니다.
 
 #### 과거 사례
 - **cross-year 트리로 이전 연도 목표 노출**: 고객이 2025 root 하위에 2026 자식 배치 → `hit=false`로 회색 표시. FE·BE 모두 정상 동작 — **스펙** [CI-4126]
@@ -1220,6 +1316,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
    - 쉬는날
 4. 월차는 입사 후 1년간 사용 가능, 막달 받은 연차는 그 다음달에 소멸
 5. Metabase에서 조회 후 jsongrid.com에서 가독성 확인
+6. ⚠️ 연차는 **분(minutes) 단위**로 관리됨: 7200분=15일, 4320분=9일 (1일=480분=8시간). bucket 값 해석 시 주의
 
 #### 조사 플로우
 
@@ -1550,6 +1647,7 @@ Kibana 참고:
 |------|------|----------|
 | 2026-03-20 | CI-4174 | 급여: 중도정산 확정해제 후 사회보험 금액 미리버트 워크어라운드 추가 |
 | 2026-03-20 | CI-4176 | 계정/구성원: OTP 2차인증 해제 플로우 추가 |
+| 2026-03-20 | Notion 3개 소스 재학습 | 승인 도메인에 SQL 템플릿·Operation API swagger·category 값 추가, 연차 도메인에 minutes 단위 스펙 추가, GLOSSARY 승인 용어 3건 추가 |
 | 2026-03-20 | Notion 온콜 가이드 | 신규 도메인 11개 추가 — 출퇴근, 근태 대시보드, 연차, 맞춤휴가, 근무지, 휴일, 캘린더 연동, Kafka 메시지 재발행, 근무 기록 삭제/복구, 시스템 모니터링, 난제 사례 |
 | 2026-03-19 | [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) | Core Squad 온콜 런북 18개 항목 반영 — 신규 도메인 3개(조직 관리, 인사발령, 체크리스트), 기존 도메인 보강(계정/구성원, 승인, OpenSearch/통계, 메일), domain-map.ttl 도메인·키워드·glossary 추가 |
 | 2026-03-19 | 전체 | --rebuild 전체 재구성 — domain-map verdict 3건 수정(CI-4117/CI-4132/CI-4151 → bug), 계정 도메인에 CI-4166(계열사 전환 스펙) 추가, 평가 도메인에 QNA-1936(raccoon 환경 불일치) 추가, glossary 항목 추가 |
@@ -1567,6 +1665,7 @@ Kibana 참고:
 | 2026-03-17 | TT-16783 | 외부 연동 도메인 — 다법인 workspace customerKey 충돌 진단 가이드 추가 |
 | 2026-03-17 | QNA-1922 | 근태/휴가 도메인 — 선택적 근무 추천 휴게 자동 입력 스펙 추가 |
 | 2026-03-17 | CI-4122 | 알림 도메인 — Core 알림 title_meta_map 빈값 스펙, 메타베이스 쿼리 개선 사례 추가 |
+| 2026-03-20 | 전체 | 목표(Goal/OKR) 대폭 확장 — Notion API 연동 가이드 학습, 탭별 API 매핑·성능 제약·응답 필드 Matrix 추가 |
 | 2026-03-17 | CI-4126 | 목표(Goal/OKR) 도메인 추가 — cross-year 트리 + hit 필드 스펙, 고객 안내 가이드 |
 | 2026-03-16 | 전체 | 전체 재구성 — QNA-1842(출입연동 커넥션 수) 외부 연동 섹션 추가 |
 | 2026-03-16 | CI-4120 | 휴직/휴가 비대칭 — 안희종 답변 반영 (유즈케이스 기반 설계, 잔여 미차감 처리) |

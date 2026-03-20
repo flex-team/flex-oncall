@@ -78,6 +78,9 @@
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | 퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요 | 고아 승인 요청 target_uid 확인 메타베이스 #309 | flex-timetracking-backend |
+| 승인 설정/라인 확인해주세요 | customer_workflow_task_template + _stage 테이블 조회 | flex-core-backend |
+| 승인은 완료됐는데 데이터가 안 바뀌었어요 | cloud_event_entity → re-produce-messages Operation API | flex-timetracking-backend |
+| 위젯 종료 시 승인이 안 돼요 | 기본 근무일 위젯 종료 시 승인 미발생 — 스펙 | flex-timetracking-backend |
 
 ## 데이터 추출 (Data Export)
 
@@ -87,10 +90,17 @@
 
 ## 목표 (Goal/OKR)
 
+> 출처: [Notion 목표 리스트 API 연동 가이드](https://www.notion.so/flexnotion/API-26c0592a4a928059b6b0c1c401751d4f)
+
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | 다른 연도 목표가 보여요 | cross-year 트리 hit=false 회색 표시 — 스펙 | flex-goal-backend |
-| 회색 목표가 뭐예요? | hit=false root-objectives API Matrix 필터 | flex-goal-backend |
+| 회색 목표가 뭐예요? | hit=false root-objectives API — detail null이거나 hit false여도 hasChild true면 노출 | flex-goal-backend |
+| 내 목표가 안 보여요 | User Grouped API grouping 확인 (companyObjectives/departmentObjectives/personalObjectives/memberObjectives) | flex-goal-backend |
+| 목표 검색 결과가 다르게 나와요 | 검색 시 트리/그룹핑 해제 — Search API 플랫 리스트 반환 | flex-goal-backend |
+| 목표가 너무 많아서 안 나와요 | User Grouped API 최대 500건 제약 / Aside Root API 최대 5,000건 제약 | flex-goal-backend |
+| 전체 목표에서 조직 선택하면 다르게 보여요 | Aside Root Objective API — 서버 트리 연산 후 최상위 목표 한번에 반환 | flex-goal-backend |
+| 하위 목표가 안 펼쳐져요 | Search API ancestorObjectiveIds로 하위 탐색 — 클라이언트 트리 구성 | flex-goal-backend |
 
 ## 급여 (Payroll)
 

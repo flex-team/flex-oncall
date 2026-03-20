@@ -81,19 +81,17 @@ QNA 이슈의 완료 여부는 **코멘트 맥락**으로 판단한다:
 - 새 코멘트에서 추가 정보가 있으면 해당 섹션에 반영
 - **변경 없는 노트는 스킵**
 
-### Step 4: 산출물 갱신 (COOKBOOK)
-완료된 이슈에 대해 `update-artifacts.md` 를 읽고 **증분 모드**를 per-ticket으로 실행한다.
+### Step 4: Brain 산출물 갱신
+완료된 이슈에 대해 `ops-learn` 스킬을 per-ticket으로 실행한다.
 
 ```
-Read: .claude/skills/ops-update-artifacts/SKILL.md
+Read: .claude/skills/ops-learn/SKILL.md
 ```
 
-1. 각 완료 노트에 대해 쿡북 반영 대상 판별 (`update-artifacts` 규칙 따름):
-   - 코드 수정으로 해결 → 쿡북 스킵
-   - 운영 대응 / 스펙 확인 → COOKBOOK 반영
-2. 반영 대상 노트가 있으면:
-   - `update-artifacts` 증분 모드 (Phase 1~2)를 각 대상 티켓에 대해 수행
-   - **사용자 확인은 Step 6 리포트에서 일괄 처리** (개별 확인 생략)
+1. 각 완료 노트에 대해 `ops-learn brain/notes/{ticket-id}.md` 실행
+   - ops-learn이 자동으로 쿡북 추가 대상 판별 (코드 수정 → 스킵, 운영/스펙 → 반영)
+   - GLOSSARY, COOKBOOK, domain-map.ttl 갱신
+2. **사용자 확인은 Step 6 리포트에서 일괄 처리** (개별 확인 생략)
 3. 반영 대상이 없으면 스킵
 
 ### Step 5: 아카이브 실행
@@ -116,9 +114,9 @@ Read: .claude/skills/ops-update-artifacts/SKILL.md
 처리 결과를 테이블로 출력한다:
 
 ```
-| 티켓 | 이슈 상태 | 노트 갱신 | 쿡북 반영 | 아카이브 |
-|------|----------|----------|----------|---------|
-| CI-XXXX | Done | ✅ 상태 업데이트 | ✅ 진단 가이드 추가 | ✅ |
+| 티켓 | 이슈 상태 | 노트 갱신 | 산출물 반영 | 아카이브 |
+|------|----------|----------|-----------|---------|
+| CI-XXXX | Done | ✅ 상태 업데이트 | ✅ GLOSSARY+COOKBOOK+TTL | ✅ |
 | CI-YYYY | In Progress | ⏭️ 변경 없음 | — | ❌ |
 ```
 
@@ -164,7 +162,7 @@ Read: .claude/skills/ops-update-artifacts/SKILL.md
 - `## 스펙/버그 판별` → 판정 결과
 
 도메인별로 분류하여 `{brain-dir}/COOKBOOK.md` 를 전체 재작성한다.
-`update-artifacts.md` 의 COOKBOOK 구조 및 규칙을 따른다.
+`ops-learn` 스킬의 `references/cookbook-rules.md` 구조 및 규칙을 따른다.
 
 ### Step 4: 사용자 확인
 재구성 결과를 보여주고 확인을 받은 후 커밋한다.
@@ -173,7 +171,7 @@ Read: .claude/skills/ops-update-artifacts/SKILL.md
 
 ## Rules
 - 완전 자동 실행 — 최종 리포트만 출력
-- 아카이브 조건: Linear 이슈 완료 AND 쿡북 반영 완료
-- 산출물 관련 규칙은 `update-artifacts` 를 따른다 (코드 진입점 미포함, SQL 파라미터화, 도메인 분류 등)
+- 아카이브 조건: Linear 이슈 완료 AND 산출물 반영 완료
+- 산출물 관련 규칙은 `ops-learn` 스킬을 따른다
 - 아카이브 시 관련 링크(COOKBOOK.md, 연관 이슈 노트) 일괄 업데이트
 - `archive/` 디렉토리가 없으면 자동 생성
