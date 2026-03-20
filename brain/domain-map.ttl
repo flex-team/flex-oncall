@@ -4,7 +4,7 @@
 @prefix g: <b:gloss/> .
 
 # ============================================================
-# Domains (15)
+# Domains (19)
 # ============================================================
 
 :notification
@@ -87,23 +87,28 @@
 :integration
   d:n   "외부 연동 (Integration)" ;
   d:cb  "외부 연동 (Integration)" ;
-  d:repo "flex-timetracking-backend" ;
-  d:mod "external-work-clock" ;
+  d:repo "flex-timetracking-backend" , "flex-work-event-transmitter-backend" ;
+  d:mod "external-work-clock" , "work-event-transmitter" ;
   d:kw  "세콤" , "SECOM" , "캡스" , "CAPS" , "텔레캅" , "외부연동" ,
-        "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ;
+        "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ,
+        "EventProvider" , "WORK_START" , "WORK_STOP" , "transmitter" ;
   d:syn "세콤 연동이 풀렸어요" , "수동 전송했는데 반영 안 돼요" ,
         "세콤으로 퇴근했는데 정시로 찍혀요" ;
-  d:x   :time-tracking , :account .
+  d:x   :time-tracking , :account , :work-event-transmitter .
 
 :permission
   d:n   "권한 (Permission)" ;
   d:cb  "권한 (Permission)" ;
   d:repo "flex-core-backend" , "flex-permission-backend" ;
-  d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ;
+  d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ,
+        "authorization" , "permission" , "authorization-cache" , "pip-service" ;
   d:kw  "권한" , "감사로그" , "audit_log" , "flex_grant_subject" ,
-        "물리삭제" , "최고관리자" , "자동부여" ;
+        "물리삭제" , "최고관리자" , "자동부여" ,
+        "OpenFGA" , "DocumentDB" , "Redis캐시" , "분산락" ,
+        "PIP" , "마이그레이션" , "authorization-cache" ;
   d:syn "누가 언제 권한을 부여했는지 확인해주세요" ,
-        "감사로그에서 권한 변경이 안 보여요" ;
+        "감사로그에서 권한 변경이 안 보여요" ,
+        "권한 캐시가 갱신 안 돼요" ;
   d:x   :shift , :account .
 
 :account
@@ -207,25 +212,42 @@
   d:n   "평가 (Evaluation / Performance Management)" ;
   d:cb  "평가 (Evaluation / Performance Management)" ;
   d:repo "flex-review-backend" ;
-  d:mod "review" , "grade" ;
-  d:kw  "평가" , "리뷰" , "등급" , "DRAFT" , "validation" , "DraftGradeItem" , "공동편집자" , "co-author" ;
-  .
+  d:mod "review" , "evaluation" , "form" , "grade" , "authorization" ;
+  d:kw  "평가" , "리뷰" , "등급" , "DRAFT" , "validation" , "DraftGradeItem" ,
+        "공동편집자" , "co-author" , "evaluation" , "폼" , "평가주기" ,
+        "역량" , "competency" , "AI프롬프트" , "엑셀" , "배치" ,
+        "Vaadin" , "admin" ;
+  d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
+        "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ;
+  d:x   :notification , :permission , :goal , :approval .
 
 :contract
   d:n   "전자계약 (Digital Contract / Digicon)" ;
   d:cb  "전자계약 (Digital Contract / Digicon)" ;
   d:repo "flex-digicon-backend" ;
-  d:mod "digicon" , "candidate" ;
-  d:kw  "전자계약" , "계약서" , "서명" , "digicon" , "SUCCEED" , "IN_PROGRESS" , "IN_REVIEW" ;
-  .
+  d:mod "digicon" , "candidate" , "integration" , "kafka-consumer" , "kafka-producer" ;
+  d:kw  "전자계약" , "계약서" , "서명" , "digicon" , "SUCCEED" , "IN_PROGRESS" , "IN_REVIEW" ,
+        "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ;
+  d:syn "전자계약 서식이 안 보여요" , "계약서 발송이 안 돼요" ,
+        "서명 완료된 계약서 삭제 가능한가요" ;
+  d:x   :account .
 
 :fins
   d:n   "비용관리 (Expense Management / Fins)" ;
   d:cb  "비용관리 (Expense Management / Fins)" ;
   d:repo "flex-fins-backend" ;
-  d:mod "fins" , "expense" ;
-  d:kw  "비용관리" , "경비" , "카드" , "fins" , "법인카드" ;
-  .
+  d:mod "spending" , "card" , "connect-management" , "data-ingest" ,
+        "data-synchronization" , "journalizing" , "merchant" , "policy" ,
+        "cipher" , "cert" , "bulk-change" , "initialization" , "query" ;
+  d:kw  "비용관리" , "경비" , "카드" , "fins" , "법인카드" ,
+        "지출" , "카드승인" , "가맹점" , "분개" , "전자결재" ,
+        "공동인증서" , "crosscert" , "데이터수집" , "데이터동기화" ,
+        "codef" , "비용정책" , "일괄변경" , "암호화" , "spending" ,
+        "journalizing" , "merchant" , "stakeholder" ;
+  d:syn "카드 내역이 안 들어와요" , "법인카드 등록이 안 돼요" ,
+        "비용 승인이 안 돼요" , "가맹점 정보가 안 맞아요" ,
+        "경비 정산이 이상해요" ;
+  d:x   :approval , :payroll .
 
 :payroll
   d:n   "급여 (Payroll)" ;
@@ -239,6 +261,59 @@
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:x   :time-tracking , :scheduling .
+
+:flow
+  d:n   "협업/커뮤니케이션 (Flow)" ;
+  d:repo "flex-flow-backend" ;
+  d:mod "notice" , "thread" , "todo" , "meeting" , "issue" ,
+        "summary" , "transcript" , "collaborative-document" , "sequence" ;
+  d:kw  "공지사항" , "스레드" , "댓글" , "할일" , "미팅" , "회의록" ,
+        "이슈" , "요약" , "음성전사" , "협업문서" , "flow" ,
+        "notice" , "thread" , "todo" , "meeting" , "transcript" ,
+        "reaction" , "render-manager" ;
+  d:syn "공지사항이 안 보여요" , "할일 목록이 안 나와요" ,
+        "미팅 요약이 안 돼요" , "댓글이 안 달려요" .
+
+:openapi
+  d:n   "외부 API / 데이터 통합 (OpenAPI)" ;
+  d:repo "flex-openapi-backend" ;
+  d:mod "openapi" , "authorization" , "data-integration" ,
+        "accounting-integration" , "people-integration" ,
+        "external-integration" , "external-mapping" ;
+  d:kw  "OpenAPI" , "토큰" , "세션" , "credential" , "token_session_state" ,
+        "SAP" , "RFC" , "급여전기" , "payroll_posting_transfer" ,
+        "외부연동" , "데이터통합" , "인사연동" , "회계연동" ,
+        "sap_rfc_server" , "external_integration_source" ,
+        "external_key_mapping" , "PEOPLE" , "ACCOUNTING" ,
+        "CLIENT_CREDENTIALS" , "REFRESH_TOKEN" ;
+  d:syn "OpenAPI 토큰이 만료됐어요" , "외부 시스템 연동이 안 돼요" ,
+        "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ;
+  d:x   :payroll , :account , :permission .
+
+:yearend
+  d:n   "연말정산 (Year-End Tax Settlement)" ;
+  d:repo "flex-yearend-backend" ;
+  d:mod "yearend" , "deduction" , "deduction-aggregation" ,
+        "settlement-core" , "settlement-report" , "retirement" ,
+        "tax-policy" , "document" , "evidence-request" ,
+        "document-analysis" , "file" ;
+  d:kw  "연말정산" , "공제" , "카드공제" , "의료비" , "교육비" , "주택" ,
+        "기부금" , "퇴직소득" , "세금정책" , "증빙서류" , "OCR" ,
+        "정산보고서" , "퇴직정산" , "부양가족" , "소득공제" ,
+        "세액공제" , "문서분석" , "PDF" ;
+  d:syn "연말정산이 안 돼요" , "공제 항목이 안 보여요" ,
+        "증빙서류 업로드가 안 돼요" , "퇴직소득 정산이 이상해요" ,
+        "연말정산 보고서가 안 나와요" ;
+  d:x   :payroll , :account .
+
+:work-event-transmitter
+  d:n   "출퇴근 이벤트 전송 (Work Event Transmitter)" ;
+  d:repo "flex-work-event-transmitter-backend" ;
+  d:mod "work-event-transmitter" ;
+  d:kw  "이벤트전송" , "work-event" , "EventProvider" ,
+        "WORK_START" , "WORK_STOP" , "transmitter" ,
+        "PostgreSQL" , "eventSyncedAt" , "eventCreatedAt" ;
+  d:x   :integration .
 
 # ============================================================
 # Notes — active (brain/notes/)

@@ -22,15 +22,15 @@
 | `flex-digicon-backend` | main | | |
 | `flex-core-backend` | main | | |
 | `flex-payroll-backend` | main | | |
-| `flex-yearend-backend` | main | | |
-| `flex-flow-backend` | main | | |
+| `flex-yearend-backend` | main | 연말정산, 공제, 퇴직소득, 세금정책 | 연말정산, 공제, 증빙서류, 퇴직정산, OCR, 정산보고서 |
+| `flex-flow-backend` | main | 협업, 커뮤니케이션 | 공지사항, 스레드, 할일, 미팅, 이슈, 요약, 음성전사, 협업문서 |
 | `flex-goal-backend` | main | 목표, OKR | 목표 리스트, objective, cycle, 내 목표, 전체 목표, 구성원 목표 |
-| `flex-fins-backend` | main | | |
-| `flex-permission-backend` | main | | |
+| `flex-fins-backend` | main | 비용관리, 경비 | 카드, 지출, 가맹점, 분개, 비용정책, 데이터동기화, codef |
+| `flex-permission-backend` | main | 권한, 인가 | OpenFGA, 분산락, PIP, authorization-cache |
 | `flex-v2-backend-commons` | main | | |
-| `flex-review-backend` | main | | |
-| `flex-work-event-transmitter-backend` | main | | |
-| `flex-openapi-backend` | main | | |
+| `flex-review-backend` | main | 평가, 리뷰 | evaluation, form, grade, 평가주기, 역량, AI프롬프트 |
+| `flex-work-event-transmitter-backend` | main | 출퇴근 이벤트 전송 | CAPS, SECOM, TELECOP, WORK_START, WORK_STOP |
+| `flex-openapi-backend` | main | 외부 API, 데이터 통합 | OpenAPI, 토큰, SAP, 급여전기, 인사연동, 회계연동 |
 | `flex-timetracking-config` | prod | 근태 설정, 환경변수, 피처플래그 | config, 설정값, feature flag |
 | `flex-raccoon` | main | Operation API, 운영 도구 | raccoon, operation-api, 운영 API |
 | `flex-admin-shell` | main | 관리자 쉘, 운영 콘솔 | admin-shell, 운영 콘솔, 설정 변경 |
