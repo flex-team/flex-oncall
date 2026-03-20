@@ -37,9 +37,18 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 
 ## Procedure
 
-### Phase 0: 선행 문서 확인
+### Phase 0: 도메인 라우팅 + 선행 문서 확인
 
-코드 수정 전에 이슈 맥락이 정리된 문서가 필요하다. 문서 상태에 따라 선행 커맨드를 실행한다.
+코드 수정 전에 어떤 도메인/서브모듈에서 작업할지 특정하고, 이슈 맥락이 정리된 문서가 필요하다.
+
+**도메인 라우팅:**
+> ```
+> Read: .claude/skills/ops-common/domain-routing.md
+> ```
+> Linear 이슈 제목으로 라우팅을 수행하여 primary 도메인의 `d:repo`(작업 대상 서브모듈)와 `d:mod`(모듈 경로)를 확인한다. 필요한 서브모듈만 `git submodule update --init` 한다.
+
+**선행 문서 확인:**
+문서 상태에 따라 선행 커맨드를 실행한다.
 
 1. `{notes-dir}/{ticket-id}.md` 또는 `{notes-dir}/archive/{ticket-id}.md` 존재 여부 확인
 2. **문서 없음** → `note-issue.md` 를 읽고 Step 1~5를 실행하여 operation-note 생성, 이어서 `investigate-issue.md` 를 읽고 조사 수행

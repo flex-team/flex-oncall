@@ -217,6 +217,22 @@ Linear 이슈를 확인했습니다. 조사 전에 아래를 확인하고 싶습
 
 ---
 
+### Step 1-5: 도메인 라우팅
+
+조사를 시작하기 전에, 이슈가 어떤 도메인에 속하는지 먼저 특정한다.
+
+> **공통 가이드**: `domain-routing.md` 를 읽고 라우팅을 수행한다.
+> ```
+> Read: .claude/skills/ops-common/domain-routing.md
+> ```
+
+**입력**: Step 1에서 정의한 문제 한 줄 정의 + Linear 이슈 제목
+**활용**:
+- primary 도메인의 `d:cb` → COOKBOOK 섹션을 Agent B가 우선 참조
+- primary 도메인의 `d:repo` → 필요한 서브모듈만 `git submodule update --init`
+- glossary 히트 → 이미 알려진 패턴인지 빠르게 판별
+- related notes → Agent B 연관 이슈 탐색 범위 축소
+
 ### Step 2-3: 데이터 수집 (🔀 병렬 처리)
 
 아래 두 작업을 **subagent로 병렬 실행**한다:
@@ -224,7 +240,7 @@ Linear 이슈를 확인했습니다. 조사 전에 아래를 확인하고 싶습
 | Agent | 작업 | 상세 |
 |-------|------|------|
 | 🤖 Agent A | **note 준비** | `note-issue.md` Step 1~3 수행 → `{notes-dir}/{ticket-id}.md` 최신화 |
-| 🤖 Agent B | **연관 이슈 스캔** | `{notes-dir}/` 전체 노트 읽기 → 관련 경험 수집 |
+| 🤖 Agent B | **연관 이슈 스캔** | Step 1-5 라우팅 결과를 활용하여 쿡북 + 연관 노트 수집 |
 
 **Agent A: operation-note 준비**
 `{notes-dir}/{ticket-id}.md` 를 최신 상태로 준비한다.
@@ -250,9 +266,10 @@ Read: .claude/skills/ops-common/note-writing-guide.md
 
 **Agent B: 쿡북 참조 + 연관 이슈 탐색 및 경험 수집**
 
-**쿡북 참조 (최우선):**
-1. `{brain-dir}/COOKBOOK.md`가 존재하면 **먼저 읽는다** (`{brain-dir}`은 `{notes-dir}`의 상위 디렉토리, 즉 `{repo-root}/brain/`)
-2. 현재 이슈의 도메인에 해당하는 섹션의 진단 체크리스트/과거 사례를 수집
+**쿡북 참조 (최우선 — Step 1-5 라우팅 결과 활용):**
+1. Step 1-5에서 특정한 primary 도메인의 `d:cb` 값으로 COOKBOOK.md 섹션을 **바로 찾는다**
+   - `{brain-dir}/COOKBOOK.md` > "{d:cb 값}" 섹션으로 직접 이동
+2. glossary 히트가 있으면 해당 항목의 `d:a`(시스템 용어)를 진단 체크리스트와 대조
 3. 이 정보를 Step 4 가설 수립 시 참고 자료로 전달
    - 쿡북의 진단 체크리스트 항목은 가설 우선순위 결정에 활용
    - 쿡북의 과거 사례 중 유사한 건이 있으면 가설에 반영
@@ -261,8 +278,8 @@ Read: .claude/skills/ops-common/note-writing-guide.md
    - 해당 도메인에 플로우가 없으면 `미스` 로 판정
    - 최종 히트/미스 판정은 Step 10에서 조사 결과를 바탕으로 확정
 
-**연관 이슈 탐색:**
-`{notes-dir}/` 루트의 active 노트만 전체 스캔한다. archive 노트는 `{repo-root}/brain/domain-map.ttl`에서 키워드로 연관 문서를 찾아 필요한 것만 `{notes-dir}/archive/`에서 읽는다.
+**연관 이슈 탐색 (Step 1-5 라우팅 결과 활용):**
+Step 1-5의 related notes를 **먼저 확인**한다. 라우팅에서 이미 매칭된 노트가 있으므로, 전체 스캔 대신 매칭된 노트를 우선 읽는다. 추가로 `{notes-dir}/` 루트의 active 노트 중 라우팅에서 놓친 것이 없는지 보충 스캔한다. archive 노트는 라우팅 결과의 related notes에서 archive 위치인 것만 읽는다.
 
 **연관 판단 기준:**
 - **동일 회사/Customer ID**: 같은 고객의 이전 문의
