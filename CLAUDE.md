@@ -60,9 +60,13 @@
 
 ## 온콜 워크플로우
 
+> **트리거**: `~하려면 어떻게 해`, `누가 했는지`, `어디서 봐야 해`, `왜 이런 거야` 등
+> 조사·추적 방법을 묻는 질문은 모두 온콜 워크플로우 진입점이다.
+> 일반 질문으로 분류하지 말고, 반드시 도메인 파악 → 쿡북 확인 순서를 따를 것.
+
 ```
 이슈 접수 (Linear/Slack)
-  → 도메인 파악 (brain/domain-map.ttl + 이 문서의 키워드 매핑 참조)
+  → 도메인 파악 (ops-find-domain 스킬 사용)
   → 쿡북 확인 (brain/COOKBOOK.md)
   → 데이터 조사 (DB/OpenSearch/Kafka 스킬)
   → 원인 분석 및 해결
@@ -76,6 +80,7 @@
 
 | 스킬 | 용도 |
 |------|------|
+| `ops-find-domain` | 이슈 키워드로 도메인 라우팅 — 관련 서브모듈, 쿡북 섹션, 과거 노트 탐색 |
 | `ops-close-note` | 완료된 이슈의 note 동기화 + 파생 산출물(COOKBOOK) 갱신 |
 | `ops-investigate-issue` | Linear 이슈 조회/조사 → 원인 파악 → operation-note 기록 |
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
