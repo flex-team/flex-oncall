@@ -2,6 +2,8 @@
 
 > 사용자/CS가 사용하는 표현 → 시스템 내 정식 용어 → 도메인 매핑.
 > 이슈 인입 시 키워드 매칭에 활용. domain-map.ttl의 glossary 항목과 동기화된다.
+>
+> 출퇴근~Kafka/이벤트 섹션 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 ## 알림 (Notification)
 
@@ -12,7 +14,7 @@
 | 알림 클릭 시 이상한 곳으로 이동해요 | CTA locale 확인 (approve.refer vs approved.refer) | flex-pavement-backend |
 | 메타베이스에서 알림 내용이 안 보여요 | Core 알림 title_meta_map 빈값 — 스펙 | flex-pavement-backend |
 
-## 연차 촉진 (Annual Time-Off Promotion)
+## 연차촉진 (Annual Time-Off Promotion)
 
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|

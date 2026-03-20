@@ -18,8 +18,8 @@
   d:x   :time-tracking , :approval , :annual-promotion .
 
 :annual-promotion
-  d:n   "연차 촉진 (Annual Time-Off Promotion)" ;
-  d:cb  "연차 촉진 (Annual Time-Off Promotion)" ;
+  d:n   "연차촉진 (Annual Time-Off Promotion)" ;
+  d:cb  "연차촉진 (Annual Time-Off Promotion)" ;
   d:repo "flex-timetracking-backend" ;
   d:mod "annual-time-off-boost" ;
   d:kw  "연차촉진" , "연차사용계획" , "촉진문서" ,

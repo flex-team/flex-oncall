@@ -111,7 +111,7 @@ WHERE primary_recipient = ? ORDER BY requested_at DESC;
 
 ---
 
-### 연차 촉진 (Annual Time-Off Promotion)
+### 연차촉진 (Annual Time-Off Promotion)
 
 #### 진단 체크리스트
 문의: "연차 사용 계획 작성 알림이 계속 와요" / "촉진 문서가 화면에 안 보여요" / "연차 대상이 아닌데 촉진 알림이 와요"
@@ -1104,7 +1104,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 ### 출퇴근 (Work Clock)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "출근이 안 돼요" / "퇴근이 안 됐어요" / "근무 위젯이 이상해요"
@@ -1121,7 +1121,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 > 비슷한 문의가 들어오면 아래 플로우를 시도한다.
 
-**F1: 출근 불가 — 근무지 범위 확인** · [Notion 온콜 가이드]
+**F1: 출근 불가 — 근무지 범위 확인** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "출근이 안 돼요" / "출근 버튼이 안 눌려요"
 
 ```
@@ -1143,7 +1143,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 ### 근태 대시보드 (Dashboard)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "근태 대시보드 수치가 안 맞아요" / "휴가 사용 내역이 다르게 보여요"
@@ -1154,7 +1154,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 #### 조사 플로우
 
-**F1: 대시보드 수치 불일치 — ES 동기화 확인** · [Notion 온콜 가이드]
+**F1: 대시보드 수치 불일치 — ES 동기화 확인** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "근태 대시보드 수치가 안 맞아요"
 
 ```
@@ -1176,7 +1176,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 ### 연차 (Annual Time Off)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요" / "사용일수가 0일이에요"
@@ -1193,7 +1193,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 #### 조사 플로우
 
-**F1: 잔여 연차 불일치 — 버킷 확인** · [Notion 온콜 가이드]
+**F1: 잔여 연차 불일치 — 버킷 확인** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요"
 
 ```
@@ -1209,7 +1209,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
    └─ 겹침으로 인한 0일 사용 → F2 시도
 ```
 
-**F2: 사용일수 0일 — 겹침 확인** · [Notion 온콜 가이드]
+**F2: 사용일수 0일 — 겹침 확인** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "사용일수가 0일이에요"
 
 ```
@@ -1246,7 +1246,7 @@ SELECT * FROM flex.v2_user_annual_time_off_adjust_assign WHERE user_id = ?;
 
 ### 맞춤휴가 (Custom Time Off)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "맞춤휴가 잔여가 이상해요" / "휴가 합치고 싶어요" / "단위 변경하고 싶어요"
@@ -1258,7 +1258,7 @@ SELECT * FROM flex.v2_user_annual_time_off_adjust_assign WHERE user_id = ?;
 
 #### 조사 플로우
 
-**F1: 맞춤휴가 잔여 불일치** · [Notion 온콜 가이드]
+**F1: 맞춤휴가 잔여 불일치** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "맞춤휴가 잔여가 이상해요"
 
 ```
@@ -1286,7 +1286,7 @@ SELECT * FROM flex.v2_customer_bulk_time_off_assign WHERE customer_id = ?;
 
 ### 근무지 (Work Place)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "근무지 밖에서 출근이 됐어요" / "IP 제한이 안 먹혀요" / "출근 버튼이 안 눌려요"
@@ -1309,7 +1309,7 @@ SELECT * FROM flex_auth.customer_ip_access_control_setting WHERE customer_id = ?
 
 ### 휴일 (Holiday)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "휴일이 안 보여요" / "대체휴일이 적용 안 돼요" / "근로자의날 삭제해주세요"
@@ -1322,7 +1322,7 @@ SELECT * FROM flex_auth.customer_ip_access_control_setting WHERE customer_id = ?
 
 #### 조사 플로우
 
-**F1: 휴일 미표시 — 매핑 확인** · [Notion 온콜 가이드]
+**F1: 휴일 미표시 — 매핑 확인** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "휴일이 안 보여요"
 
 ```
@@ -1356,7 +1356,7 @@ SELECT * FROM flex.v2_time_tracking_user_alternative_holiday_event WHERE user_id
 
 ### 캘린더 연동 (Calendar Integration)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "구글 캘린더에 휴가가 안 떠요" / "캘린더 연동이 안 돼요"
@@ -1370,7 +1370,7 @@ SELECT * FROM flex.v2_time_tracking_user_alternative_holiday_event WHERE user_id
 
 #### 조사 플로우
 
-**F1: 구글 캘린더 동기화 실패** · [Notion 온콜 가이드]
+**F1: 구글 캘린더 동기화 실패** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "구글 캘린더에 휴가가 안 떠요"
 
 ```
@@ -1395,7 +1395,7 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
 
 ### Kafka 메시지 재발행
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 1. 에러 메시지에서 `<topic>@<offset>` 값으로 offset 확인
@@ -1406,7 +1406,7 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
 
 #### 조사 플로우
 
-**F1: Kafka 컨슘 실패 — 메시지 재발행** · [Notion 온콜 가이드]
+**F1: Kafka 컨슘 실패 — 메시지 재발행** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: Kafka Consumer Error 로그 / 컨슘 실패 알림
 
 ```
@@ -1422,7 +1422,7 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
    message_consume_log에서 상태 확인
 ```
 
-**F2: 사용자 변경 이벤트 컨슘 실패** · [Notion 온콜 가이드]
+**F2: 사용자 변경 이벤트 컨슘 실패** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: `Kafka Consumer Error[userDataChangedEvent]. identities: [SimpleCustomerUserIdentity(...)]`
 
 ```
@@ -1437,7 +1437,7 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
 
 ### 근무 기록 삭제/복구
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 문의: "근무 기록 삭제해주세요" / "삭제한 데이터 복구해주세요" / "휴가 기록 삭제해주세요"
@@ -1460,7 +1460,7 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
 
 #### 조사 플로우
 
-**F1: 근무/휴가 기록 삭제 요청 대응** · [Notion 온콜 가이드]
+**F1: 근무/휴가 기록 삭제 요청 대응** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 > 트리거: "근무 기록 삭제해주세요" / "휴가 기록 삭제해주세요"
 
 ```
@@ -1481,7 +1481,7 @@ FAQ:
 
 ### 시스템 모니터링
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 
@@ -1502,7 +1502,7 @@ Kibana 참고:
 
 ### 난제 사례 (Edge Cases)
 
-> 출처: Notion 온콜 가이드
+> 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
 
@@ -1544,5 +1544,5 @@ Kibana 참고:
 | 2026-03-12 | 세콤 | 외부 연동(세콤) 프로토콜 진단 가이드 추가 |
 | 2026-02-26 | CI-3976 | 근태/휴가 도메인에 퇴사자 휴가 데이터 추출 진단 항목·API 템플릿·사례 추가 |
 | 2026-02-24 | CI-3949 | 근태/휴가 도메인에 휴일대체 탭 미표기 진단 패턴 2건 추가 |
-| 2026-02-20 | CI-3932 | 연차 촉진 도메인에 정책 변경 후 PENDING_WRITE 잔존 진단 항목 추가 |
+| 2026-02-20 | CI-3932 | 연차촉진 도메인에 정책 변경 후 PENDING_WRITE 잔존 진단 항목 추가 |
 | 2026-02-15 | 전체 | 초기 버전 — 기존 14개 노트에서 전체 추출 |
