@@ -15,6 +15,9 @@
   d:kw  "알림" , "notification" , "이메일" , "CTA" , "push" , "SES" ,
         "mail_send_history" , "notification_deliver" , "notification_type" ,
         "title_meta_map" , "Core알림" ;
+  d:syn "알림이 안 왔어요" , "메일 못 받았어요" ,
+        "알림 클릭 시 이상한 곳으로 이동해요" ,
+        "메타베이스에서 알림 내용이 안 보여요" ;
   d:x   :time-tracking , :approval , :annual-promotion .
 
 :annual-promotion
@@ -25,6 +28,9 @@
   d:kw  "연차촉진" , "연차사용계획" , "촉진문서" ,
         "annual_time_off_boost_history" , "boosted_at" ,
         "MONTHLY" , "MONTHLY_FINAL" , "PENDING_WRITE" ;
+  d:syn "연차 사용 계획 작성 알림이 계속 와요" ,
+        "촉진 문서가 화면에 안 보여요" ,
+        "연차 대상이 아닌데 촉진 알림이 와요" ;
   d:x   :notification , :time-tracking .
 
 :time-tracking
@@ -37,6 +43,11 @@
         "보상휴가" , "포괄임금" , "근로시간" , "휴직" , "휴게" ,
         "OpenSearch" , "holidayProps" , "v2_user_work_rule" ,
         "work_clock.stop.preference" ;
+  d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
+        "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
+        "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
+        "추천 휴게가 안 들어가요" , "연차 사용 내역이 사라졌어요" ,
+        "퇴사자 휴가 데이터 추출해주세요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -47,6 +58,8 @@
   d:kw  "스케줄" , "게시" , "정시전출근불가" , "연장근무" , "dry-run" ,
         "validationLevel" , "v2_user_non_repetitive_work_plan" ,
         "agreedWorkingMinutes" , "requiredWorkingMinutes" ;
+  d:syn "스케줄 게시가 안 돼요" , "정시 전 출근 불가가 안 먹혀요" ,
+        "연장근무가 이상해요" ;
   d:x   :time-tracking , :shift , :payroll .
 
 :shift
@@ -56,6 +69,8 @@
   d:mod "shift-schedule" ;
   d:kw  "교대근무" , "휴무일" , "퇴근자동조정" , "초단시간근로자" ,
         "baseAgreedDayWorkingMinutes" , "access-check" ;
+  d:syn "교대근무 관리 화면에서 일부 구성원만 조회됩니다" ,
+        "퇴근 자동 조정이 안 돼요" ;
   d:x   :time-tracking , :permission , :payroll .
 
 :integration
@@ -65,6 +80,8 @@
   d:mod "external-work-clock" ;
   d:kw  "세콤" , "SECOM" , "캡스" , "CAPS" , "텔레캅" , "외부연동" ,
         "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ;
+  d:syn "세콤 연동이 풀렸어요" , "수동 전송했는데 반영 안 돼요" ,
+        "세콤으로 퇴근했는데 정시로 찍혀요" ;
   d:x   :time-tracking , :account .
 
 :permission
@@ -74,6 +91,8 @@
   d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ;
   d:kw  "권한" , "감사로그" , "audit_log" , "flex_grant_subject" ,
         "물리삭제" , "최고관리자" , "자동부여" ;
+  d:syn "누가 언제 권한을 부여했는지 확인해주세요" ,
+        "감사로그에서 권한 변경이 안 보여요" ;
   d:x   :shift , :account .
 
 :account
@@ -86,6 +105,11 @@
         "자동로그아웃" , "입사일변경" , "company_join_date" , "삭제된구성원" ,
         "정보복구" , "DB Snapshot" , "개인정보현황" , "이메일대량변경" ,
         "bullseye" , "opensearch싱크" ;
+  d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
+        "계열사 전환하면 로그인이 풀려요" ,
+        "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
+        "삭제된 구성원 복구해주세요" , "구성원 정보가 마스킹됐어요" ,
+        "개인정보 보유현황 파악해주세요" ;
   d:x   :permission , :department .
 
 :department
@@ -97,6 +121,11 @@
         "department_time_series_segment" , "department_change_history_set" ,
         "조직시계열" , "조직코드" , "조직종료일" , "종료된조직" , "하위조직" ,
         "end_date_time" , "begin_date_time" , "parent_id" ;
+  d:syn "조직 삭제해주세요" , "조직을 지울 수 있나요?" ,
+        "조직 변경 예약을 취소할 수 없어요" , "발령과 조직변경이 꼬였어요" ,
+        "조직 시계열 데이터 뽑아주세요" ,
+        "조직 종료일 변경 시 오류가 나요" ,
+        "종료된 조직에 조직코드 넣어주세요" ;
   d:x   :personnel-appointment , :account .
 
 :personnel-appointment
@@ -107,6 +136,8 @@
   d:kw  "인사발령" , "발령엑셀" , "발령데이터" , "조직추출" ,
         "user_position_time_series_segment" , "personnel-appointment" ,
         "발령취소" , "예약발령" ;
+  d:syn "인사발령 엑셀 데이터 뽑아주세요" ,
+        "특정 시점의 조직 정보 추출해주세요" ;
   d:x   :department , :account .
 
 :checklist
@@ -116,7 +147,8 @@
   d:mod "checklist" ;
   d:kw  "체크리스트" , "온보딩" , "checklist" , "template" , "task" ,
         "체크리스트미발송" , "온보딩완료" ;
-  .
+  d:syn "체크리스트가 발송되지 않았어요" , "온보딩 체크리스트 안 왔어요" .
+
 
 :approval
   d:n   "승인 (Approval)" ;
@@ -127,6 +159,10 @@
         "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ,
         "workflow_task" , "workflow_task_stage" , "customer_workflow_task_template" ,
         "승인라인" , "위젯종료승인" ;
+  d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
+        "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
+        "승인 설정/라인 확인해주세요" ,
+        "위젯 종료 시 승인이 안 돼요" ;
   d:x   :notification , :time-tracking .
 
 :data-export
@@ -136,6 +172,7 @@
   d:mod "export" , "download" ;
   d:kw  "엑셀" , "다운로드" , "타임아웃" , "SocketTimeoutException" ,
         "구성원누락" , "core-api" ;
+  d:syn "엑셀 다운로드가 안 돼요" ;
   d:x   :time-tracking .
 
 :goal
@@ -150,7 +187,12 @@
         "ancestorObjectiveIds" , "companyObjectives" , "departmentObjectives" ,
         "personalObjectives" , "memberObjectives" , "hasChild" , "detail" ,
         "500건" , "5000건" , "내목표탭" , "전체목표탭" , "구성원목표탭" ;
-  .
+  d:syn "다른 연도 목표가 보여요" , "회색 목표가 뭐예요?" ,
+        "내 목표가 안 보여요" , "목표 검색 결과가 다르게 나와요" ,
+        "목표가 너무 많아서 안 나와요" ,
+        "전체 목표에서 조직 선택하면 다르게 보여요" ,
+        "하위 목표가 안 펼쳐져요" .
+
 
 :review
   d:n   "평가 (Evaluation / Performance Management)" ;
