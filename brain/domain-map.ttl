@@ -42,12 +42,22 @@
   d:kw  "휴가" , "연차" , "time-off" , "근태" , "출퇴근" , "휴일대체" ,
         "보상휴가" , "포괄임금" , "근로시간" , "휴직" , "휴게" ,
         "OpenSearch" , "holidayProps" , "v2_user_work_rule" ,
-        "work_clock.stop.preference" ;
+        "work_clock.stop.preference" ,
+        "agreedWorkingMinutes" , "statutoryWorkingMinutes" , "requiredWorkingMinutes" ,
+        "usualWorkingMinutes" , "maxStatutoryTotalWorkingMinutes" ,
+        "법정근로시간" , "소정근로시간" , "필수근로시간" , "계약근로시간" ,
+        "초과근로" , "연장근로" , "야간근로" , "가산율" ,
+        "단시간근로자" , "초단시간근로자" , "연소근로자" ,
+        "보상휴가제" , "고정OT" , "탄력근무제" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
         "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
         "추천 휴게가 안 들어가요" , "연차 사용 내역이 사라졌어요" ,
-        "퇴사자 휴가 데이터 추출해주세요" ;
+        "퇴사자 휴가 데이터 추출해주세요" ,
+        "소정근로시간이 뭐예요" , "법정근로시간이 뭐예요" ,
+        "초과근로 가산율이 이상해요" , "단시간 근로자 연장이 이상해요" ,
+        "보상휴가 시간이 이상해요" , "포괄임금 설정이 뭐예요" ,
+        "연차 촉진 절차가 뭐예요" , "5인 미만 사업장 적용이 달라요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -57,7 +67,8 @@
   d:mod "work-schedule" , "work-plan" ;
   d:kw  "스케줄" , "게시" , "정시전출근불가" , "연장근무" , "dry-run" ,
         "validationLevel" , "v2_user_non_repetitive_work_plan" ,
-        "agreedWorkingMinutes" , "requiredWorkingMinutes" ;
+        "agreedWorkingMinutes" , "requiredWorkingMinutes" ,
+        "탄력적근무시간제" , "법정최대근로시간" , "주52시간" ;
   d:syn "스케줄 게시가 안 돼요" , "정시 전 출근 불가가 안 먹혀요" ,
         "연장근무가 이상해요" ;
   d:x   :time-tracking , :shift , :payroll .
@@ -223,7 +234,8 @@
   d:mod "payroll" , "settlement" , "payslip" ;
   d:kw  "급여" , "정산" , "소득세" , "부양가족" ,
         "payroll_legal_payment_setting" , "work_income_settlement_payee" ,
-        "dependent_families_count" , "올림" , "구독해지" , "명세서" ;
+        "dependent_families_count" , "올림" , "구독해지" , "명세서" ,
+        "연차휴가미사용수당" , "연차수당" , "주휴수당" , "연차휴가수당" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:x   :time-tracking , :scheduling .
@@ -680,6 +692,36 @@ g:tt-09
   d:q  "퇴사자 휴가 데이터 추출해주세요" ;
   d:a  "Operation API departmentIds includeResignatedUsers" .
 
+g:tt-10
+  d:in :time-tracking ;
+  d:q  "소정근로시간이 뭐예요" ;
+  d:a  "agreedWorkingMinutes — 회사와 근무자가 약속한 근로시간 (일반 사무직: 주 40h, 일 8h)" .
+
+g:tt-11
+  d:in :time-tracking ;
+  d:q  "법정근로시간이 뭐예요" ;
+  d:a  "statutoryWorkingMinutes — 법정 최대 소정근로 (성인: 일 8h/주 40h, 연소: 일 7h/주 35h)" .
+
+g:tt-12
+  d:in :time-tracking ;
+  d:q  "초과근로 가산율이 이상해요" ;
+  d:a  "연장/야간 각 0.5배, 휴일 0.5배. 주기연장+휴일 중복 시 0.5배만(연장 미적용)" .
+
+g:tt-13
+  d:in :time-tracking ;
+  d:q  "단시간 근로자 연장이 이상해요" ;
+  d:a  "단시간 근로자는 소정근로시간 초과 시 연장 발생 (통상근로자는 법정근로시간 기준)" .
+
+g:tt-14
+  d:in :time-tracking ;
+  d:q  "보상휴가 시간이 이상해요" ;
+  d:a  "가산율 포함 시간 기준 부여 (8h 연장 × 1.5 = 12h). 미사용 시 수당 의무" .
+
+g:tt-15
+  d:in :time-tracking ;
+  d:q  "포괄임금 설정이 뭐예요" ;
+  d:a  "flex '포괄계약 근로시간 설정' = 실제 고정OT 계약 (항목별 시간 명시). 포괄임금제와 다름" .
+
 # ============================================================
 # Glossary — scheduling
 # ============================================================
@@ -926,3 +968,8 @@ g:pay-03
   d:in :payroll ;
   d:q  "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:a  "구독 해지 후 payslip 공개/알림 동작 — 스펙" .
+
+g:pay-04
+  d:in :payroll ;
+  d:q  "연차수당이 이상해요" ;
+  d:a  "연차휴가미사용수당 — 소멸 연차 금전 보상. 퇴직 시 입사일 기준 재정산 가능 (취업규칙 단서 필요)" .
