@@ -149,7 +149,6 @@
         "체크리스트미발송" , "온보딩완료" ;
   d:syn "체크리스트가 발송되지 않았어요" , "온보딩 체크리스트 안 왔어요" .
 
-
 :approval
   d:n   "승인 (Approval)" ;
   d:cb  "승인 (Approval)" ;
@@ -193,7 +192,6 @@
         "전체 목표에서 조직 선택하면 다르게 보여요" ,
         "하위 목표가 안 펼쳐져요" .
 
-
 :review
   d:n   "평가 (Evaluation / Performance Management)" ;
   d:cb  "평가 (Evaluation / Performance Management)" ;
@@ -226,6 +224,8 @@
   d:kw  "급여" , "정산" , "소득세" , "부양가족" ,
         "payroll_legal_payment_setting" , "work_income_settlement_payee" ,
         "dependent_families_count" , "올림" , "구독해지" , "명세서" ;
+  d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
+        "급여정산 해지하면 명세서 공개가 되나요?" ;
   d:x   :time-tracking , :scheduling .
 
 # ============================================================

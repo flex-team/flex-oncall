@@ -1,7 +1,7 @@
 ---
 name: find-domain
 description: Use when a problem, question, or inquiry needs domain routing — finds relevant domains, submodules, cookbook sections, and past notes from domain-map.ttl. Triggers include '도메인 찾아줘', '어디 봐야 해', '어떤 repo야', or when starting oncall issue triage before investigation.
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read, Grep, Glob, Edit
 argument-hint: <문제/질문 텍스트 또는 ticket-id> (예: "세콤 퇴근 정시로 찍혀요", CI-4145)
 ---
 
@@ -86,3 +86,34 @@ $ARGUMENTS
 2. "매칭된 도메인이 없습니다" 안내
 3. CLAUDE.md의 서브모듈 맵 키워드 테이블을 fallback으로 제시
 4. 사용자에게 도메인을 직접 지정하도록 요청
+5. **미스 로그에 기록** (아래 "미스 로그" 섹션 참조)
+
+## 미스 로그
+
+라우팅 실패를 `brain/routing-misses.md` 에 기록하여, `ops-learn` 이 키워드를 자동 보강하는 데 활용한다.
+
+### 기록 조건
+
+다음 **두 가지** 상황에서 미스 로그를 기록한다:
+
+1. **매칭 없음**: 어떤 도메인에도 스코어가 발생하지 않았을 때
+2. **사용자 거부**: 결과를 출력했으나 사용자가 "아니야", "다른 도메인인데" 등으로 결과를 거부했을 때
+
+### 기록 방법
+
+`brain/routing-misses.md` 의 테이블 마지막 행에 추가한다:
+
+```
+| {YYYY-MM-DD} | {입력 텍스트 원문} | {사용자가 지정한 도메인 또는 빈칸} | {비고: 왜 실패했는지 한 줄} |
+```
+
+- 날짜는 KST 기준
+- 사용자가 도메인을 직접 지정했으면 "최종 도메인" 칸에 기록
+- 사용자가 지정하지 않았으면 빈칸으로 남김
+
+### 예시
+
+```
+| 2026-03-20 | 급여명세서 항목이 이상해요 | :payroll | d:kw에 "급여명세서" 없음 |
+| 2026-03-20 | 관리자가 직원 비밀번호를 초기화하려면 | | 매칭 없음 — 계정 도메인 키워드 부족 |
+```

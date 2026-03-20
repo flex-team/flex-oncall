@@ -15,6 +15,7 @@ brain/
 ├── GLOSSARY.md            # 사용자 표현 → 시스템 용어
 ├── COOKBOOK.md             # 진단 가이드 + 조사 플로우
 ├── ontology.md            # domain-map.ttl 작성 규칙
+├── routing-misses.md      # 라우팅 미스 로그 (ops-learn이 소비)
 └── notes/                 # 이슈 노트
     ├── {ticket-id}.md
     └── archive/
