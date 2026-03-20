@@ -43,8 +43,8 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 1. `{notes-dir}/{ticket-id}.md` 또는 `{notes-dir}/archive/{ticket-id}.md` 존재 여부 확인
 2. **문서 없음** → `note-issue.md` 를 읽고 Step 1~5를 실행하여 operation-note 생성, 이어서 `investigate-issue.md` 를 읽고 조사 수행
    ```
-   Read: .claude/commands/ops/note-issue.md
-   Read: .claude/commands/ops/investigate-issue.md
+   Read: .claude/skills/ops-note-issue/SKILL.md
+   Read: .claude/skills/ops-investigate-issue/SKILL.md
    ```
 3. **문서 있음, 조사 결과 없음** (원인 분석/해결안 섹션 미존재) → `investigate-issue.md` 를 읽고 조사 수행
 4. **문서 있음, 조사 결과 있음** → Phase 1로 바로 진행
@@ -129,7 +129,7 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 
 > 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
-> Read: .claude/commands/ops/metrics-guide.md
+> Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
 1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` 하단 `## Claude 활동 로그` 테이블에 행 추가

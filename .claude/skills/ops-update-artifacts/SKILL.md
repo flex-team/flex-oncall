@@ -234,7 +234,7 @@ gh issue view {number} --comments
 
 > 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
-> Read: .claude/commands/ops/metrics-guide.md
+> Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
 1. **COOKBOOK 히트 동기화**: Phase 1에서 기존 플로우의 히트 카운트를 갱신했으면, `.claude/METRICS.md` 플로우 히트 이력도 동기화

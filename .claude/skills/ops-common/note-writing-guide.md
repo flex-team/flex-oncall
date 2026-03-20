@@ -1,3 +1,8 @@
+---
+name: ops-note-writing-guide
+description: Operation Note 문서 작성 가이드
+---
+
 # Operation Note 문서 작성 가이드
 
 이 문서는 operation-notes 문서를 작성할 때 공통으로 적용되는 규칙을 정의한다.

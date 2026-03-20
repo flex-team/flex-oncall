@@ -31,7 +31,7 @@ $ARGUMENTS
 `commands/ops/note-issue.md` 를 읽고 **Step 1~6을 그대로 수행**한다.
 
 ```
-Read: .claude/commands/ops/note-issue.md
+Read: .claude/skills/ops-note-issue/SKILL.md
 ```
 
 수행 범위:
@@ -49,7 +49,7 @@ Phase 1 완료 후 산출물: `brain/notes/{ticket-id}.md`
 Phase 1에서 생성/업데이트된 노트를 읽고, `update-artifacts.md` 를 읽어 **증분 모드를 수행**한다.
 
 ```
-Read: .claude/commands/ops/update-artifacts.md
+Read: .claude/skills/ops-update-artifacts/SKILL.md
 ```
 
 - COOKBOOK: 반영 대상 자동 판단 (진단 가이드/SQL/원인 확정/스펙 판별 섹션 존재 여부)
@@ -79,7 +79,7 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 
 > 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
-> Read: .claude/commands/ops/metrics-guide.md
+> Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
 1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` (또는 archive로 이동된 경우 해당 경로) 하단 `## Claude 활동 로그` 테이블에 행 추가

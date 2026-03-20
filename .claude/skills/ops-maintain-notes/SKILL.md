@@ -84,7 +84,7 @@ QNA 이슈의 완료 여부는 **코멘트 맥락**으로 판단한다:
 완료된 이슈에 대해 `update-artifacts.md` 를 읽고 **증분 모드**를 per-ticket으로 실행한다.
 
 ```
-Read: .claude/commands/ops/update-artifacts.md
+Read: .claude/skills/ops-update-artifacts/SKILL.md
 ```
 
 1. 각 완료 노트에 대해 쿡북 반영 대상 판별 (`update-artifacts` 규칙 따름):
@@ -129,7 +129,7 @@ Read: .claude/commands/ops/update-artifacts.md
 
 > 이 스텝은 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
-> Read: .claude/commands/ops/metrics-guide.md
+> Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
 1. **`.claude/METRICS.md` 갱신**: 활동 로그(전체)에 행 추가 (이슈 = `일괄`) + 스킬별 사용량 + 월별 요약 갱신

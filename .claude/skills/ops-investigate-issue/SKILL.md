@@ -232,7 +232,7 @@ Linear 이슈를 확인했습니다. 조사 전에 아래를 확인하고 싶습
 2. **문서 없음** → `note-issue.md` 를 읽고 **Step 1~5를 정식 실행**하여 operation-note를 생성한다 (Step 6 보고는 생략).
    이때 **Step 1에서 정의한 문제 정의 및 이해관계자 정보를 "증상" 섹션에 반드시 반영**한다.
    ```
-   Read: .claude/commands/ops/note-issue.md
+   Read: .claude/skills/ops-note-issue/SKILL.md
    ```
 3. **문서 있음** → Linear 최신 정보와 동기화:
    - MCP CLI로 이슈 + 코멘트 조회 (`mcp-cli info` 로 스키마 확인 후 호출)
@@ -242,7 +242,7 @@ Linear 이슈를 확인했습니다. 조사 전에 아래를 확인하고 싶습
 
 **문서 작성 시 `note-writing-guide.md` 의 "문서 작성 원칙"과 "문서 포맷팅 규칙"을 반드시 읽고 준수한다.**
 ```
-Read: .claude/commands/ops/note-writing-guide.md
+Read: .claude/skills/ops-common/note-writing-guide.md
 ```
 
 이 단계가 끝나면 `{notes-dir}/{ticket-id}.md` 가 최신 상태로 존재한다.
@@ -641,7 +641,7 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 
 > 이 스텝은 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
 > ```
-> Read: .claude/commands/ops/metrics-guide.md
+> Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
 1. **쿡북 히트/미스 확정**: Agent B가 참조한 플로우와 조사 결과를 대조하여 최종 판정
