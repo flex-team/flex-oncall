@@ -140,9 +140,14 @@
   d:n   "목표 (Goal/OKR)" ;
   d:cb  "목표 (Goal/OKR)" ;
   d:repo "flex-goal-backend" ;
-  d:mod "objective" , "root-objectives" ;
+  d:mod "objective" , "root-objectives" , "objective-search-v3" ;
   d:kw  "목표" , "OKR" , "cycle" , "root-objectives" , "cross-year" ,
-        "hit" , "회색목표" , "ObjectiveSearchServiceImpl" ;
+        "hit" , "회색목표" , "ObjectiveSearchServiceImpl" ,
+        "User Grouped API" , "Aside Root Objective API" , "Search API" ,
+        "userIdHashes" , "departmentIdHashesWithDescendants" ,
+        "ancestorObjectiveIds" , "companyObjectives" , "departmentObjectives" ,
+        "personalObjectives" , "memberObjectives" , "hasChild" , "detail" ,
+        "500건" , "5000건" , "내목표탭" , "전체목표탭" , "구성원목표탭" ;
   .
 
 :review
@@ -328,6 +333,12 @@ n:TT-16674
   d:in :permission ;
   d:v  "investigating" ;
   d:s  "실시간 기록 조회 권한 분기 처리" .
+
+n:CI-4173
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "52시간 초과기록 미허용 설정인데 56시간 근무기록 허용됨" ;
+  d:x  :scheduling .
 
 # ============================================================
 # Notes — archive (brain/notes/archive/)
@@ -816,7 +827,32 @@ g:goal-01
 g:goal-02
   d:in :goal ;
   d:q  "회색 목표가 뭐예요?" ;
-  d:a  "hit=false root-objectives API Matrix 필터" .
+  d:a  "hit=false root-objectives API — detail null/hit false여도 hasChild true면 노출" .
+
+g:goal-03
+  d:in :goal ;
+  d:q  "내 목표가 안 보여요" ;
+  d:a  "User Grouped API grouping 확인 (company/department/personal/member)" .
+
+g:goal-04
+  d:in :goal ;
+  d:q  "목표 검색 결과가 다르게 나와요" ;
+  d:a  "검색 시 트리/그룹핑 해제 — Search API 플랫 리스트" .
+
+g:goal-05
+  d:in :goal ;
+  d:q  "목표가 너무 많아서 안 나와요" ;
+  d:a  "User Grouped 500건 / Aside Root 5,000건 내부 제약" .
+
+g:goal-06
+  d:in :goal ;
+  d:q  "전체 목표에서 조직 선택하면 다르게 보여요" ;
+  d:a  "Aside Root Objective API — 서버 트리 연산 후 최상위 한번에 반환" .
+
+g:goal-07
+  d:in :goal ;
+  d:q  "하위 목표가 안 펼쳐져요" ;
+  d:a  "Search API ancestorObjectiveIds 하위 탐색 → 클라이언트 트리 구성" .
 
 # ============================================================
 # Glossary — payroll
