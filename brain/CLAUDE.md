@@ -131,11 +131,12 @@ brain/
 
 | 스킬 | domain-map.ttl | GLOSSARY.md | COOKBOOK.md | 노트 |
 |------|---------------|-------------|------------|------|
-| `investigate-issue` | 노트 항목 추가 | - | - | 생성/갱신 |
-| `note-issue` | 노트 항목 추가 | - | - | 생성/갱신 |
-| `close-note` | verdict 확정 | 갱신 | 갱신 | archive 이동 |
+| `note-issue` | 노트 항목 추가 | ops-learn 갱신 | ops-learn 갱신 | 생성/갱신 |
+| `investigate-issue` | 노트 항목 추가 | ops-learn 갱신 | ops-learn 갱신 | 생성/갱신 |
+| `close-note` | verdict 확정 | ops-learn 갱신 | ops-learn 갱신 | archive 이동 |
 | `fix-issue` | - | - | - | 갱신 |
-| `maintain-notes --rebuild` | 전체 재구축 | - | - | 일괄 정리 |
+| `ops-learn` | 키워드/glossary 갱신 | 용어 매핑 갱신 | 진단 패턴 갱신 | - |
+| `maintain-notes` | ops-learn/재구축 | ops-learn 갱신 | ops-learn/재구축 | 일괄 정리 |
 
 ### domain-map.ttl 갱신 시점
 
