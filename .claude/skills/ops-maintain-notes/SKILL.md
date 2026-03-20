@@ -1,5 +1,6 @@
 ---
-description: 활성 노트 일괄 유지보수 + 아카이브. --rebuild 로 COOKBOOK 전체 재구성
+name: maintain-notes
+description: Use when active operation-notes need batch maintenance — checks all notes against Linear status, archives completed ones, and updates COOKBOOK for each. Triggers include '노트 정리해줘', '아카이브', '일괄 유지보수'. With --rebuild, performs full COOKBOOK.md + domain-map.ttl reconstruction from all notes.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task, Agent
 argument-hint: [--rebuild] (인자 없음: 일괄 유지보수, --rebuild: 전체 재구성)
 ---

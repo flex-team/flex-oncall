@@ -1,5 +1,6 @@
 ---
-description: Linear 이슈를 조회/조사하고 원인 파악 및 해결안을 도출하여 operation-note에 기록
+name: investigate-issue
+description: Use when an oncall issue needs root cause analysis — hypothesis testing, DB/log verification, and solution proposals. Triggers include '조사해줘', '원인 파악', '왜 이런 거야', or when an operation-note exists but lacks cause analysis. Not for documentation-only (use ops-note-issue) or code implementation (use ops-fix-issue).
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id> (예: CI-3861)
 ---

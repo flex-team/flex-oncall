@@ -1,5 +1,6 @@
 ---
-description: 완료된 이슈의 operation-note 를 동기화하고 파생 산출물(COOKBOOK)을 갱신
+name: close-note
+description: Use when an issue is resolved/done and needs final wrap-up — syncs the operation-note with latest Linear data AND updates COOKBOOK in one step. Triggers include '마무리해줘', '클로즈해줘', '노트 정리', or after investigation/fix is complete. Not for issue intake (use ops-note-issue).
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id> (예: CI-3861)
 ---

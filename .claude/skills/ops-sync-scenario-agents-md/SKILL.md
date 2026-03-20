@@ -1,5 +1,6 @@
 ---
-description: operation-notes의 이슈에서 유저 대상 API를 찾아 scenario-test AGENTS.md에 추가
+name: sync-scenario-agents-md
+description: Use when operation-notes may reference user-facing APIs missing from scenario-test AGENTS.md. Scans notes for API references, verifies gaps in codebase, and creates a PR. Only works for flex-timetracking-backend. Triggers include 'AGENTS.md 동기화', 'API 누락 확인', or after accumulating several resolved issues.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task, Skill
 ---
 

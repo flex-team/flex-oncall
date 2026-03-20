@@ -1,6 +1,6 @@
 ---
 name: visualize-brain
-description: brain/domain-map.ttl을 파싱하여 인터랙티브 도메인 그래프(brain/graph.html)를 생성하고 브라우저에서 연다
+description: Use when you need to see the brain knowledge graph visually — generates an interactive domain graph from brain/domain-map.ttl. Triggers include '그래프 보여줘', '도메인 맵 시각화', or after domain-map.ttl has been updated.
 ---
 
 # Brain 도메인 그래프 시각화

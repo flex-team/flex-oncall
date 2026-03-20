@@ -1,5 +1,6 @@
 ---
-description: operation-note에서 COOKBOOK.md 를 증분 업데이트
+name: update-artifacts
+description: Use when a single operation-note's findings need reflecting in COOKBOOK.md — incremental update of diagnosis guides, SQL templates, and past cases. Triggers include '쿡북 업데이트', '아티팩트 갱신', or after note-issue/investigate-issue completes for a specific ticket. For full COOKBOOK rebuild, use ops-maintain-notes --rebuild.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id | --gh-issue {number}> (예: CI-3914, --gh-issue 11976)
 ---

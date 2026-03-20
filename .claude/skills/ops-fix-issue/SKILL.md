@@ -1,5 +1,6 @@
 ---
-description: Linear 이슈를 기반으로 코드 조사 → 구현 → PR 생성까지 수행
+name: fix-issue
+description: Use when an issue needs a code change — bug fix, feature implementation, or config update — going through to PR creation. Triggers include '수정해줘', '코드 고쳐줘', 'PR 만들어줘', or when investigation concluded the issue requires code fix. Not for investigation-only (use ops-investigate-issue) or documentation-only (use ops-note-issue).
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task, Skill
 argument-hint: <ticket-id> (예: FLX-1234, CI-5678)
 ---

@@ -1,5 +1,6 @@
 ---
-description: Linear 이슈를 조회하여 operation-notes 문서를 생성/업데이트
+name: note-issue
+description: Use when a Linear issue needs an operation-note created or synced with latest data (new comments, status changes). Also use after resolution to finalize the note with Gherkin scenarios. Triggers include new issue intake, '노트 만들어줘', '동기화', or when existing note is stale. Not for investigation (use ops-investigate-issue) or closing workflow (use ops-close-note).
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 argument-hint: <ticket-id> (예: CI-3849)
 ---
