@@ -101,6 +101,13 @@ git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <director
 
 서브모듈을 추가한 후 `CLAUDE.md`의 서브모듈 맵 테이블도 함께 업데이트할 것.
 
+## 알람
+
+| 도메인 | 채널 |
+|---|---|
+| 트래킹 BE | [alram-system-error-tracking-be](https://flex-cv82520.slack.com/archives/C03DDNUEV29) |
+| 트래킹 FE | [alram-system-error-tracking-fe-prod](https://flex-cv82520.slack.com/archives/C096SFWRC05) |
+
 ## 참고: 도메인별 슬랙 멘션 이력
 
 과거 문의마다 어떤 멘션을 사용했는지 확인하기 위한 참고 테이블.

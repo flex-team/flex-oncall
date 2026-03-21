@@ -13,6 +13,17 @@
     "opensearch@flex-claude-skills-yj-kim": true
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/log-skill.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Skill",

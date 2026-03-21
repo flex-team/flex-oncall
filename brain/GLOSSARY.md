@@ -110,6 +110,30 @@
 | 정산 수정했는데 소득세가 바뀌었어요 | 부양가족 수 최신화 dependent_families_count — 스펙 | flex-payroll-backend |
 | 급여정산 해지하면 명세서 공개가 되나요? | 구독 해지 후 payslip 공개/알림 동작 — 스펙 | flex-payroll-backend |
 
+## 근로기준법 용어 (Labor Law Terms)
+
+> 출처: [Notion Tracking 도메인 지도](https://www.notion.so/flexnotion/Tracking-8b40cec73dcc4b1db1e6123569d7b9ce)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 소정근로시간이 뭐예요? | agreedWorkingMinutes — 회사와 근무자가 약속한 일하는 시간 (일반 사무직: 주 40시간, 일 8시간) | flex-timetracking-backend |
+| 법정근로시간이 뭐예요? | statutoryWorkingMinutes — 법으로 지정한 최대 소정근로시간 (성인: 일 8시간/주 40시간, 연소: 일 7시간/주 35시간) | flex-timetracking-backend |
+| 필수근로시간이 뭐예요? | requiredWorkingMinutes — 소정근로시간에 휴일대체·입퇴사·휴직 반영한 실제 근로 목표 시간 | flex-timetracking-backend |
+| 계약근로시간이 뭐예요? | usualWorkingMinutes — 근로계약서상 일 근무시간. 소정근로시간 초과 가능하나 법정최대 초과 불가 | flex-timetracking-backend |
+| 법정최대근로시간이 뭐예요? | maxStatutoryTotalWorkingMinutes — 법정근로(40H) + 법정최대연장(12H) = 주 52시간 | flex-timetracking-backend |
+| 목표근로시간이 뭐예요? | 1.0 용어로 2.0에서 폐기. requiredWorkingMinutes(필수근로시간)로 대체. UI에서는 아직 사용되기도 함 | flex-timetracking-backend |
+| 초과근로가 뭐예요? | 연장·야간·휴일 근로의 총칭. 시간외 근로라고도 불림 | flex-timetracking-backend |
+| 연장근로 계산이 이상해요 | 일 단위(일 8시간 초과) + 주기 단위(주 40시간 초과) 이중 판단. 선택적 근무는 일 단위 연장 없음 | flex-timetracking-backend |
+| 야간근로 가산이 이상해요 | 22시~06시 사이 근로, 0.5배 가산. 연장+야간 중복 시 1.0배 | flex-timetracking-backend |
+| 휴일근로 가산이 이상해요 | 휴일 근로 0.5배 가산. 단, 주기 연장과 중복 시 0.5배만(연장 가산 미적용). 일 단위 연장은 별도 적용 | flex-timetracking-backend |
+| 포괄임금 설정이 뭐예요? | flex 제품의 '포괄계약 근로시간 설정'은 실제로 고정OT 계약 (항목별 시간 명시). 포괄임금제와 다름 | flex-timetracking-backend |
+| 보상휴가 시간이 이상해요 | 가산율 포함 시간 기준 부여 (예: 8시간 연장 × 1.5 = 12시간). 미사용 시 수당 지급 의무 있음 | flex-timetracking-backend |
+| 단시간 근로자 연장이 이상해요 | 단시간 근로자는 소정근로시간 초과 시 연장근로 발생 (통상근로자는 법정근로시간 초과 기준) | flex-timetracking-backend |
+| 초단시간 근로자 연차/주휴가 없어요 | 주 15시간 미만 → 퇴직금·연차·주휴일/주휴수당 의무 없음 — 스펙 | flex-timetracking-backend |
+| 휴일 대체가 안 돼요 | 주휴일 대체는 6일 이내, 근로자의날은 대체 불가. 사전 24시간 통보 필수 | flex-timetracking-backend |
+| 연차 촉진 절차가 뭐예요? | 3종류: 연차 촉진(소멸 6개월 전), 월차 1차(3개월 전), 월차 2차(1개월 전). 노무수령거부 의사표시 필요 | flex-timetracking-backend |
+| 연차수당이 이상해요 | = 연차휴가미사용수당. 소멸된 연차 금전 보상. 퇴직 시 입사일 기준 재정산 가능(취업규칙 단서 필요) | flex-payroll-backend |
+
 ## 출퇴근 (Work Clock)
 
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
