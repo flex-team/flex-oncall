@@ -319,6 +319,11 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:CI-4174
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "건강보험 제외 대상자 중도정산 시 전년도 사회보험 연말정산 금액 잘못 표시 — 확정/확정해제 시 정산 결과 미리버트 + 2월 말 합산 픽스" .
+
 n:CI-4048
   d:in :time-tracking ;
   d:v  "investigating" ;
@@ -448,7 +453,7 @@ n:CI-4164
 n:CI-4166
   d:in :account ;
   d:v  "spec" ;
-  d:s  "계열사 전환 시 로그인 풀림 — 자동 로그아웃 설정 시간 차이 (스펙)" .
+  d:s  "계열사 전환 시 로그인 풀림 — SSO(OAuth2) PC웹 로그인 시 workspace refresh token 미발급으로 12h 후 만료 (스펙)" .
 
 n:CI-4170
   d:in :account ;
@@ -519,6 +524,11 @@ n:CI-4174
 # ============================================================
 # Notes — archive (brain/notes/archive/)
 # ============================================================
+
+n:CI-4176
+  d:in :account ;
+  d:v  "spec" ;
+  d:s  "최고관리자 OTP 설정으로 카드등록 로그인 불가" .
 
 n:CI-3777
   d:in :annual-promotion ;

@@ -541,7 +541,29 @@ WHERE gs.customer_id = ? AND gs.subject_id = ?;
    - 사전에 DB에서 대상 이메일 존재 여부 확인 필수
 3. 다법인 사용자 확인 → `primary_user_id`가 NULL이 아니면 primary 회사에서만 변경 가능 [CI-4118]
 4. 검증된 이메일(verified) 확인 → 이미 검증된 이메일은 관리자가 변경 불가, Operation API 사용 필요 [CI-4118]
-5. 계열사 전환 시 로그인 풀림 → 각 계열사의 **자동 로그아웃 설정 시간** 비교. 세션 시간이 긴 회사에서 짧은 회사로 전환 시 짧은 쪽 기준으로 세션 만료 판정 → 정상 동작(스펙). 두 회사 설정을 동일하게 맞추도록 안내 [CI-4166]
+5. 계열사 전환 시 로그인 풀림 → **인증 방식 확인**. SSO(OAuth2/SAML2/OIDC) PC웹 로그인은 workspace refresh token 미발급 → workspace access token(12h) 만료 후 계열사 전환 불가(스펙). 재로그인하면 12시간간 전환 가능. 비밀번호 로그인이면 refresh token 발급되어 7일간 유효. 코드: `flex-authentication/.../AuthorizationStrategy.kt` [CI-4166]
+6. OTP 설정 확인 → `SELECT required FROM flex_auth.customer_credential_t_otp_setting WHERE customer_id = ?` [CI-4176]
+7. required=1이면 → 증적 확보 후 `UPDATE required = 0` [CI-4176]
+8. SSO 설정 있으면 → SSO 로그인으로 우회 가능 [CI-4176]
+
+문의: "OTP 때문에 로그인이 안 돼요" / "최고관리자가 OTP를 켜고 퇴사했어요"
+
+#### 조사 플로우
+
+**F1: OTP 2차인증 해제** · 히트: 1 · [CI-4176]
+> 트리거: "OTP 로그인 불가", "관리자 퇴사 후 OTP 해제 요청", "2차인증 해제"
+
+①  OTP 설정 상태 확인
+   `SELECT id, customer_id, required FROM flex_auth.customer_credential_t_otp_setting WHERE customer_id = ?`
+   → required=1이면 OTP 필수 상태
+   ↓
+② 증적 확보
+   CS팀 경유 고객사 요청 확인 (서면/메시지)
+   ↓
+③ UPDATE 실행
+   `UPDATE flex_auth.customer_credential_t_otp_setting SET required = 0 WHERE customer_id = ?`
+   ├─ 쿼리 승인자 필요 (보안 규정)
+   └─ 실행 후 고객 로그인 확인 요청
 
 #### 데이터 접근
 ```sql
@@ -557,12 +579,18 @@ SELECT id, customer_id, email, primary_user_id, deleted_date
 FROM user
 WHERE customer_id = ?
   AND email LIKE ?;
+
+-- OTP 2차인증 설정 확인
+SELECT id, customer_id, required, db_created_at, db_updated_at
+FROM flex_auth.customer_credential_t_otp_setting
+WHERE customer_id = ?;
 ```
 
 #### 과거 사례
 - **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]
 - **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124]
-- **계열사 전환 시 로그인 풀림**: 계열사별 자동 로그아웃 설정이 독립적. 세션 시간이 긴 회사→짧은 회사로 전환 시 exchange API가 대상 회사 기준으로 세션 만료 판정. 두 회사 설정 동일하게 맞추면 해결 — **스펙** [CI-4166]
+- **계열사 전환 시 로그인 풀림 (SSO)**: SSO(OAuth2/SAML2/OIDC) PC웹 로그인 시 workspace refresh token 미발급(보안 설계). workspace access token(12h) 만료 후 계열사 전환(`/tokens/customer-user/exchange`) 시 401. 단일 회사 사용은 customer-user token(7일)으로 정상 — **스펙** [CI-4166]
+- **관리자 퇴사 후 OTP 해제 불가**: 기존 관리자가 OTP 설정을 켜고 퇴사 → 신규 관리자 로그인 차단 → DB UPDATE로 해제 — **스펙** [CI-4176]
 
 ---
 
@@ -794,6 +822,7 @@ POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates
 4. 주 연장근무 계산 → "스케줄링" 도메인의 연장근무 항목 참조 [CI-3839]
 5. 정산 수정 후 소득세 변경 문의 → 정산 자물쇠 해제 후 재처리 시 소득세 변경 → 1차 정산 ~ 수정 정산 사이에 기본 공제 대상(부양가족 수)이 변경되었는지 확인. `work_income_settlement_payee`의 `dependent_families_count` 조회 [CI-4149]
 6. 급여정산 해지 후 명세서 공개/알림 문의 → 알림은 해지와 무관하게 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실제 열람 불가. 1달 연장 권장 안내 [QNA-1933]
+7. 중도정산 시 건강보험 제외 대상인데 사회보험 금액 표시 → 확정→확정해제→최신정보반영 경로를 거쳤는지 확인. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 [CI-4174]
 
 #### 데이터 접근
 ```sql
@@ -818,6 +847,7 @@ WHERE settlement_id = ? AND user_id = ?;
 - **정산 재처리 시 소득세 변경 — 부양가족 수 최신화**: 정산 자물쇠 해제 후 재처리 시 PAYEES 단계에서 전체 대상자의 payee 스냅샷 최신화. 1차 정산 이후 부양가족 추가/변경이 있었으면 소득세 재계산됨 — **스펙** [CI-4149]
 <!-- TODO: 시나리오 테스트 추가 권장 — 정산 재처리 시 payee 스냅샷 최신화로 소득세 변경 검증 -->
 - **구독 해지 후 명세서 알림 발송**: payroll 스케줄러/pavement 모두 구독 상태 미체크. 알림은 정상 발송되나 급여 탭 접근 차단으로 실제 열람 불가. 1달 연장 안내 권장 — **스펙** [QNA-1933]
+- **중도정산 확정해제 후 전년도 사회보험 금액 미리버트**: 확정 시 정산 결과에 저장된 사회보험 연말정산 금액이 확정해제 시 리버트되지 않음. 2월 말 합산 픽스 이후 이 금액이 납부한 보험료에 합산됨. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 — **버그** [CI-4174]
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -1666,6 +1696,8 @@ Kibana 참고:
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-20 | CI-4174 | 급여: 중도정산 확정해제 후 사회보험 금액 미리버트 워크어라운드 추가 |
+| 2026-03-20 | CI-4176 | 계정/구성원: OTP 2차인증 해제 플로우 추가 |
 | 2026-03-21 | [Notion Tracking 도메인 지도](https://www.notion.so/flexnotion/Tracking-8b40cec73dcc4b1db1e6123569d7b9ce) | 근로기준법 용어/제도 레퍼런스 섹션 추가 — 시스템 변수 매핑, 가산율 테이블, 근로자 유형별 차이, 주요 제도 요약 (36개 페이지 학습) |
 | 2026-03-20 | Notion 3개 소스 재학습 | 승인 도메인에 SQL 템플릿·Operation API swagger·category 값 추가, 연차 도메인에 minutes 단위 스펙 추가, GLOSSARY 승인 용어 3건 추가 |
 | 2026-03-20 | Notion 온콜 가이드 | 신규 도메인 11개 추가 — 출퇴근, 근태 대시보드, 연차, 맞춤휴가, 근무지, 휴일, 캘린더 연동, Kafka 메시지 재발행, 근무 기록 삭제/복구, 시스템 모니터링, 난제 사례 |
