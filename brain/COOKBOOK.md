@@ -187,6 +187,14 @@ WHERE h.customer_id = ? AND h.user_id = ?
 14. 월별 연차 사용내역 vs 내휴가 잔여 차이 → 기준 시점 차이 확인. 월별 연차 사용내역은 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 정상 [CI-4140]
 15. 보상휴가 회수 후 잠금(🔒) 미해제 → 해당 날짜의 lock 이벤트를 assign별로 조회. 고객이 모든 assign을 회수했는지 확인. 미회수 assign이 있으면 회수 안내. 단일 부여에서 추출 0분 날짜에도 lock이 생성되는 비대칭 존재 (조사 중) [CI-4147]
 16. **근무유형 적용 시 500 오류** → `v2_user_work_rule`에서 해당 유저의 마지막 이벤트가 `CANCEL`인지 확인. CANCEL이면 유효 매핑 없는 상태 → 비활성(`active=0`) 근무유형의 CANCEL INSERT로 데이터 보정 [CI-4180]
+17. 근무유형 삭제 불가 ("근무 예약이 있어서 삭제 못 합니다") → 아래 구조 이해 후 대응
+   - **근무유형(`v2_customer_work_rule`)은 soft-delete** — 삭제 시 `active=false` 비활성화
+   - **유저-근무유형 매핑(`v2_user_work_rule`)은 time-series** — REGISTER/CANCEL 이벤트가 쌓이는 구조. 매핑 존재 ≠ 삭제 불가 (해석 결과에서 해당 근무유형이 없으면 삭제 가능)
+   - **미래 예약만 취소 가능**, 벌크 취소 기능 없음 (유저 단건 처리만 가능)
+   - **동일 근무유형으로 벌크 변경 시** core에서 validation 에러 발생 (대량 변경 테이블에서 같은 근무유형으로 변경 불가)
+   - **운영 대응**:
+     ◦ 급한 경우: DB에서 `v2_user_work_rule` row 삭제 → ES sync
+     ◦ 여유 있는 경우: Operation API `DELETE /api/v2/work-rule/users/{userId}/work-rules/{userWorkRuleId}` 반복 호출 (검증 유/무 분리된 operation API 존재, PR flex-timetracking-backend#7800)
 
 #### 조사 플로우
 
