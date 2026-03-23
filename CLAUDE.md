@@ -25,7 +25,7 @@
 | `flex-yearend-backend` | main | 연말정산, 공제, 퇴직소득, 세금정책 | 연말정산, 공제, 증빙서류, 퇴직정산, OCR, 정산보고서 |
 | `flex-flow-backend` | main | 협업, 커뮤니케이션 | 공지사항, 스레드, 할일, 미팅, 이슈, 요약, 음성전사, 협업문서 |
 | `flex-goal-backend` | main | 목표, OKR | 목표 리스트, objective, cycle, 내 목표, 전체 목표, 구성원 목표 |
-| `flex-fins-backend` | main | 비용관리, 경비 | 카드, 지출, 가맹점, 분개, 비용정책, 데이터동기화, codef |
+| `flex-fins-backend` | main | 비용관리, 경비 | 카드, 지출, 가맹점, 분개, 비용정책, 데이터동기화, codef, 세금계산서, 국세청, 스크래핑 |
 | `flex-permission-backend` | main | 권한, 인가 | OpenFGA, 분산락, PIP, authorization-cache |
 | `flex-v2-backend-commons` | main | | |
 | `flex-review-backend` | main | 평가, 리뷰 | evaluation, form, grade, 평가주기, 역량, AI프롬프트 |

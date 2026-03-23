@@ -167,7 +167,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
 1. 휴일대체 탭 미표기 → 먼저 OpenSearch dev tools로 해당 유저+날짜 문서 존재 확인 [CI-3949]
    - **문서 자체가 없음** → 근무를 건드리지 않은 유저는 sync 이벤트 미발생으로 OS 문서 미생성. 수동 sync 실행: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` [CI-3949]
    - **문서는 있는데 `holidayProps`가 null** → 해당 날짜 **시점의** 활성 근무유형 확인 (현재 근무유형이 아님!). `v2_user_work_rule`에서 date_from/date_to 범위로 확인 → 해당 요일이 `WEEKLY_UNPAID_HOLIDAY`(휴무일)이면 스펙대로 제외. `WEEKLY_PAID_HOLIDAY`(주휴일)인데 null이면 버그 → 추가 조사 필요 [CI-3949]
-2. 휴일대체 기간 문의 → 회사별 gap 커스텀 설정 확인 (`TrackingExperimentalDynamicConfig`) → config 변경으로 해결 가능 [CI-3897]
+2. 휴일대체 기간 문의 → 회사별 gap 커스텀 설정 확인 (`TrackingExperimentalDynamicConfig`) → config 변경으로 해결 가능 [CI-3897] [CI-4186]
 3. 보상휴가 "부여가능한 시간 없음" → `forAssign` 모드에 따른 기부여 필터 차이 확인. 우회: 1일 단위로 분리 부여 [CI-3858]
 4. 포괄계약 공제 불일치 → 월 중 계약 변경 시 Range 분할 확인. `REGARDED_OVER`는 주기 종료일 포함 Range에만 귀속 [CI-3868]
 5. 여러날 휴가 스케줄 편집 시 소실 → FE 버그, `timeoffEventId` 기반 판별 한계 [CI-3892]
@@ -186,6 +186,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
 13. 휴일대체 사후신청 버튼 표시되나 승인 불가 → 1차 조직장 미배치(또는 퇴사자/휴직자 등 8가지 에러 사유) 여부 확인. 승인라인 리졸브 오류 시 버튼은 노출되지만 실제 승인 불가. 관리자가 근태관리 > 휴일대체에서 직접 대체일 지정 안내 [CI-4130]
 14. 월별 연차 사용내역 vs 내휴가 잔여 차이 → 기준 시점 차이 확인. 월별 연차 사용내역은 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 정상 [CI-4140]
 15. 보상휴가 회수 후 잠금(🔒) 미해제 → 해당 날짜의 lock 이벤트를 assign별로 조회. 고객이 모든 assign을 회수했는지 확인. 미회수 assign이 있으면 회수 안내. 단일 부여에서 추출 0분 날짜에도 lock이 생성되는 비대칭 존재 (조사 중) [CI-4147]
+16. **근무유형 적용 시 500 오류** → `v2_user_work_rule`에서 해당 유저의 마지막 이벤트가 `CANCEL`인지 확인. CANCEL이면 유효 매핑 없는 상태 → 비활성(`active=0`) 근무유형의 CANCEL INSERT로 데이터 보정 [CI-4180]
 
 #### 조사 플로우
 
@@ -293,7 +294,7 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **휴일대체 탭 미표기 — holidayProps null**: 문의 날짜 시점의 활성 근무유형에서 해당 요일이 휴무일(`WEEKLY_UNPAID_HOLIDAY`)이면 제외. 근무유형 변경 이력에 주의 (현재 근무유형이 아닌 **해당 날짜 시점** 기준) — **스펙** [CI-3949]
 - **포괄계약 월 중 변경 시 공제 차이**: Range별 독립 관리, 잔여량 이월 없음 — **스펙** [CI-3868]
 - **보상휴가 부여 불가 (10/17 비대칭)**: V3 조회 API와 부여 API의 `forAssign` 모드 차이로 기부여 필터 불일치 — **버그** [CI-3858]
-- **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897]
+- **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897] [CI-4186]
 - **여러날 휴가 스케줄 편집 시 소실**: FE 판별 로직 한계 + BE 응답에 published 휴가일 정보 누락 — **버그** [CI-3892]
 - **퇴사자 휴가 데이터 웹 UI 누락**: 주조직 없는 퇴직자가 조직 기반 필터링에서 제외됨. Operation API(`departmentIds: null`)로 우회 추출 — **스펙 (웹 UI 한계)** [CI-3976]
 - **세콤/캡스/텔레캅 퇴근이 정시로 고정**: 유저 본인이 flex 앱에서 퇴근 설정을 `ON_TIME`(정시)으로 변경 → 정시 이후 모든 퇴근이 정시로 기록. 날짜별 퇴근 기록 비교로 변곡점 특정 → DB/OpenSearch로 설정 변경 시점·주체 확인 → 본인 변경 확인 → 설정 재변경 안내 — **스펙** [CI-4145]
@@ -306,6 +307,7 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **월별 연차 사용내역 vs 내휴가 잔여 차이**: `totalRemainingDays`는 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 — **스펙** [CI-4140]
 <!-- TODO: 시나리오 테스트 추가 권장 — 입사 1주년 전후 월별 연차 사용내역 vs 내휴가 잔여 검증 -->
 - **보상휴가 회수 후 잠금 미해제 — 고아 lock**: 단일 부여 경로에서 추출 0분인 날짜에도 lock 생성 (벌크 부여는 필터링됨). 미회수 assign의 lock이 잔존하여 근무 수정 차단 — **조사 중 (버그 추정)** [CI-4147]
+- **근무유형 적용 시 500 오류 — 매핑 없는 유저**: `validateBulk`의 `.first {}` 호출이 매핑 없는 유저에서 `NoSuchElementException` 발생. 원인: 근무유형 삭제 후 유저 맵핑 취소 시 비활성 근무유형이 잔존하여 유효 매핑 없는 상태. 데이터 보정(CANCEL INSERT)으로 즉시 대응, `.firstOrNull {}` 방어 처리 코드 수정 예정 — **버그** [CI-4180]
 <!-- TODO: 시나리오 테스트 추가 권장 — 선택적 근무 추천 휴게 자동 입력 조건 검증 -->
 <!-- TODO: 시나리오 테스트 추가 권장 — 휴직 기간 휴가 등록 차단 + 휴가 기간 휴직 등록 허용 비대칭 검증 -->
 
@@ -391,7 +393,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 ### 외부 연동 (Integration)
 
 #### 진단 체크리스트
-문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요"
+문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요" / "ODBC 연결이 안 돼요"
 1. 연동 비활성화 주체 확인 → 구독 해지 외 자동 변경 없음. log-dashboard에서 API 호출 이력 확인 [CI-3849]
 2. 비활성화 상태에서 수동 전송 → 비활성화 기간 데이터는 소급 불가 [CI-3849]
 3. 수동 전송 반영 안 됨 → 세콤 데이터 수신 순서 확인 (퇴근→출근 역순 수신 가능) [CI-3861]
@@ -401,6 +403,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 6. 다법인 workspace에서 연동 등록 실패 (`하나의 계열사 안에 서로 다른 외부 연동 정보가 존재합니다`) → workspace 내 동일 providerType에 서로 다른 customerKey 존재 여부 확인. 다법인 지원 이전 데이터 마이그레이션 누락이 원인. 데이터 패치로 key 통일 필요 [TT-16783]
 7. 세콤 출근 미반영 + 진행중 위젯 잔존 → **먼저 잔존 위젯 확인**. 이전 근무의 위젯이 미종료 상태이면 새 출근 이벤트가 dry-run validation에서 차단됨. Operation API로 잔존 위젯 수동 종료 후 재처리 [CI-4157]
 8. 세콤/외부 이벤트로 진행중 블럭 다건 발생 → 다수 터미널에서 동시 이벤트 수신 시 Kafka 동시성 race condition으로 중복 START 등록 가능. `isDraftEventRegistrationAllowed`가 이벤트 타입(START/STOP) 미구분하여 통과시킴 [CI-4165]
+9. ODBC 연결 실패 (CONNECTION LIMIT 0) → `v2_customer_external_provider`에서 `odbc_connection_limit` 조회. 0이면 PostgreSQL ROLE의 `CONNECTION LIMIT 0`으로 모든 연결 차단. Operation API로 connectionLimit을 기본값(SECOM/CAPS=2, TELECOP=3)으로 변경 [CI-4190]
 
 #### 조사 플로우
 
@@ -453,6 +456,23 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
    └─ 잔존 위젯 없음 → 다른 validation 실패 원인 조사
 ```
 
+**F4: ODBC 연결 실패 — CONNECTION LIMIT 0 차단** · 히트: 1 · [CI-4190]
+> 트리거: "ODBC 연결 오류" / "PostgreSQL 연결 거부" / 세콤 초기 연동 설정 중 연결 실패
+
+```
+① v2_customer_external_provider 조회
+   SELECT customer_id, provider_type, odbc_connection_limit, active
+   FROM v2_customer_external_provider WHERE customer_id = ?;
+   ├─ odbc_connection_limit = 0 → CONNECTION LIMIT 0으로 전체 차단. ②로
+   ├─ odbc_connection_limit >= 1 + active=true → SSL/방화벽/ODBC 드라이버 설정 확인
+   └─ 레코드 없음 → provider 계정 미생성. 초기 연동 프로세스 재확인
+   ↓
+② Operation API로 connectionLimit 변경
+   POST /api/operation/v2/time-tracking/external-provider/customers/{customerId}/providers/{providerType}/db-connection-info
+   Body: { "connectionLimit": 2 }  (SECOM/CAPS=2, TELECOP=3)
+   → MySQL(odbc_connection_limit) + PostgreSQL ROLE(CONNECTION LIMIT) 모두 변경됨
+```
+
 **고객사 방화벽 허용 설정 안내값:**
 
 | 항목 | 값 |
@@ -483,6 +503,12 @@ SELECT id, event_time, target_time, fail_message, registered_user_work_clock_eve
 FROM v2_user_work_clock_draft_event
 WHERE user_id = ? AND created_at >= ?
 ORDER BY created_at;
+
+-- 외부 연동 provider 설정 조회 (ODBC connection limit 확인)
+SELECT id, customer_id, provider_type, account_id, odbc_connection_limit, active,
+       work_clock_register_enabled, date_from, date_to
+FROM v2_customer_external_provider
+WHERE customer_id = ?;
 ```
 
 **로그 확인 (연동 상태 변경 추적):**
@@ -500,6 +526,7 @@ ORDER BY created_at;
 - **다법인 workspace customerKey 충돌**: 다법인 지원 코드 추가 시 기존 데이터 마이그레이션 누락으로 workspace 내 동일 providerType에 서로 다른 customerKey 존재 → 신규 등록 실패. 데이터 패치로 key 통일 필요 — **버그 (데이터 마이그레이션 누락)** [TT-16783]
 - **세콤 출근 미반영 — 잔존 위젯에 의한 dry-run 차단**: 이전 근무 위젯 미종료 → 새 출근 이벤트의 dry-run validation 실패(`WORK_CLOCK_START_CONTINUOUS_NOT_ALLOWED`). Operation API로 잔존 위젯 수동 종료 후 재처리 — **스펙 (정상 차단)** [CI-4157]
 - **세콤 다중 터미널 동시 이벤트 → 중복 START 등록**: Kafka 파티션 분산 + REQUIRES_NEW 트랜잭션 + REPEATABLE READ 격리 → 동시 dry-run에서 서로의 미커밋 데이터 미가시. `isDraftEventRegistrationAllowed`의 이벤트 타입 미구분도 기여 — **버그 (조사 중)** [CI-4165]
+- **세콤 ODBC 연결 실패 — CONNECTION LIMIT 0**: `odbc_connection_limit=0`으로 PostgreSQL ROLE의 CONNECTION LIMIT 0 적용, 모든 ODBC 연결 차단. JPA Entity 기본값이 0이므로 계정 생성 시 `getDefaultConnectionLimit()` 누락 가능. Operation API로 connectionLimit=2 변경으로 해결 — **설정 오류** [CI-4190]
 
 ---
 
@@ -546,11 +573,37 @@ WHERE gs.customer_id = ? AND gs.subject_id = ?;
 7. required=1이면 → 증적 확보 후 `UPDATE required = 0` [CI-4176]
 8. SSO 설정 있으면 → SSO 로그인으로 우회 가능 [CI-4176]
 
+문의: "결제 취소 후 로그인이 안 돼요" / "체험 종료일 변경해주세요"
+1. 결제 취소로 인한 접근 차단 여부 확인 [CI-4169]
+2. raccoon > billing operation > `force-open` 실행하여 임시 접근 허용 [CI-4169]
+3. 고객에게 로그인 → 카드 등록 안내 [CI-4169]
+4. 카드 등록 완료 확인 후 `close-forced-open`으로 원복 [CI-4169]
+5. 체험 종료일 직접 변경은 불가 — 0원 구독 또는 청구 시작일 조정으로 대응 [CI-4169]
+
 문의: "OTP 때문에 로그인이 안 돼요" / "최고관리자가 OTP를 켜고 퇴사했어요"
 
 #### 조사 플로우
 
-**F1: OTP 2차인증 해제** · 히트: 1 · [CI-4176]
+**F1: Billing force-open (결제 취소 접근 차단)** · 히트: 1 · [CI-4169]
+> 트리거: "결제 취소 후 로그인 불가", "체험 종료일 변경", "카드 등록 불가"
+
+```
+① 결제 취소 여부 및 접근 차단 상태 확인
+   고객사 Metabase 대시보드에서 구독 상태 확인
+   ↓
+② raccoon > billing operation > force-open 실행
+   → 고객사 임시 접근 허용
+   ↓
+③ 고객에게 로그인 → 카드 등록 안내
+   → 카드 등록 완료 확인
+   ↓
+④ close-forced-open 실행
+   → 강제 진입 플래그 원복
+   ├─ 체험 종료일 변경 요청 시 → 결제 이력 있으면 변경 불가 안내
+   └─ 청구서 삭제 요청 시 → 삭제 불가 안내
+```
+
+**F2: OTP 2차인증 해제** · 히트: 1 · [CI-4176]
 > 트리거: "OTP 로그인 불가", "관리자 퇴사 후 OTP 해제 요청", "2차인증 해제"
 
 ①  OTP 설정 상태 확인
@@ -591,6 +644,7 @@ WHERE customer_id = ?;
 - **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124]
 - **계열사 전환 시 로그인 풀림 (SSO)**: SSO(OAuth2/SAML2/OIDC) PC웹 로그인 시 workspace refresh token 미발급(보안 설계). workspace access token(12h) 만료 후 계열사 전환(`/tokens/customer-user/exchange`) 시 401. 단일 회사 사용은 customer-user token(7일)으로 정상 — **스펙** [CI-4166]
 - **관리자 퇴사 후 OTP 해제 불가**: 기존 관리자가 OTP 설정을 켜고 퇴사 → 신규 관리자 로그인 차단 → DB UPDATE로 해제 — **스펙** [CI-4176]
+- **결제 취소 후 로그인 차단 → 카드 재등록 불가**: 결제 취소 시 접근 차단(스펙). raccoon billing `force-open`으로 임시 접근 허용 → 카드 등록 → `close-forced-open` 원복. 체험 종료일은 결제 이력 있는 고객 변경 불가 — **스펙** [CI-4169]
 
 ---
 
@@ -630,6 +684,14 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
 
 #### 과거 사례
 - **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
+- **승인 완료 문서가 진행중 표시 — 승인-워크플로우 이벤트 동기화 실패**: approval_process는 APPROVED인데 workflow_task가 ONGOING으로 잔류. 승인 이벤트가 워크플로우로 전파되지 않아 문서함에서 진행중으로 표시됨. `sync-with-approval` Operation API로 보정 — **버그 (운영 대응)** [CI-4019] [CI-4182]
+
+#### 진단 체크리스트 (추가)
+문의: "승인 완료된 문서가 진행중으로 보여요"
+1. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인지 확인
+2. `workflow_task` 테이블에서 동일 문서의 워크플로우 상태 확인 → ONGOING이면 동기화 실패
+3. 대응: `/action/operation/v2/approval/sync-with-approval` Operation API 호출로 워크플로우 상태 보정
+4. 보정 후 문서함에서 정상 표시 확인
 
 ---
 
@@ -847,7 +909,7 @@ WHERE settlement_id = ? AND user_id = ?;
 - **정산 재처리 시 소득세 변경 — 부양가족 수 최신화**: 정산 자물쇠 해제 후 재처리 시 PAYEES 단계에서 전체 대상자의 payee 스냅샷 최신화. 1차 정산 이후 부양가족 추가/변경이 있었으면 소득세 재계산됨 — **스펙** [CI-4149]
 <!-- TODO: 시나리오 테스트 추가 권장 — 정산 재처리 시 payee 스냅샷 최신화로 소득세 변경 검증 -->
 - **구독 해지 후 명세서 알림 발송**: payroll 스케줄러/pavement 모두 구독 상태 미체크. 알림은 정상 발송되나 급여 탭 접근 차단으로 실제 열람 불가. 1달 연장 안내 권장 — **스펙** [QNA-1933]
-- **중도정산 확정해제 후 전년도 사회보험 금액 미리버트**: 확정 시 정산 결과에 저장된 사회보험 연말정산 금액이 확정해제 시 리버트되지 않음. 2월 말 합산 픽스 이후 이 금액이 납부한 보험료에 합산됨. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 — **버그** [CI-4174]
+- **중도정산 확정해제 후 전년도 사회보험 금액 미리버트**: 확정 시 정산 결과에 저장된 사회보험 연말정산 금액이 확정해제 시 리버트되지 않음. 2월 말 합산 픽스 이후 이 금액이 납부한 보험료에 합산됨. **2026-03-20 핫픽스로 근본 수정 완료** (확정해제 시 리버트 추가). 핫픽스 이전 데이터 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 — **버그(수정완료)** [CI-4174]
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -862,11 +924,53 @@ WHERE settlement_id = ? AND user_id = ?;
 3. FE 배포 직후 발생한 경우 → FE에서 목록 필터링 로직이 변경되었을 가능성 확인 [CI-4158], [CI-4129]
 4. 리뷰 마이그레이션 "Failed requirement." 에러 → raccoon **prod**(`flex-raccoon.grapeisfruit.com`)를 사용하고 있는지 확인. dev raccoon에 prod 해시를 쓰면 Hashids salt 불일치로 `INVALID_NUMBER` 반환 → `require(reviewSetId > 0L)` 실패 [QNA-1936]
 
+문의: "평가지 생성 중" / "평가지가 안 보여요"
+1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
+2. 빈 배열이면 `created_at`을 일괄 생성 레코드와 비교하여 후발 추가 여부 확인 [CI-4188]
+3. 후발 추가 확인 시 → raccoon Operation API `initialize-user-form` 호출하여 수동 초기화 [CI-4188]
+
+#### 조사 플로우
+
+> 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
+
+**F1: 후발 추가 reviewer UserForm 미초기화** · 히트: 1 · [CI-4188]
+> 트리거: "특정 구성원 평가지가 생성 중", "평가지가 안 보여요" — finalize 이후 추가된 reviewer에서 발생
+
+```
+① evaluation_reviewer 테이블에서 user_form_ids 확인
+   SELECT id, reviewee, reviewer, user_form_ids, created_at
+   FROM evaluation_reviewer WHERE customer_id = ? AND evaluation_id = ? AND user_form_ids = '[]'
+   ├─ 빈 배열 레코드 있음 → ②로
+   └─ 모든 레코드에 form_ids 존재 → 다른 원인 조사 (API 응답, FE 필터링 등)
+   ↓
+② 후발 추가 여부 판별
+   동일 evaluation의 다른 레코드 created_at과 비교
+   ├─ 유의미한 시간차 (수시간~수일) → 후발 추가 확정, ③으로
+   └─ 비슷한 시간대 → 일괄 생성 시 누락, 추가 조사 필요
+   ↓
+③ raccoon Operation API initialize-user-form 호출
+   → form_user_form 생성 확인 → user_form_ids 채워짐 → 해결
+```
+
+#### 데이터 접근
+```sql
+-- 평가지 미생성 reviewer 조회
+SELECT id, reviewee, reviewer, step_type, user_form_ids, writing_requested_at, created_at
+FROM evaluation_reviewer
+WHERE customer_id = ? AND evaluation_id = ?
+ORDER BY created_at;
+
+-- form 생성 확인
+SELECT id, created_at FROM form_user_form
+WHERE id IN (?);
+```
+
 #### 과거 사례
 - **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
 - **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
 <!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
 - **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
+- **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
 
 ---
 
@@ -1166,6 +1270,7 @@ WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS 
 
 #### 과거 사례 (추가)
 - **승인 완료 후 데이터 반영 오류**: 승인 완료 이벤트 처리 중 오류 → ONGOING 상태 잔류. `re-produce-messages` Operation API로 이벤트 재발행하여 정상 처리 — **운영 대응** [코어 런북]
+- **승인 완료 문서가 진행중 표시 (워크플로우 동기화)**: approval_process APPROVED인데 workflow_task ONGOING 잔류. `sync-with-approval` Operation API로 보정. 반복 발생 패턴 — **버그 (운영 대응)** [CI-4019] [CI-4182]
 
 ---
 
@@ -1692,10 +1797,51 @@ Kibana 참고:
 
 ---
 
+### 비용관리 (Expense Management / Fins)
+
+#### 진단 체크리스트
+문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청"
+1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
+2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
+3. 연동 완료 상태이면 → 운영 도구로 희망 기간 데이터 동기화 가능 [CI-4179]
+
+#### 조사 플로우
+
+**F1: 데이터 소급 동기화 요청 처리** · 히트: 1 · [CI-4179]
+> 트리거: "이전 데이터 연동", "과거 내역 동기화", "세금계산서/카드 내역 소급 요청"
+
+```
+① 연동 대상 및 기간 확인
+   고객 문의에서 대상(카드사/국세청 등) + 희망 기간 추출
+   ↓
+② 현재 연동 상태 확인
+   해당 고객사에 대상 서비스가 연동되어 있는지 확인
+   ├─ 미연동 → 고객사에서 직접 연동 후 재요청 안내
+   └─ 연동 완료 → ③으로
+   ↓
+③ 스크래핑 수집 범위 확인
+   Notion 스크래핑 대상 문서에서 해당 서비스의 수집 가능 기간 확인
+   ├─ 범위 내 → 운영 도구로 동기화 실행
+   └─ 범위 외 → 수집 불가 안내
+```
+
+#### 과거 사례
+- **국세청 세금계산서 소급 연동**: 최근 12개월까지 수집 가능. 운영 도구로 동기화 실행 — **운영 대응** [CI-4179]
+- **카드 부분 취소가 전체 취소로 표시**: 하나카드 부분취소 시 취소금액 필드 미사용 버그. hotfix + 영수증 재생성 — **버그** [CI-4071]
+
+---
+
 ## 변경 이력
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-23 | CI-4188 | 평가: 후발 추가 reviewer UserForm 미초기화 — 진단 체크리스트 + 플로우(F1) + SQL 템플릿 + 과거 사례 추가 |
+| 2026-03-23 | CI-4190 | 외부 연동: ODBC 연결 실패(CONNECTION LIMIT 0) 체크리스트#9 + 플로우(F4) + SQL 템플릿 + 과거 사례 추가 |
+| 2026-03-23 | CI-4180 | 근태/휴가: 근무유형 적용 500 오류 체크리스트#16 + 과거 사례 추가 — validateBulk .first{} 방어 처리 부재, 데이터 보정 대응 |
+| 2026-03-23 | CI-4186 | 근태/휴가: 휴일대체 기간 체크리스트#2 + 과거 사례에 CI-4186 히트 추가 |
+| 2026-03-23 | CI-4169 | 계정/구성원: billing force-open 진단 체크리스트·플로우(F1) 추가, 결제 취소 접근 차단 사례 추가 |
+| 2026-03-23 | CI-4179 | 비용관리: 신규 도메인 섹션 추가 — 데이터 소급 동기화 플로우, 카드 부분취소 사례 |
+| 2026-03-23 | CI-4174 | 급여: 중도정산 확정해제 사회보험 미리버트 — 핫픽스 완료 반영, 워크어라운드→수정완료로 갱신 |
 | 2026-03-20 | CI-4174 | 급여: 중도정산 확정해제 후 사회보험 금액 미리버트 워크어라운드 추가 |
 | 2026-03-20 | CI-4176 | 계정/구성원: OTP 2차인증 해제 플로우 추가 |
 | 2026-03-21 | [Notion Tracking 도메인 지도](https://www.notion.so/flexnotion/Tracking-8b40cec73dcc4b1db1e6123569d7b9ce) | 근로기준법 용어/제도 레퍼런스 섹션 추가 — 시스템 변수 매핑, 가산율 테이블, 근로자 유형별 차이, 주요 제도 요약 (36개 페이지 학습) |

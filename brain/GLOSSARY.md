@@ -35,6 +35,7 @@
 | 추천 휴게가 안 들어가요 | 선택적 근무 실시간 기록 시 추천 휴게 미입력 — 스펙 | flex-timetracking-backend |
 | 연차 사용 내역이 사라졌어요 | 부여 시작일 이전 미표시 grant_start_date | flex-timetracking-backend |
 | 퇴사자 휴가 데이터 추출해주세요 | Operation API departmentIds includeResignatedUsers | flex-raccoon |
+| 근무유형 적용 시 오류가 나요 | v2_user_work_rule 마지막 이벤트 CANCEL 여부 확인 → 매핑 없는 상태면 데이터 보정 | flex-timetracking-backend |
 
 ## 스케줄링 (Scheduling)
 
@@ -58,6 +59,7 @@
 | 세콤 연동이 풀렸어요 | 비활성화 기간 데이터 소급 불가 — 스펙 | flex-timetracking-backend |
 | 수동 전송했는데 반영 안 돼요 | 이벤트 수신 순서 역순 확인 | flex-timetracking-backend |
 | 세콤으로 퇴근했는데 정시로 찍혀요 | 퇴근 타각 자정 조정 preference=ON_TIME | flex-timetracking-backend |
+| ODBC 연결이 안 돼요 | `v2_customer_external_provider.odbc_connection_limit` 확인 — 0이면 CONNECTION LIMIT 0으로 전체 차단. Operation API로 변경 | flex-timetracking-backend |
 
 ## 권한 (Permission)
 
@@ -72,6 +74,7 @@
 |------------|------------|---------|
 | 이메일 변경해주세요 | Operation API UserEmailChange (단건) | flex-raccoon |
 | 구성원 이메일 일괄 변경해주세요 | Operation API 일괄 이메일 변경 | flex-raccoon |
+| 결제 취소 후 로그인이 안 돼요 | raccoon billing operation `force-open` → 카드 재등록 → `close-forced-open` | flex-raccoon |
 
 ## 승인 (Approval)
 
@@ -81,6 +84,16 @@
 | 승인 설정/라인 확인해주세요 | customer_workflow_task_template + _stage 테이블 조회 | flex-core-backend |
 | 승인은 완료됐는데 데이터가 안 바뀌었어요 | cloud_event_entity → re-produce-messages Operation API | flex-timetracking-backend |
 | 위젯 종료 시 승인이 안 돼요 | 기본 근무일 위젯 종료 시 승인 미발생 — 스펙 | flex-timetracking-backend |
+| 승인 완료인데 진행중으로 보여요 | approval_process APPROVED인데 workflow_task ONGOING — 이벤트 동기화 실패. `sync-with-approval` Operation API로 보정 | flex-core-backend |
+
+## 평가 (Evaluation / Performance Management)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 리뷰 다운로드 | ReviewSetExcelService.getReviewSetAsExcel() — 리뷰셋 단위 엑셀 | flex-review-backend |
+| 마감 리뷰 | progressStatus IN (ANSWER_NOT_OPEN, ANSWER_OPEN) | flex-review-backend |
+| 평가지 생성 중 | evaluation_reviewer.user_form_ids = [] — UserForm 미초기화 상태 | flex-review-backend |
+| 평가지가 안 보여요 | 후발 추가 reviewer의 UserForm lazy initialization 미트리거. Operation API `initialize-user-form`으로 해결 | flex-review-backend |
 
 ## 데이터 추출 (Data Export)
 
@@ -102,6 +115,16 @@
 | 전체 목표에서 조직 선택하면 다르게 보여요 | Aside Root Objective API — 서버 트리 연산 후 최상위 목표 한번에 반환 | flex-goal-backend |
 | 하위 목표가 안 펼쳐져요 | Search API ancestorObjectiveIds로 하위 탐색 — 클라이언트 트리 구성 | flex-goal-backend |
 
+## 비용관리 (Expense Management / Fins)
+
+> 출처: [CI-4179](./notes/CI-4179.md), [CI-4071](./notes/archive/CI-4071.md)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 세금계산서가 안 들어와요 | 국세청 스크래핑 수집 범위 확인 (최근 12개월) + 운영 도구 동기화 | flex-fins-backend |
+| 이전 카드 내역 연동해주세요 | 카드사 연동 상태 확인 → 운영 도구로 희망 기간 동기화 | flex-fins-backend |
+| 카드 부분 취소가 전체 취소로 나와요 | 카드사별 취소금액 필드 처리 확인 (하나카드 hotfix 이력) | flex-fins-backend |
+
 ## 급여 (Payroll)
 
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
@@ -109,6 +132,7 @@
 | 초과근무 계산이 이상해요 | 올림 자릿수 payroll_legal_payment_setting 확인 | flex-payroll-backend |
 | 정산 수정했는데 소득세가 바뀌었어요 | 부양가족 수 최신화 dependent_families_count — 스펙 | flex-payroll-backend |
 | 급여정산 해지하면 명세서 공개가 되나요? | 구독 해지 후 payslip 공개/알림 동작 — 스펙 | flex-payroll-backend |
+| 건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요 | 중도정산 확정해제 시 사회보험 연말정산 금액 미리버트 — 버그(핫픽스 완료) | flex-payroll-backend |
 
 ## 근로기준법 용어 (Labor Law Terms)
 
