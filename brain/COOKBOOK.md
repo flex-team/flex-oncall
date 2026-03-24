@@ -19,10 +19,10 @@
    1. `notification_deliver` + `notification` JOIN으로 인앱 알림 생성 확인
    2. 인앱 알림 있으면 → `user_notification_type_setting` EMAIL 비활성화 여부 확인
    3. OpenSearch `flex-app.be-consumer-*`에서 Kafka produce 로그 확인 (`prod.mail.cmd.mail-sending.v1 produced!`)
-   4. **SES 이벤트 OpenSearch** (`flex-prod-ses-feedback-*`)에서 `MessageObject.mail.destination` 필터로 Delivery/Bounce 확인 (별도 클러스터, 별도 권한 필요)
+   4. **admin-shell 이메일 발송 로그**로 Delivery/Bounce 확인: admin-shell → pavement-admin → 이메일 발송 로그 탭 (https://admin-shell.flexis.team/pavement/mail/ses-feedback). 또는 SES 이벤트 OpenSearch (`flex-prod-ses-feedback-*`)에서 `MessageObject.mail.destination` 필터
    5. SES Delivery 확인됨 → flex 측 정상, 고객에게 수신 서버/스팸 필터 확인 요청
 
-> ⚠️ `mail_send_history` 테이블은 BEI-151(2026-02-20)로 기록 중단됨. 메일 발송 여부는 SES 이벤트 OpenSearch로 확인해야 한다.
+> ⚠️ `mail_send_history` 테이블은 BEI-151(2026-02-20)로 기록 중단됨. 메일 발송 여부는 admin-shell 이메일 발송 로그 또는 SES 이벤트 OpenSearch로 확인해야 한다.
 
 #### 조사 플로우
 
@@ -167,7 +167,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
 1. 휴일대체 탭 미표기 → 먼저 OpenSearch dev tools로 해당 유저+날짜 문서 존재 확인 [CI-3949]
    - **문서 자체가 없음** → 근무를 건드리지 않은 유저는 sync 이벤트 미발생으로 OS 문서 미생성. 수동 sync 실행: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` [CI-3949]
    - **문서는 있는데 `holidayProps`가 null** → 해당 날짜 **시점의** 활성 근무유형 확인 (현재 근무유형이 아님!). `v2_user_work_rule`에서 date_from/date_to 범위로 확인 → 해당 요일이 `WEEKLY_UNPAID_HOLIDAY`(휴무일)이면 스펙대로 제외. `WEEKLY_PAID_HOLIDAY`(주휴일)인데 null이면 버그 → 추가 조사 필요 [CI-3949]
-2. 휴일대체 기간 문의 → 회사별 gap 커스텀 설정 확인 (`TrackingExperimentalDynamicConfig`) → config 변경으로 해결 가능 [CI-3897] [CI-4186]
+2. 휴일대체 기간 문의 → 회사별 gap 커스텀 설정 확인 (`TrackingExperimentalDynamicConfig`) → config 변경으로 해결 가능 [CI-3897] [CI-4186] [CI-4199]
 3. 보상휴가 "부여가능한 시간 없음" → `forAssign` 모드에 따른 기부여 필터 차이 확인. 우회: 1일 단위로 분리 부여 [CI-3858]
 4. 포괄계약 공제 불일치 → 월 중 계약 변경 시 Range 분할 확인. `REGARDED_OVER`는 주기 종료일 포함 Range에만 귀속 [CI-3868]
 5. 여러날 휴가 스케줄 편집 시 소실 → FE 버그, `timeoffEventId` 기반 판별 한계 [CI-3892]
@@ -294,7 +294,7 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **휴일대체 탭 미표기 — holidayProps null**: 문의 날짜 시점의 활성 근무유형에서 해당 요일이 휴무일(`WEEKLY_UNPAID_HOLIDAY`)이면 제외. 근무유형 변경 이력에 주의 (현재 근무유형이 아닌 **해당 날짜 시점** 기준) — **스펙** [CI-3949]
 - **포괄계약 월 중 변경 시 공제 차이**: Range별 독립 관리, 잔여량 이월 없음 — **스펙** [CI-3868]
 - **보상휴가 부여 불가 (10/17 비대칭)**: V3 조회 API와 부여 API의 `forAssign` 모드 차이로 기부여 필터 불일치 — **버그** [CI-3858]
-- **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897] [CI-4186]
+- **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897] [CI-4186] [CI-4199]
 - **여러날 휴가 스케줄 편집 시 소실**: FE 판별 로직 한계 + BE 응답에 published 휴가일 정보 누락 — **버그** [CI-3892]
 - **퇴사자 휴가 데이터 웹 UI 누락**: 주조직 없는 퇴직자가 조직 기반 필터링에서 제외됨. Operation API(`departmentIds: null`)로 우회 추출 — **스펙 (웹 UI 한계)** [CI-3976]
 - **세콤/캡스/텔레캅 퇴근이 정시로 고정**: 유저 본인이 flex 앱에서 퇴근 설정을 `ON_TIME`(정시)으로 변경 → 정시 이후 모든 퇴근이 정시로 기록. 날짜별 퇴근 기록 비교로 변곡점 특정 → DB/OpenSearch로 설정 변경 시점·주체 확인 → 본인 변경 확인 → 설정 재변경 안내 — **스펙** [CI-4145]
@@ -393,7 +393,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 ### 외부 연동 (Integration)
 
 #### 진단 체크리스트
-문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요" / "ODBC 연결이 안 돼요"
+문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요" / "ODBC 연결이 안 돼요" / "수동 동기화 실패"
 1. 연동 비활성화 주체 확인 → 구독 해지 외 자동 변경 없음. log-dashboard에서 API 호출 이력 확인 [CI-3849]
 2. 비활성화 상태에서 수동 전송 → 비활성화 기간 데이터는 소급 불가 [CI-3849]
 3. 수동 전송 반영 안 됨 → 세콤 데이터 수신 순서 확인 (퇴근→출근 역순 수신 가능) [CI-3861]
@@ -404,6 +404,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 7. 세콤 출근 미반영 + 진행중 위젯 잔존 → **먼저 잔존 위젯 확인**. 이전 근무의 위젯이 미종료 상태이면 새 출근 이벤트가 dry-run validation에서 차단됨. Operation API로 잔존 위젯 수동 종료 후 재처리 [CI-4157]
 8. 세콤/외부 이벤트로 진행중 블럭 다건 발생 → 다수 터미널에서 동시 이벤트 수신 시 Kafka 동시성 race condition으로 중복 START 등록 가능. `isDraftEventRegistrationAllowed`가 이벤트 타입(START/STOP) 미구분하여 통과시킴 [CI-4165]
 9. ODBC 연결 실패 (CONNECTION LIMIT 0) → `v2_customer_external_provider`에서 `odbc_connection_limit` 조회. 0이면 PostgreSQL ROLE의 `CONNECTION LIMIT 0`으로 모든 연결 차단. Operation API로 connectionLimit을 기본값(SECOM/CAPS=2, TELECOP=3)으로 변경 [CI-4190]
+10. 캡스 수동 동기화 "전송 실패" → Grafana 캡스 RDB 모니터링에서 로그 확인. `e_date` 컬럼이 보이면 **테이블 매핑 설정 오류**. 고객에게 올바른 매핑 설정 가이드 안내 [CI-4202]
 
 #### 조사 플로우
 
@@ -527,6 +528,7 @@ WHERE customer_id = ?;
 - **세콤 출근 미반영 — 잔존 위젯에 의한 dry-run 차단**: 이전 근무 위젯 미종료 → 새 출근 이벤트의 dry-run validation 실패(`WORK_CLOCK_START_CONTINUOUS_NOT_ALLOWED`). Operation API로 잔존 위젯 수동 종료 후 재처리 — **스펙 (정상 차단)** [CI-4157]
 - **세콤 다중 터미널 동시 이벤트 → 중복 START 등록**: Kafka 파티션 분산 + REQUIRES_NEW 트랜잭션 + REPEATABLE READ 격리 → 동시 dry-run에서 서로의 미커밋 데이터 미가시. `isDraftEventRegistrationAllowed`의 이벤트 타입 미구분도 기여 — **버그 (조사 중)** [CI-4165]
 - **세콤 ODBC 연결 실패 — CONNECTION LIMIT 0**: `odbc_connection_limit=0`으로 PostgreSQL ROLE의 CONNECTION LIMIT 0 적용, 모든 ODBC 연결 차단. JPA Entity 기본값이 0이므로 계정 생성 시 `getDefaultConnectionLimit()` 누락 가능. Operation API로 connectionLimit=2 변경으로 해결 — **설정 오류** [CI-4190]
+- **캡스 수동 동기화 전송 실패 — 테이블 매핑 설정 오류**: Grafana 캡스 RDB 모니터링에서 `e_date` 컬럼 오류 확인 → 고객이 캡스 테이블 매핑을 가이드대로 설정하지 않은 것이 원인. 고객 안내로 해결 — **고객 설정 오류** [CI-4202]
 
 ---
 
@@ -641,7 +643,7 @@ WHERE customer_id = ?;
 
 #### 과거 사례
 - **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]
-- **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124]
+- **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124] [CI-4200]
 - **계열사 전환 시 로그인 풀림 (SSO)**: SSO(OAuth2/SAML2/OIDC) PC웹 로그인 시 workspace refresh token 미발급(보안 설계). workspace access token(12h) 만료 후 계열사 전환(`/tokens/customer-user/exchange`) 시 401. 단일 회사 사용은 customer-user token(7일)으로 정상 — **스펙** [CI-4166]
 - **관리자 퇴사 후 OTP 해제 불가**: 기존 관리자가 OTP 설정을 켜고 퇴사 → 신규 관리자 로그인 차단 → DB UPDATE로 해제 — **스펙** [CI-4176]
 - **결제 취소 후 로그인 차단 → 카드 재등록 불가**: 결제 취소 시 접근 차단(스펙). raccoon billing `force-open`으로 임시 접근 허용 → 카드 등록 → `close-forced-open` 원복. 체험 종료일은 결제 이력 있는 고객 변경 불가 — **스펙** [CI-4169]
@@ -682,16 +684,41 @@ SELECT * FROM workflow_task WHERE customer_id = ? AND task_key = ?;
 SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?;
 ```
 
-#### 과거 사례
-- **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
-- **승인 완료 문서가 진행중 표시 — 승인-워크플로우 이벤트 동기화 실패**: approval_process는 APPROVED인데 workflow_task가 ONGOING으로 잔류. 승인 이벤트가 워크플로우로 전파되지 않아 문서함에서 진행중으로 표시됨. `sync-with-approval` Operation API로 보정 — **버그 (운영 대응)** [CI-4019] [CI-4182]
-
 #### 진단 체크리스트 (추가)
 문의: "승인 완료된 문서가 진행중으로 보여요"
 1. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인지 확인
 2. `workflow_task` 테이블에서 동일 문서의 워크플로우 상태 확인 → ONGOING이면 동기화 실패
 3. 대응: `/action/operation/v2/approval/sync-with-approval` Operation API 호출로 워크플로우 상태 보정
 4. 보정 후 문서함에서 정상 표시 확인
+
+문의: "누가 리마인드 알림을 보냈는지 확인해주세요" / "승인 확인 요청 알림이 갑자기 왔어요"
+1. access log 조회 — `flex-app.be-access-{날짜}` 인덱스에서 `json.ipath: "remind/pending-approval"` + `json.authentication.customerId` 필터 [CI-4203]
+2. 결과의 `json.authentication.email`로 발송자 특정, `json.requestBody.userIdHashes`로 대상 사용자 특정
+3. 알림 수신자는 대상 사용자의 승인 프로세스에서 ONGOING 상태인 미승인 승인권자
+
+#### 조사 플로우
+
+> 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
+
+**F1: 승인 리마인드 발송자 추적** · 히트: 1 · [CI-4203]
+> 트리거: "누가 리마인드 보냈나요" / "승인 확인 요청 알림이 갑자기 왔어요"
+
+```
+① access log에서 remind API 호출 조회
+   OpenSearch flex-app.be-access-{날짜}: json.ipath = "remind/pending-approval" + json.authentication.customerId = ?
+   ↓
+② 발송자 특정
+   json.authentication.email → 실제 발송한 사람
+   json.requestBody.userIdHashes → 리마인드 대상 사용자
+   ├─ 문의자가 지목한 사람의 호출 있음 → 발송 확인
+   └─ 호출 없음 → 다른 사용자가 발송한 것. 결과 목록에서 실제 발송자 안내
+```
+
+#### 과거 사례
+- **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
+- **승인 완료 문서가 진행중 표시 — 승인-워크플로우 이벤트 동기화 실패**: approval_process는 APPROVED인데 workflow_task가 ONGOING으로 잔류. 승인 이벤트가 워크플로우로 전파되지 않아 문서함에서 진행중으로 표시됨. `sync-with-approval` Operation API로 보정 — **버그 (운영 대응)** [CI-4019] [CI-4182]
+- **승인 리마인드 발송자 추적**: 관리자가 갑자기 승인 확인 알림을 받았다고 문의. access log 조회로 실제 발송자(다른 관리자)를 특정 — **스펙 (로그 확인)** [CI-4203]
+- **경력/학력 변경 요청 댓글 누락/중복**: FE가 UserDataApproval activities API를 `sort=ASC&size=1`로 호출하여 action history만 반환, 댓글 누락. BE 응답은 정상(targetUid 기반 UUID 고유키로 cross-contamination 없음). 동일 댓글 2회 POST도 확인(idempotency 미적용) — **버그 (FE)** [CI-4193]
 
 ---
 
@@ -924,6 +951,13 @@ WHERE settlement_id = ? AND user_id = ?;
 3. FE 배포 직후 발생한 경우 → FE에서 목록 필터링 로직이 변경되었을 가능성 확인 [CI-4158], [CI-4129]
 4. 리뷰 마이그레이션 "Failed requirement." 에러 → raccoon **prod**(`flex-raccoon.grapeisfruit.com`)를 사용하고 있는지 확인. dev raccoon에 prod 해시를 쓰면 Hashids salt 불일치로 `INVALID_NUMBER` 반환 → `require(reviewSetId > 0L)` 실패 [QNA-1936]
 
+문의: "삭제된 평가 복구해주세요"
+1. `flex_review.evaluation` 테이블에서 해당 회사의 `deleted_at IS NOT NULL` 레코드 조회 — 삭제된 평가 목록과 삭제 시점 확인 [CI-4195]
+2. 고객에게 삭제 시점과 대상 평가명 확인. 여러 건이면 평가 상태(`BEFORE_START` vs 진행 중)와 `deleted_at` 시점으로 대상 특정 [CI-4195]
+3. Operation API PR #5181 머지 여부 확인
+   - 머지됨 → Operation API로 복구
+   - 미머지 → DML 실행 (`deleted_at = NULL, deleted_user_id = NULL`), 결재 필요 [CI-4195]
+
 문의: "평가지 생성 중" / "평가지가 안 보여요"
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
 2. 빈 배열이면 `created_at`을 일괄 생성 레코드와 비교하여 후발 추가 여부 확인 [CI-4188]
@@ -933,7 +967,30 @@ WHERE settlement_id = ? AND user_id = ?;
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 
-**F1: 후발 추가 reviewer UserForm 미초기화** · 히트: 1 · [CI-4188]
+**F1: 삭제된 평가 복구** · 히트: 1 · [CI-4195]
+> 트리거: "삭제된 평가 복구해주세요" — 고객이 진행 중 평가를 실수로 삭제한 경우
+
+```
+① 삭제된 평가 조회
+   SELECT id, name, status, deleted_at, deleted_user_id
+   FROM flex_review.evaluation
+   WHERE customer_id = ? AND deleted_at IS NOT NULL
+   ORDER BY deleted_at DESC
+   ├─ 복구 대상 특정 가능 → ②로
+   └─ 여러 건 → 고객에게 평가명/삭제 시점 확인하여 대상 특정
+   ↓
+② Operation API 사용 가능 여부 확인 (PR #5181)
+   ├─ 머지됨 → Operation API로 복구
+   └─ 미머지 → ③으로
+   ↓
+③ DML로 soft delete 복구 (결재 필요)
+   UPDATE flex_review.evaluation
+   SET deleted_at = NULL, deleted_user_id = NULL
+   WHERE id = ?
+   → 고객에게 복구 확인 요청
+```
+
+**F2: 후발 추가 reviewer UserForm 미초기화** · 히트: 1 · [CI-4188]
 > 트리거: "특정 구성원 평가지가 생성 중", "평가지가 안 보여요" — finalize 이후 추가된 reviewer에서 발생
 
 ```
@@ -954,6 +1011,24 @@ WHERE settlement_id = ? AND user_id = ?;
 
 #### 데이터 접근
 ```sql
+-- 삭제된 평가 조회
+SELECT id, name, status, deleted_at, deleted_user_id
+FROM flex_review.evaluation
+WHERE customer_id = ? AND deleted_at IS NOT NULL
+ORDER BY deleted_at DESC;
+
+-- 삭제된 평가 복구 (결재 필요)
+UPDATE flex_review.evaluation
+SET deleted_at = NULL, deleted_user_id = NULL
+WHERE id = ?;
+
+-- 복구 롤백
+-- UPDATE flex_review.evaluation
+-- SET deleted_at = '{원래_deleted_at}', deleted_user_id = {원래_deleted_user_id}
+-- WHERE id = ?;
+```
+
+```sql
 -- 평가지 미생성 reviewer 조회
 SELECT id, reviewee, reviewer, step_type, user_form_ids, writing_requested_at, created_at
 FROM evaluation_reviewer
@@ -971,6 +1046,7 @@ WHERE id IN (?);
 <!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
 - **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
 - **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
+- **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
 
 ---
 
@@ -1023,7 +1099,7 @@ ORDER BY created_at DESC;
 > 출처: [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) — Core Squad
 
 #### 진단 체크리스트
-문의: "조직 삭제해주세요" / "조직 변경 예약을 취소할 수 없어요" / "조직 시계열 데이터 뽑아주세요" / "조직 종료일 변경 시 오류" / "종료된 조직에 조직코드 넣어주세요"
+문의: "조직 삭제해주세요" / "조직 변경 예약을 취소할 수 없어요" / "조직 시계열 데이터 뽑아주세요" / "조직 종료일 변경 시 오류" / "종료된 조직에 조직코드 넣어주세요" / "구성원이 없는데 조직 종료가 안 돼요"
 1. **조직 삭제 요청** → 시작일이 오늘인지 확인
    - 오늘이면 → 제품 상에서 처리 가능 (⚠️ **일반 설정**에서만 가능, 고급 설정은 종료일 처리가 다름). 일반 설정에서 오늘로 종료 처리 시 시작일=종료일이 되면서 삭제됨
    - 오늘이 아니면 → Operation API로 삭제. 사전에 구성원/하위조직 확인 필수
@@ -1040,6 +1116,7 @@ ORDER BY created_at DESC;
    - 간혹 발령 처리가 안 되는 경우 → 조직 종료일을 수동으로 먼저 조정 → 발령 처리 → 종료일 다시 조정
 5. **조직 시계열 데이터 조회** → metabase로 전환됨. [Metabase #5082](https://metabase.dp.grapeisfruit.com/question/5082?customerId=44879) 링크로 안내
 6. **종료된 조직 코드 일괄 마이그레이션** → 엑셀을 받아서 이름으로 ID를 찾고 DML 수행. 팁: 시작일/이름 정렬 후 이름을 긁어서 쿼리하면 편함
+7. **"구성원이 없는데 조직 종료 안 됨" + DEPA_400_017** → 예약발령이 잔존하여 validator가 차단하는 스펙. 구성원이 모두 이동 완료되어도 예약발령 실행 전이면 차단됨 → 발령 실행 후 종료 처리 안내 (옵션 A), 급하면 발령 취소→종료→재발령 (옵션 B) [CI-4201]
 
 #### 조사 플로우
 
@@ -1125,6 +1202,8 @@ WHERE customer_id = ? AND id IN (?) AND department_id IN (?) AND end_date_time =
 - **조직 삭제 — 시작일=오늘 우회**: 제품 상 삭제 기능은 없지만, 일반 설정에서 오늘 종료 처리 시 시작일=종료일이 되면서 삭제됨 — **스펙 (우회 경로)**
 - **조직 시계열 조회 → Metabase 전환**: 쿼리 대응에서 Metabase #5082로 전환. 문의 시 링크 안내 — **운영 요청**
 - **종료된 조직 코드 마이그레이션**: 과거 발령 마이그레이션 위해 종료된 조직에 코드 입력 필요. 엑셀→DML — **운영 요청**
+- **구성원 없는 조직 종료 불가 — 예약발령 잔존**: 구성원이 모두 타조직으로 이동 예정이어도, 예약발령 실행 전이면 validator가 미래 position을 감지하여 차단(`DEPA_400_017`). 발령 실행 후 종료 또는 발령 취소→종료→재발령으로 해소 — **스펙** [CI-4201]
+<!-- TODO: 시나리오 테스트 추가 권장 -->
 
 ---
 
@@ -1803,7 +1882,8 @@ Kibana 참고:
 문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청"
 1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
 2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
-3. 연동 완료 상태이면 → 운영 도구로 희망 기간 데이터 동기화 가능 [CI-4179]
+3. 연동 완료 상태이면 → 어드민쉘 수동 동기화로 희망 기간 데이터 동기화 가능 [CI-4179]
+4. 카드 데이터 특정 기간 이전 동기화 실패 → 승인/매입 API별 조회 가능 기간이 상이. 범위 초과 시 담당 개발자에게 별도 코드 작업 요청 필요 [CI-4179]
 
 #### 조사 플로우
 
@@ -1821,12 +1901,19 @@ Kibana 참고:
    ↓
 ③ 스크래핑 수집 범위 확인
    Notion 스크래핑 대상 문서에서 해당 서비스의 수집 가능 기간 확인
-   ├─ 범위 내 → 운영 도구로 동기화 실행
+   ├─ 범위 내 → ④로
    └─ 범위 외 → 수집 불가 안내
+   ↓
+④ 어드민쉘 수동 동기화 실행
+   어드민쉘 > 파이낸스 > 고객사 통합 조회 > 금융기관 연동 상태
+   > 대상 회사 > 금융사 카드 더보기 > 수동 동기화 > 기간 설정 > 시작
+   결과 확인: #squad_finance_notification_critical
+   ├─ 성공 → 고객에게 확인 요청
+   └─ 실패 (API 기간 제한) → 담당 개발자에게 별도 코드 작업 요청
 ```
 
 #### 과거 사례
-- **국세청 세금계산서 소급 연동**: 최근 12개월까지 수집 가능. 운영 도구로 동기화 실행 — **운영 대응** [CI-4179]
+- **국세청 세금계산서 소급 연동**: 최근 12개월까지 수집 가능. 어드민쉘 수동 동기화로 즉시 처리. 카드 데이터는 승인/매입 API별 조회 기간이 상이하여 특정 기간 이전은 별도 코드 작업 필요 — **운영 대응** [CI-4179]
 - **카드 부분 취소가 전체 취소로 표시**: 하나카드 부분취소 시 취소금액 필드 미사용 버그. hotfix + 영수증 재생성 — **버그** [CI-4071]
 
 ---
@@ -1835,7 +1922,16 @@ Kibana 참고:
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
-| 2026-03-23 | CI-4188 | 평가: 후발 추가 reviewer UserForm 미초기화 — 진단 체크리스트 + 플로우(F1) + SQL 템플릿 + 과거 사례 추가 |
+| 2026-03-24 | CI-4193 | 승인: 경력/학력 변경 댓글 누락 — 과거 사례 추가 (FE 버그, code-fix이므로 플로우 스킵) |
+| 2026-03-24 | CI-4142 | 알림: 메일 미수신 진단 체크리스트#7.4 — admin-shell 이메일 발송 로그 조회 도구 반영 |
+| 2026-03-24 | CI-4203 | 승인: 리마인드 발송자 추적 — 체크리스트 + F1 플로우 + 과거 사례 추가 (스펙) |
+| 2026-03-24 | CI-4201 | 조직 관리: 예약발령 잔존으로 조직 종료 불가 — 체크리스트#7 + 과거 사례 추가 (스펙) |
+| 2026-03-24 | CI-4179 | 비용관리: 어드민쉘 수동 동기화 절차 + 카드 API 기간 제약 보강, 과거 사례 갱신 |
+| 2026-03-24 | CI-4199 | 근태/휴가: 휴일대체 기간 커스텀 — 체크리스트#2 히트 +1, 과거 사례에 CI-4199 추가 |
+| 2026-03-24 | CI-4202 | 외부 연동: 캡스 테이블 매핑 설정 오류 — 진단 체크리스트 #10 + 과거 사례 추가 |
+| 2026-03-24 | CI-4200 | 계정/구성원: 일괄 이메일 변경 과거 사례에 CI-4200 히트 추가 (주식회사 이도, 문의성 — CI-4124와 동일 패턴) |
+| 2026-03-24 | CI-4195 | 평가: 삭제된 평가 복구 — 진단 체크리스트 + 플로우(F1) + SQL 템플릿(조회/복구/롤백) + 과거 사례 추가 |
+| 2026-03-23 | CI-4188 | 평가: 후발 추가 reviewer UserForm 미초기화 — 진단 체크리스트 + 플로우(F1→F2) + SQL 템플릿 + 과거 사례 추가 |
 | 2026-03-23 | CI-4190 | 외부 연동: ODBC 연결 실패(CONNECTION LIMIT 0) 체크리스트#9 + 플로우(F4) + SQL 템플릿 + 과거 사례 추가 |
 | 2026-03-23 | CI-4180 | 근태/휴가: 근무유형 적용 500 오류 체크리스트#16 + 과거 사례 추가 — validateBulk .first{} 방어 처리 부재, 데이터 보정 대응 |
 | 2026-03-23 | CI-4186 | 근태/휴가: 휴일대체 기간 체크리스트#2 + 과거 사례에 CI-4186 히트 추가 |
