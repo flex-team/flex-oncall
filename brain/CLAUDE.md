@@ -13,7 +13,9 @@ brain/
 ├── CLAUDE.md              # 이 파일
 ├── domain-map.ttl         # 중앙 도메인 지도 (Turtle/RDF)
 ├── GLOSSARY.md            # 사용자 표현 → 시스템 용어
-├── COOKBOOK.md             # 진단 가이드 + 조사 플로우
+├── COOKBOOK.md             # Tier-1: 진단 체크리스트 + 조사 플로우 + 레퍼런스
+├── cookbook/               # Tier-2: 도메인별 SQL 템플릿 + 과거 사례
+│   └── {domain-id}.md
 ├── ontology.md            # domain-map.ttl 작성 규칙
 ├── routing-misses.md      # 라우팅 미스 로그 (ops-learn이 소비)
 └── notes/                 # 이슈 노트
@@ -79,11 +81,24 @@ brain/
 
 - 참고한 슬랙 스레드, 문서 링크 등
 
-## Claude 활동 로그
+## Claude 활동 로그 (선택)
 
-| 시각(KST) | 활동 |
-|-----------|------|
+> ⚠️ 활동 로그는 `metrics/{user}/{date}.jsonl` 에서 자동 수집되므로 노트에 작성하지 않아도 된다.
+> `ops-close-note` Phase 3(정제)에서 기존 활동 로그는 제거된다.
 ```
+
+### 농축 규칙
+
+close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
+
+1. **사용자 표현 흡수**: 노트 "증상"의 문의 표현 → domain-map.ttl `d:syn` (새로운 것만)
+2. **키워드 흡수**: 유효한 진단 키워드 → domain-map.ttl `d:kw` (도메인 고유 용어만)
+3. **COOKBOOK 보강**: 재사용 가능한 원인 패턴 → COOKBOOK 플로우 등록/보강
+4. **상태 설정**: domain-map.ttl의 `n:{ticket-id}` 에 `d:st "C"` 추가
+
+농축 완료 후 노트 정제:
+- 제거: Claude 활동 로그, 소거된 가설, DB 원시 데이터, 상세 코드 트레이스
+- 유지: 증상 요약, 확정 원인, 해결 조치, PR 링크, Gherkin
 
 ### 상대 링크 규칙
 

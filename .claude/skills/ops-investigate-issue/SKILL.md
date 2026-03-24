@@ -269,6 +269,7 @@ Read: .claude/skills/ops-common/note-writing-guide.md
 **쿡북 참조 (최우선 — Step 1-5 라우팅 결과 활용):**
 1. Step 1-5에서 특정한 primary 도메인의 `d:cb` 값으로 COOKBOOK.md 섹션을 **바로 찾는다**
    - `{brain-dir}/COOKBOOK.md` > "{d:cb 값}" 섹션으로 직접 이동
+   - COOKBOOK.md(Tier-1)의 해당 도메인 섹션을 읽은 후, `{brain-dir}/cookbook/{domain-id}.md` 파일이 존재하면 Tier-2로 함께 읽는다. Tier-2에는 과거 사례 상세와 SQL 템플릿이 포함되어 있으므로 가설 수립과 데이터 조사에 활용한다.
 2. glossary 히트가 있으면 해당 항목의 `d:a`(시스템 용어)를 진단 체크리스트와 대조
 3. 이 정보를 Step 4 가설 수립 시 참고 자료로 전달
    - 쿡북의 진단 체크리스트 항목은 가설 우선순위 결정에 활용

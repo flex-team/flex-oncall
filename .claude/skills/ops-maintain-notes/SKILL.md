@@ -91,7 +91,7 @@ Read: .claude/skills/ops-learn/SKILL.md
 1. 각 완료 노트에 대해 `ops-learn brain/notes/{ticket-id}.md` 실행
    - ops-learn이 자동으로 쿡북 추가 대상 판별 (코드 수정 → 스킵, 운영/스펙 → 반영)
    - GLOSSARY, COOKBOOK, domain-map.ttl 갱신
-2. **사용자 확인은 Step 6 리포트에서 일괄 처리** (개별 확인 생략)
+2. **사용자 확인은 Step 7 리포트에서 일괄 처리** (개별 확인 생략)
 3. 반영 대상이 없으면 스킵
 
 ### Step 5: 아카이브 실행
@@ -110,7 +110,20 @@ Read: .claude/skills/ops-learn/SKILL.md
    - 활성 노트에서 아카이브된 노트 참조: `[CI-XXXX](./CI-XXXX.md)` → `[CI-XXXX](./archive/CI-XXXX.md)`
    - 아카이브된 노트에서 활성 노트 참조: `[CI-YYYY](./CI-YYYY.md)` → `[CI-YYYY](../CI-YYYY.md)`
 
-### Step 6: 최종 리포트
+### Step 6: 컴팩션 (자동)
+
+아카이브 완료 후 `ops-compact` 스킬의 절차를 실행한다:
+
+```
+Read: .claude/skills/ops-compact/SKILL.md
+```
+
+1. 농축 미완료 archive 노트 일괄 농축 (`d:syn`/`d:kw` 흡수 + `d:st "C"` 설정 + 노트 정제)
+2. 퇴출 기준(R1/R2/R3) 충족 시 자동 퇴출 (`n:*` 삭제 + `compact-log.md` 기록)
+3. COOKBOOK Tier-1/Tier-2 계층 조정 (히트 0 + 60일 경과 → 강등, 히트 발생 → 승격)
+4. 히트율 리포트 생성 (Step 7 리포트에 포함)
+
+### Step 7: 최종 리포트
 처리 결과를 테이블로 출력한다:
 
 ```
@@ -124,16 +137,12 @@ Read: .claude/skills/ops-learn/SKILL.md
 - 아카이브된 노트 수, 활성 유지 노트 수
 - 쿡북 변경 내용 요약 (변경이 있었으면)
 
-### Step 7: 메트릭스 기록
+### Step 8: 메트릭스
 
-> 이 스텝은 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> 스킬 호출 로그는 PreToolUse hook이 JSONL에 자동 기록한다. 별도 METRICS.md 갱신 불필요.
 > ```
 > Read: .claude/skills/ops-common/metrics-guide.md
 > ```
-
-1. **`.claude/METRICS.md` 갱신**: 활동 로그(전체)에 행 추가 (이슈 = `일괄`) + 스킬별 사용량 + 월별 요약 갱신
-   - subagent total_tokens/duration_ms 합산
-   - 월별 요약의 이슈 수, 스킬 호출, 총 토큰, 쿡북 히트 수치를 활동 로그 기반으로 재계산
 
 ---
 
@@ -164,8 +173,11 @@ Read: .claude/skills/ops-learn/SKILL.md
 도메인별로 분류하여 `{brain-dir}/COOKBOOK.md` 를 전체 재작성한다.
 `ops-learn` 스킬의 `references/cookbook-rules.md` 구조 및 규칙을 따른다.
 
-### Step 4: 사용자 확인
-재구성 결과를 보여주고 확인을 받은 후 커밋한다.
+### Step 4: 컴팩션 (자동)
+rebuild 후에도 `ops-compact` 절차를 실행한다 (일반 모드 Step 6과 동일).
+
+### Step 5: 사용자 확인
+재구성 + 컴팩션 결과를 보여주고 확인을 받은 후 커밋한다.
 
 ---
 

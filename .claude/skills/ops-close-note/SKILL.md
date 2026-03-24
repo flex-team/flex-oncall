@@ -60,9 +60,47 @@ ops-learn이 자동으로 판단:
 - COOKBOOK: 진단 가이드/SQL/원인 확정/스펙 판별 반영 (코드 수정 해결 시 스킵)
 - domain-map.ttl: 키워드/glossary 항목 갱신
 
-### Phase 3: 최종 보고
+### Phase 3: 노트 농축 + 정제
 
-Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
+> 이슈가 **완료 상태**(Done/Closed)인 경우에만 이 Phase를 수행한다.
+> 아직 조사 중이거나 미완료이면 이 Phase를 건너뛴다.
+
+archive 이동 전에 유효한 신호를 상위 산출물에 흡수하고, 노트를 정제한다.
+
+#### 3-1. 농축 (정제보다 반드시 먼저 수행)
+
+노트에서 재사용 가능한 신호를 추출하여 상위 산출물에 흡수한다:
+
+1. **사용자 표현 흡수**: 노트 "증상" 섹션의 문의 표현 중 domain-map.ttl의 해당 도메인 `d:syn` 에 없는 것 → 추가
+2. **키워드 흡수**: 조사에서 유효했던 진단 키워드 중 해당 도메인 `d:kw` 에 없는 도메인 고유 키워드 → 추가
+3. **COOKBOOK 보강**: 확정된 원인 패턴이 재사용 가능하면 → Phase 2의 ops-learn에서 이미 처리됨. 추가 필요 시 COOKBOOK 체크리스트/플로우에 반영
+4. **domain-map.ttl 상태 설정**: 해당 노트 `n:{ticket-id}` 에 `d:st "C"` (consolidated) 추가
+
+#### 3-2. 정제
+
+농축 완료 후 노트에서 불필요한 내용을 제거한다:
+
+**제거 대상**:
+- `## Claude 활동 로그` 테이블 전체 (JSONL 메트릭스로 대체됨)
+- 가설 목록에서 소거된 가설 (확정된 가설/원인만 유지)
+- DB 쿼리 결과 테이블 (원시 데이터, 시점 종속)
+- 상세 코드 트레이스 (COOKBOOK에 요약 반영된 것)
+
+**유지 대상**:
+- 증상 1-2줄 요약
+- 확정 원인
+- 해결 조치 + PR 링크
+- 참조 링크/각주
+- Gherkin 시나리오
+
+정제 후 노트 상단에 기록:
+```markdown
+> **compact**: 원본 {N}줄 → 정제 {M}줄 ({날짜}). git log로 원본 추적 가능.
+```
+
+### Phase 4: 최종 보고
+
+Phase 1~3 결과를 통합하여 한번에 보고한다.
 
 ```
 ## close-note 결과: {ticket-id}
@@ -79,20 +117,22 @@ Phase 1 + Phase 2 결과를 통합하여 한번에 보고한다.
 - COOKBOOK: {반영 완료 | 반영할 내용 없음 | 코드 수정으로 해결 — 스킵}
 - domain-map.ttl: {갱신 | 변경 없음}
 
+### Phase 3: 농축+정제
+- 농축: d:syn {N}건 흡수, d:kw {N}건 흡수, d:st "C" 설정
+- 정제: {N}줄 → {M}줄 (활동 로그/가설/원시 데이터 제거)
+- {건너뜀 — 이슈 미완료}
+
 ### 다음 단계
 - 일괄 아카이브가 필요하면 → `ops:maintain-notes`
 ```
 
-### Phase 4: 메트릭스 기록
+### Phase 5: 메트릭스
 
-> 이 단계는 PostToolUse 훅이 자동으로 리마인드한다. 기록 규칙 상세는 아래 가이드를 참조.
+> 스킬 호출 로그는 PreToolUse hook이 JSONL에 자동 기록한다. 별도 METRICS.md 갱신 불필요.
+> 쿡북 히트 기록이 필요한 경우(investigate-issue 전용)만 COOKBOOK.md를 갱신한다.
 > ```
 > Read: .claude/skills/ops-common/metrics-guide.md
 > ```
-
-1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` (또는 archive로 이동된 경우 해당 경로) 하단 `## Claude 활동 로그` 테이블에 행 추가
-   - subagent total_tokens/duration_ms 합산, 쿡북 참조 = `—`
-2. **`.claude/METRICS.md` 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
 
 ## Rules
 - Phase 1의 모든 규칙은 `note-issue.md` 를 따른다

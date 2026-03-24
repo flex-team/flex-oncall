@@ -86,6 +86,7 @@
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
 | `ops-fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
 | `ops-learn` | 지식 소스(Notion/Slack/Linear/노트)에서 brain 산출물 전체 갱신 |
+| `ops-compact` | brain 산출물 컴팩션 — 농축(keyword/synonym 흡수) → 퇴출(n:* 삭제) → COOKBOOK 계층 조정 → 히트율 리포트 |
 | `ops-maintain-notes` | 활성 노트 일괄 유지보수 + 아카이브. `--rebuild` 로 전체 재구성 |
 | `ops-db-query-builder` | DB 쿼리 필요 시 도메인 라우팅 → Entity 탐색 → 근거 있는 SQL 구성 |
 | `db:db-query` | Aurora MySQL DB 쿼리 (dev/qa/prod) |
