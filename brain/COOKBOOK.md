@@ -2,6 +2,7 @@
 
 > 이슈 조사 전에 이 문서를 먼저 참조하면 조사 시간을 단축할 수 있다.
 > 각 항목의 상세는 출처 이슈 노트를 참조.
+> SQL 템플릿과 과거 사례는 `cookbook/` 디렉토리의 도메인별 파일에 있다.
 
 ## 도메인별 진단 가이드
 
@@ -70,44 +71,7 @@
    en/ko 템플릿 CTA URL이 다를 수 있음 (3건 알려진 불일치)
 ```
 
-#### 데이터 접근
-```sql
--- 수신자의 알림 발송 이력
-SELECT nd.*, n.notification_type, n.message_data_map
-FROM notification_deliver nd
-  LEFT JOIN notification n ON nd.notification_id = n.id
-WHERE nd.receiver_id = ?
-  AND n.db_created_at >= ?;
-
--- 특정 승인 건의 알림 이력 (notification_topic_id 기준)
-SELECT *
-FROM notification_deliver nd
-  LEFT JOIN notification n ON nd.notification_id = n.id
-WHERE nd.notification_topic_id = ?;
-
--- Core 알림 실제 내용 확인 (title_meta_map이 빈 경우)
-SELECT nd.id, n.notification_type, n.message_data_map, nt.topic_type, nt.title_meta_map,
-       FROM_UNIXTIME(nd.created_at / 1000) AS delivered_at
-FROM notification_deliver nd
-  JOIN notification n ON n.id = nd.notification_id
-  LEFT JOIN notification_topic nt ON nd.notification_topic_id = nt.id
-WHERE nd.id = ?;
-
--- 수신자 locale 확인 (디폴트: KOREAN)
-SELECT * FROM member_setting WHERE member_id = ?;
-
--- 메일 발송 확인 (mail_send_history — BEI-151 이후 기록 중단, 2026-02-20 이전 데이터만 존재)
-SELECT status, requested_at FROM flex_pavement.mail_send_history
-WHERE primary_recipient = ? ORDER BY requested_at DESC;
--- ⚠️ 2026-02-20 이후 메일 발송 확인은 SES 이벤트 OpenSearch (flex-prod-ses-feedback-*) 사용
-```
-
-#### 과거 사례
-- **승인자=참조자 중복 알림 제거**: 동일 사용자가 승인자이면서 참조자일 때 승인 알림 1건으로 통합. 참조 알림 미수신은 정상 — **스펙** [CI-3910]
-- **이메일 CTA 이동 대상 차이**: `approve.refer` → 할 일, `approved.refer` → 홈피드. 클릭 시점에 승인 완료된 건은 홈피드로 리다이렉트 — **스펙** [CI-3914]
-- **en/ko 템플릿 CTA URL 불일치**: 3건 발견 (`approve.refer.cta-web`, `remind.work-record.missing.one.cta-web`, `workflow.task.request-view.request.cta-web`) — **별도 버그** [CI-3914]
-- **Core 알림 title_meta_map 빈값**: Core 인사정보 변경 알림(`FLEX_USER_DATA_CHANGE`)의 토픽 제목은 고정("내 정보 변경")이므로 `titleMetaMap = emptyMap()` — **스펙**. 실제 내용은 `notification.message_data_map.changedDataName`으로 확인 [CI-4122]
-- **메일 미수신 — SES Delivery 확인 후 고객 안내**: 인앱 알림 정상 + Kafka produce 정상 + SES Send/Delivery 확인 → flex 측 전체 정상. 수신자 메일 서버 내부 문제. `mail_send_history`는 BEI-151로 기록 중단(2026-02-20)되었으므로 SES 이벤트 OpenSearch 사용 필수 — **고객 안내** [CI-4142]
+→ 상세: [cookbook/notification.md](cookbook/notification.md)
 
 ---
 
@@ -121,42 +85,7 @@ WHERE primary_recipient = ? ORDER BY requested_at DESC;
 4. MONTHLY/MONTHLY_FINAL 간 연동 여부 확인 → 1차/2차는 독립 동작, 2차 완료해도 1차 알림 지속 가능 [CI-3809]
 5. 사용자의 연차 정책이 변경되었는지 확인 → `v2_user_customer_annual_time_off_policy_mapping`의 `modified_at`과 촉진 이력의 `created_date` 비교. 정책이 `enabled_annual_time_off_policy = false`인데 PENDING_WRITE 이력이 있으면 정책 변경 전 잔존 이력 → TODO/알림 수동 정리 필요 [CI-3932]
 
-#### 데이터 접근
-```sql
--- 촉진 이력 조회
-SELECT id, customer_id, user_id, status, boost_type, boosted_at, dissipated_at, canceled_at
-FROM annual_time_off_boost_history
-WHERE customer_id = ? AND user_id = ?
-ORDER BY boosted_at DESC;
-
--- 즉시 대응: 촉진 이력 취소 처리
-UPDATE annual_time_off_boost_history
-SET status = 'CANCELED',
-    canceled_at = NOW(),
-    canceled_user_id = 0,
-    last_modified_date = NOW(),
-    last_modified_by = 'operation'
-WHERE id = ?;
-
--- 정책 변경 후 PENDING_WRITE 잔존 확인 (정책 변경 시점 vs 촉진 생성 시점 비교)
-SELECT h.id, h.user_id, h.status, h.boosted_at, h.created_date,
-       m.modified_at AS policy_mapped_at,
-       p.enabled_annual_time_off_policy
-FROM annual_time_off_boost_history h
-  JOIN v2_user_customer_annual_time_off_policy_mapping m
-    ON h.customer_id = m.customer_id AND h.user_id = m.user_id
-  JOIN v2_customer_annual_time_off_policy p
-    ON m.annual_time_off_policy_id = p.id
-WHERE h.customer_id = ? AND h.user_id = ?
-  AND h.status = 'PENDING_WRITE'
-  AND p.enabled_annual_time_off_policy = false;
-```
-
-#### 과거 사례
-- **연말 촉진 → 다음 해 목록 누락**: `boosted_at` UTC 저장 vs 조회 범위 KST 연도 기준 → 연도 경계 불일치 — **버그** [CI-3907]
-- **월차 2차 완료 후 1차 알림 지속**: MONTHLY/MONTHLY_FINAL 독립 동작 + UTC/KST 연도 경계 불일치 — **버그** [CI-3809]
-- **히든 스펙 필터링 → 알림-화면 불일치**: 관리자 종료 시 목록에서 제외하는 히든 스펙(PR #750)이 알림에는 미적용 — **버그** [CI-3777]
-- **정책 변경(미지급) 후 PENDING_WRITE 잔존**: 연차 미지급 정책으로 변경 시 기존 촉진 이력/TODO/알림 자동 정리 로직 없음 → 홈피드에 표시되나 델리에서는 버킷 매칭 숨김 처리로 미표시 — **버그** [CI-3932]
+→ 상세: [cookbook/annual-promotion.md](cookbook/annual-promotion.md)
 
 ---
 
@@ -261,63 +190,7 @@ WHERE h.customer_id = ? AND h.user_id = ?
    └─ 휴가 없음 → 다른 원인, F2(정시 고정) 또는 별도 조사
 ```
 
-#### 데이터 접근
-```sql
--- 휴일대체 미표기: 해당 유저+날짜 시점의 활성 근무유형 확인
-SELECT uwr.id, uwr.user_id, uwr.customer_work_rule_id, uwr.date_from, uwr.date_to,
-       cwr.name AS work_rule_name
-FROM v2_user_work_rule uwr
-  JOIN v2_customer_work_rule cwr ON uwr.customer_work_rule_id = cwr.id
-WHERE uwr.customer_id = ? AND uwr.user_id = ?
-  AND uwr.date_from <= ? AND uwr.date_to >= ?  -- ? = 문의 날짜
-ORDER BY uwr.date_from DESC;
-
--- 휴일대체 미표기: 근무유형의 요일별 dayWorkingType 확인
--- v2_customer_work_rule에서 해당 요일 컬럼의 dayWorkingType 확인
--- WEEKLY_PAID_HOLIDAY(주휴일) = 휴일대체 대상, WEEKLY_UNPAID_HOLIDAY(휴무일) = 제외
-
--- 휴일대체 미표기: 수동 OS sync
-POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced
-
--- 보상휴가 관련 Operation API
-POST /api/operation/v2/exceeded-work/customers/{customerId}/users/{userId}/exceeded-works
-GET /api/operation/v2/time-off/customers/{customerId}/users/{userId}/compensatory-time-off-status?fromDate=?&toDate=?
-
--- 퇴사자 포함 휴가 사용 현황 엑셀 다운로드 (주조직 없는 퇴직자도 포함)
-POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
--- Body: {"queryUserId": ?, "departmentIds": null, "dateFrom": "?", "dateTo": "?", "includeResignatedUsers": true}
--- departmentIds: null → 조직 필터 미적용, includeResignatedUsers: true → 퇴직자 포함
-```
-
-#### 참고: 휴일대체 대상 판별 설계 테이블
-| 근무유형 | 약정휴일 | 주휴일 | 휴무일 |
-|---------|---------|--------|--------|
-| 교대근무 | O | X | X |
-| 그 외 | O | O | X |
-
-- `DayWorkingType`: `WORKING_DAY`(근무일), `WEEKLY_PAID_HOLIDAY`(주휴일/유급), `WEEKLY_UNPAID_HOLIDAY`(휴무일/무급)
-
-#### 과거 사례
-- **휴일대체 탭 미표기 — OS 문서 미생성**: 근무를 건드리지 않은 유저는 sync 이벤트 미발생 → OS 문서 없음 → 조회 누락. 수동 sync로 즉시 대응 — **버그 (설계 한계)** [CI-3949]
-- **휴일대체 탭 미표기 — holidayProps null**: 문의 날짜 시점의 활성 근무유형에서 해당 요일이 휴무일(`WEEKLY_UNPAID_HOLIDAY`)이면 제외. 근무유형 변경 이력에 주의 (현재 근무유형이 아닌 **해당 날짜 시점** 기준) — **스펙** [CI-3949]
-- **포괄계약 월 중 변경 시 공제 차이**: Range별 독립 관리, 잔여량 이월 없음 — **스펙** [CI-3868]
-- **보상휴가 부여 불가 (10/17 비대칭)**: V3 조회 API와 부여 API의 `forAssign` 모드 차이로 기부여 필터 불일치 — **버그** [CI-3858]
-- **휴일대체 기간 커스텀**: 회사별 config 변경으로 해결, 코드 수정 불필요 — **스펙** [CI-3897] [CI-4186] [CI-4199]
-- **여러날 휴가 스케줄 편집 시 소실**: FE 판별 로직 한계 + BE 응답에 published 휴가일 정보 누락 — **버그** [CI-3892]
-- **퇴사자 휴가 데이터 웹 UI 누락**: 주조직 없는 퇴직자가 조직 기반 필터링에서 제외됨. Operation API(`departmentIds: null`)로 우회 추출 — **스펙 (웹 UI 한계)** [CI-3976]
-- **세콤/캡스/텔레캅 퇴근이 정시로 고정**: 유저 본인이 flex 앱에서 퇴근 설정을 `ON_TIME`(정시)으로 변경 → 정시 이후 모든 퇴근이 정시로 기록. 날짜별 퇴근 기록 비교로 변곡점 특정 → DB/OpenSearch로 설정 변경 시점·주체 확인 → 본인 변경 확인 → 설정 재변경 안내 — **스펙** [CI-4145]
-- **퇴근 타각 자정 조정**: 자정 넘긴 퇴근이 다음날 종일휴가와 겹치면 휴가 시작 시간(00:00)으로 조정. `adjustWorkClockStopTime()` 휴가 겹침 체크에 의한 정상 동작 — **스펙** [CI-3979]
-- **휴직/휴가 비대칭 검증**: 유즈케이스 기반 의도적 설계. 휴가→휴직 허용(갑작스런 휴직 발생 시, 기존 휴가 잔여 미차감 처리), 휴직→휴가 차단(유즈케이스 없음). 서비스 경계 분리: 휴직(`flex-core-backend`) / 휴가(`flex-timetracking-backend`) — **스펙** [CI-4120]
-- **선택적 근무 추천 휴게 미입력**: 추천 휴게는 실시간 기록 시점이 아닌 **근무 확정 시점**에 판단/입력. 별도 등록 휴게와 겹치지 않으면 자동 등록, 겹치면 미등록 — **스펙** [QNA-1922]
-- **연차 사용 내역 사라짐**: 연차 정책 부여 시작일 이전 사용 내역은 제품 내 미표시. 엑셀에는 원시 데이터 존재. — **스펙** [QNA-1920]
-- **근태기록 리포트 컬럼 차이**: 출근시각/퇴근시각(Work Clock)과 시작/종료시간(이벤트 블록)은 다른 소스. 승인 없는 기록은 관리자 직접 수정. 당일 승인상태는 다운로드 시점 기준 — **스펙** [QNA-1928]
-- **휴일대체 사후신청 버튼 — 승인라인 미검증 노출**: `original-holiday-info` API가 승인라인 유효성을 체크하지 않아, 1차 조직장 미배치 등 승인 불가 구성원에게도 사후신청 버튼 표시. 관리자 직접 대체일 지정으로 우회 — **버그** [CI-4130]
-- **월별 연차 사용내역 vs 내휴가 잔여 차이**: `totalRemainingDays`는 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 시점별 잔여 차이 발생 — **스펙** [CI-4140]
-<!-- TODO: 시나리오 테스트 추가 권장 — 입사 1주년 전후 월별 연차 사용내역 vs 내휴가 잔여 검증 -->
-- **보상휴가 회수 후 잠금 미해제 — 고아 lock**: 단일 부여 경로에서 추출 0분인 날짜에도 lock 생성 (벌크 부여는 필터링됨). 미회수 assign의 lock이 잔존하여 근무 수정 차단 — **조사 중 (버그 추정)** [CI-4147]
-- **근무유형 적용 시 500 오류 — 매핑 없는 유저**: `validateBulk`의 `.first {}` 호출이 매핑 없는 유저에서 `NoSuchElementException` 발생. 원인: 근무유형 삭제 후 유저 맵핑 취소 시 비활성 근무유형이 잔존하여 유효 매핑 없는 상태. 데이터 보정(CANCEL INSERT)으로 즉시 대응, `.firstOrNull {}` 방어 처리 코드 수정 예정 — **버그** [CI-4180]
-<!-- TODO: 시나리오 테스트 추가 권장 — 선택적 근무 추천 휴게 자동 입력 조건 검증 -->
-<!-- TODO: 시나리오 테스트 추가 권장 — 휴직 기간 휴가 등록 차단 + 휴가 기간 휴직 등록 허용 비대칭 검증 -->
+→ 상세: [cookbook/time-tracking.md](cookbook/time-tracking.md)
 
 ---
 
@@ -329,25 +202,7 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 2. 정시 전 출근 불가 미작동 → 스케줄이 실제로 **게시**되었는지 확인 (임시 저장 ≠ 게시). 게시 안 된 상태면 정시 기준 없음 [CI-3866]
 3. 주 연장근무 발생 → `agreedWorkingMinutes`(근무규칙) vs `requiredWorkingMinutes`(스케줄) 차이 확인 [CI-3839]
 
-#### 데이터 접근
-```sql
--- 일별 게시된 스케줄
-SELECT * FROM v2_user_non_repetitive_work_plan
-WHERE customer_id = ? AND user_id = ? AND date = ?;
-
--- 게시 이벤트
-SELECT * FROM v2_user_work_plan
-WHERE customer_id = ? AND user_id = ?;
-
--- 임시 저장된 스케줄 (게시 전)
-SELECT * FROM v2_user_shift_schedule_draft
-WHERE customer_id = ? AND user_id = ? AND date = ?;
-```
-
-#### 과거 사례
-- **주휴일 없는 게시 차단**: BE는 WARN 반환 정상, FE가 WARN=ERROR 처리 — **버그 (FE)** [CI-3862]
-- **게시 안 된 스케줄 + 정시 전 출근 불가**: 임시 저장은 게시 아님, 정시 기준 제공 안 함 — **스펙** [CI-3866]
-- **주 연장근무 비대칭**: 근무규칙 기반(40h) vs 스케줄 기반(32h) 계산 차이 — **보류** [CI-3839]
+→ 상세: [cookbook/scheduling.md](cookbook/scheduling.md)
 
 ---
 
@@ -390,11 +245,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
    └─ 범위 같은데 누락 → 코드 버그, 조직 필터 로직(교집합/합집합) 확인
 ```
 
-#### 과거 사례
-- **교대근무 관리 화면 구성원 일부 누락**: 근무 조회 권한(전체)과 휴가 조회 권한(소속 및 하위 조직)의 교집합으로 필터링되어 일부만 표시. 고객에게 두 권한 범위를 맞추도록 안내. — **스펙** [CI-4103]
-- **교대근무 조직 필터링 합집합 버그**: 조직 레벨에서 합집합으로 구현되어 있던 것을 교집합으로 수정 (#11994). — **버그 (수정 완료)** [CI-4103]
-- **교대근무 휴무일 퇴근 자동 조정 실패**: `baseAgreedDayWorkingMinutes=0`으로 일연장 조건이 null → 퇴근 자동 조정 불가. 유급휴일은 480분 기준 별도 처리되나 휴무일은 미고려 — **버그 (수정 예정)** [CI-4119]
-- **초단시간 근로자 연장근무 과소 계산**: 휴무일의 `baseAgreedDayWorkingMinutes` 기준 비대칭. 노무 가이드 변경("휴무일도 8시간 기준") 미반영 추정 — **버그 추정** [CI-4048]
+→ 상세: [cookbook/shift.md](cookbook/shift.md)
 
 ---
 
@@ -515,52 +366,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 | 포트 | `5432` |
 | 데이터베이스 | `postgres` |
 
-#### 데이터 접근
-```sql
--- 세콤 이벤트 조회 (Metabase)
--- https://metabase.dp.grapeisfruit.com/question/3565
-
--- 위젯 draft 이벤트 (Metabase)
--- https://metabase.dp.grapeisfruit.com/question/4716-draft
-
--- 특정 유저의 세콤 이벤트 조회 (수신 확인)
-SELECT id, event_time, event_type, created_at
-FROM v2_user_external_provider_event
-WHERE customer_external_provider_id = ? AND user_id = ?
-  AND event_time >= ?
-ORDER BY event_time;
-
--- 출퇴근 위젯 draft 이벤트 (중복 등록 확인)
-SELECT id, event_time, target_time, fail_message, registered_user_work_clock_event_id
-FROM v2_user_work_clock_draft_event
-WHERE user_id = ? AND created_at >= ?
-ORDER BY created_at;
-
--- 외부 연동 provider 설정 조회 (ODBC connection limit 확인)
-SELECT id, customer_id, provider_type, account_id, odbc_connection_limit, active,
-       work_clock_register_enabled, date_from, date_to
-FROM v2_customer_external_provider
-WHERE customer_id = ?;
-```
-
-**로그 확인 (연동 상태 변경 추적):**
-- log-dashboard → 조건:
-  - `json.ipath.keyword`: `/api/v2/time-tracking/customers/{customerIdHash}/external-providers/{externalProvider}`
-  - `json.authentication.customerId`: 해당 회사 ID
-  - `json.authentication.email`: 변경한 사용자 이메일
-
-#### 과거 사례
-- **세콤 연동 비활성화 기간 데이터 소급 불가**: 시스템 설계상 비활성화 기간 수신 데이터 저장 안 함 — **스펙** [CI-3849]
-- **세콤 수동 전송 미반영**: 퇴근→출근 역순 수신으로 위젯 draft 불일치 — **조사 중** [CI-3861]
-- **세콤/캡스/텔레캅 퇴근이 정시로 고정**: 유저 본인이 flex 앱에서 `ON_TIME` 설정으로 변경한 것이 원인. 날짜별 퇴근 기록(이벤트 vs 기록)을 비교하여 변곡점 특정 → DB/OpenSearch로 설정 변경 시점·주체 확인 — **스펙** [CI-4145]
-- **세콤 연동 프로토콜 타입 문의**: 고객사에서 방화벽 허용 설정을 위해 프로토콜 타입을 문의. PostgreSQL 고정 설계로 API에 별도 필드 없음. 고객사에 "TCP/PostgreSQL 프로토콜, 포트 5432" 직접 안내로 해결. — **스펙**
-- **출입연동 커넥션 수 설정**: 업체별 PC당 커넥션 수 기본값 — 캡스 2, 세콤 2, KT(텔레캅) 3. admin-shell(`https://admin-shell.flexis.team/time-tracking/admin/external-provider.html`)에서 변경 — **운영 요청** [QNA-1842]
-- **다법인 workspace customerKey 충돌**: 다법인 지원 코드 추가 시 기존 데이터 마이그레이션 누락으로 workspace 내 동일 providerType에 서로 다른 customerKey 존재 → 신규 등록 실패. 데이터 패치로 key 통일 필요 — **버그 (데이터 마이그레이션 누락)** [TT-16783]
-- **세콤 출근 미반영 — 잔존 위젯에 의한 dry-run 차단**: 이전 근무 위젯 미종료 → 새 출근 이벤트의 dry-run validation 실패(`WORK_CLOCK_START_CONTINUOUS_NOT_ALLOWED`). Operation API로 잔존 위젯 수동 종료 후 재처리 — **스펙 (정상 차단)** [CI-4157]
-- **세콤 다중 터미널 동시 이벤트 → 중복 START 등록**: Kafka 파티션 분산 + REQUIRES_NEW 트랜잭션 + REPEATABLE READ 격리 → 동시 dry-run에서 서로의 미커밋 데이터 미가시. `isDraftEventRegistrationAllowed`의 이벤트 타입 미구분도 기여 — **버그 (조사 중)** [CI-4165]
-- **세콤 ODBC 연결 실패 — CONNECTION LIMIT 0**: `odbc_connection_limit=0`으로 PostgreSQL ROLE의 CONNECTION LIMIT 0 적용, 모든 ODBC 연결 차단. JPA Entity 기본값이 0이므로 계정 생성 시 `getDefaultConnectionLimit()` 누락 가능. Operation API로 connectionLimit=2 변경으로 해결 — **설정 오류** [CI-4190]
-- **캡스 수동 동기화 전송 실패 — 테이블 매핑 설정 오류**: Grafana 캡스 RDB 모니터링에서 `e_date` 컬럼 오류 확인 → 고객이 캡스 테이블 매핑을 가이드대로 설정하지 않은 것이 원인. 고객 안내로 해결 — **고객 설정 오류** [CI-4202]
-- **캡스 연동 연결 실패 — 방화벽 아닌 PW 오입력**: 캡스 기사가 원격 지원 중 PW를 잘못 입력하여 연결 실패. 고객은 방화벽 문제로 추정했으나 DB 로그에서 PW 실패 확인. 2차 문의(시작→정지 복귀)에서는 실제 방화벽 차단 → 도메인 기반 예외처리 안내 — **운영 (고객 환경)** [FT-12290]
+→ 상세: [cookbook/integration.md](cookbook/integration.md)
 
 ---
 
@@ -572,23 +378,7 @@ WHERE customer_id = ?;
 2. 대상 사용자가 grant에 없으면 → 이미 회수됨 (물리 삭제로 이력 소실). 회사 최초 유저인지 확인 → 최초 유저라면 회사 생성 시 자동 부여된 것 [CI-4150]
 3. 감사로그(Envers)는 권한 변경을 기록하지 않음 → 고객에게 "감사로그 기록 대상이 아닙니다" 안내 [CI-4150]
 
-#### 데이터 접근
-```sql
--- 특정 회사의 최고관리자 grant 멤버 조회
-SELECT gs.subject_id, gs.created_by, gs.created_at
-FROM flex_authorization.flex_grant_subject gs
-  JOIN flex_authorization.flex_grant g ON g.id = gs.grant_id
-WHERE gs.customer_id = ? AND g.title_key = 'authority.administrator_title';
-
--- 특정 사용자가 포함된 모든 grant 조회
-SELECT gs.subject_id, gs.created_by, gs.created_at, g.title_text, g.title_key
-FROM flex_authorization.flex_grant_subject gs
-  JOIN flex_authorization.flex_grant g ON g.id = gs.grant_id
-WHERE gs.customer_id = ? AND gs.subject_id = ?;
-```
-
-#### 과거 사례
-- **최초 유저 최고관리자 자동 부여**: 회사 생성 시 첫 유저에게 자동 부여, 감사로그에 이력 없음. `flex_grant_subject` 물리 삭제로 회수 후 이력 추적 불가 — **스펙** [CI-4150]
+→ 상세: [cookbook/permission.md](cookbook/permission.md)
 
 ---
 
@@ -652,33 +442,34 @@ WHERE gs.customer_id = ? AND gs.subject_id = ?;
    ├─ 쿼리 승인자 필요 (보안 규정)
    └─ 실행 후 고객 로그인 확인 요청
 
-#### 데이터 접근
-```sql
--- 대상 구성원 조회 (이메일 변경 전 확인)
-SELECT id, customer_id, email, primary_user_id, deleted_date
-FROM user
-WHERE customer_id = ?
-  AND deleted_date IS NULL
-ORDER BY email;
+#### 진단 체크리스트 (코어 런북 보강)
+문의: "입사일 변경해주세요" / "삭제된 구성원 복구해주세요" / "개인정보 보유현황 파악" / "이메일 대량 변경해주세요"
+1. **입사일 변경 요청** → 입사일을 미래로 설정해 접속 불가한 경우. 어드민 페이지 생성됨 (확인 필요)
+   - Operation API: `PATCH /action/operation/v2/core/bundle/user-basic/update-join-date`
+   - ⚠️ patch 스펙이 아니므로 `company_join_date`, `company_group_join_date`, `is_company_group_join_date_used`를 모두 채워야 함
+   - [Metabase #7227](https://metabase.dp.grapeisfruit.com/question/7227?userId=911010&userEmail=)로 기존 값 확인
+2. **삭제된 구성원 정보 복구** →
+   1. 삭제 처리 시기 파악 → DB Snapshot 복구 요청
+   2. Snapshot에서 삭제된 정보 확인 및 복구 ([복구 가이드 참조](https://www.notion.so/1df7b0f913a94fbaa0c2fd2610f6b95f))
+   3. opensearch, bullseye 동기화:
+      - bullseye: `/action/operation/v2/bullseye/users/produce`
+      - opensearch: `/action/operation/v2/workspace/users/produce`
+3. **개인정보 보유현황 파악** → 시즈널, 대기업 컴플라이언스 목적. SQL은 cookbook/account.md 참조
+4. **이메일 대량 변경** (기존 일괄 변경 보강) → `PATCH /action/v2/operation/core/customers/{customerId}/emails/change/bulk`
+   - 자동화됨 (Operation API Y)
 
--- 특정 이메일 사용자 조회
-SELECT id, customer_id, email, primary_user_id, deleted_date
-FROM user
-WHERE customer_id = ?
-  AND email LIKE ?;
+#### 진단 체크리스트 (OpenSearch sync / 조직도 통계)
+문의: "검색에서 구성원이 안 나와요" / "조직도 월별 통계 오류"
+1. **OpenSearch sync 깨진 경우 보정** → Operation API로 대응
+   - produce type: `USER` → `userIds`만, `CUSTOMER` → `customerId` (null이면 `customerIdRange`), `ALL` → 전체 싱크
+   - `deletedUsersOnly: true` → 삭제된 유저만 필터링 sync
+   - ⚠️ 구성원 삭제 → 퇴직 정보 삭제 과정에서 `user data changed` 이벤트 발행으로 다시 생성될 수 있음
+2. **조직도 월별 통계 오류** (`Key XXX is missing in the map`) → 삭제된 구성원 데이터가 ES에 남아서 발생. projection은 삭제된 구성원 포함, search는 제외 → 불일치. ES 싱크 한 번 맞추면 해결
+3. **청구일 구성원 수 불일치** → 매월 5일 09:05 청구 시점 vs 이후 조회 시점 차이
+   - 줄어드는 경우: 청구일 이후 퇴직일을 청구일 이전으로 설정 / 구성원 삭제
+   - 늘어나는 경우: 청구일 이후 입사일을 청구일 이전으로 설정 / 입사 예정자 포함(as-is)
 
--- OTP 2차인증 설정 확인
-SELECT id, customer_id, required, db_created_at, db_updated_at
-FROM flex_auth.customer_credential_t_otp_setting
-WHERE customer_id = ?;
-```
-
-#### 과거 사례
-- **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]
-- **일괄 이메일 변경 (도메인 변경)**: 회사 도메인 변경으로 43명 이메일 일괄 변경. 1차 호출 시 미존재 이메일 1건으로 전체 실패 → 제외 후 재호출로 성공 — **운영 요청** [CI-4124] [CI-4200]
-- **계열사 전환 시 로그인 풀림 (SSO)**: SSO(OAuth2/SAML2/OIDC) PC웹 로그인 시 workspace refresh token 미발급(보안 설계). workspace access token(12h) 만료 후 계열사 전환(`/tokens/customer-user/exchange`) 시 401. 단일 회사 사용은 customer-user token(7일)으로 정상 — **스펙** [CI-4166]
-- **관리자 퇴사 후 OTP 해제 불가**: 기존 관리자가 OTP 설정을 켜고 퇴사 → 신규 관리자 로그인 차단 → DB UPDATE로 해제 — **스펙** [CI-4176]
-- **결제 취소 후 로그인 차단 → 카드 재등록 불가**: 결제 취소 시 접근 차단(스펙). raccoon billing `force-open`으로 임시 접근 허용 → 카드 등록 → `close-forced-open` 원복. 체험 종료일은 결제 이력 있는 고객 변경 불가 — **스펙** [CI-4169]
+→ 상세: [cookbook/account.md](cookbook/account.md)
 
 ---
 
@@ -698,24 +489,6 @@ WHERE customer_id = ?;
 - Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
 - category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진)
 
-#### 데이터 접근
-```sql
--- 승인 설정 확인
-SELECT * FROM customer_workflow_task_template WHERE customer_id = ?;
-
--- 승인 라인(단계) 확인
-SELECT * FROM customer_workflow_task_template_stage
-WHERE customer_id = ? AND customer_workflow_task_template_id = ?;
-
--- VOC 해당 근무 승인 건 확인
-SELECT * FROM v2_user_work_record_approval_content
-WHERE customer_id = ? AND user_id = ?;
-
--- 실제 승인 단계 상태 확인
-SELECT * FROM workflow_task WHERE customer_id = ? AND task_key = ?;
-SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?;
-```
-
 #### 진단 체크리스트 (추가)
 문의: "승인 완료된 문서가 진행중으로 보여요"
 1. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인지 확인
@@ -727,6 +500,14 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
 1. access log 조회 — `flex-app.be-access-{날짜}` 인덱스에서 `json.ipath: "remind/pending-approval"` + `json.authentication.customerId` 필터 [CI-4203]
 2. 결과의 `json.authentication.email`로 발송자 특정, `json.requestBody.userIdHashes`로 대상 사용자 특정
 3. 알림 수신자는 대상 사용자의 승인 프로세스에서 ONGOING 상태인 미승인 승인권자
+
+#### 진단 체크리스트 (코어 런북 보강)
+문의: "승인은 완료됐는데 데이터가 안 바뀌었어요"
+1. **승인 완료 후 데이터 반영 오류** → 승인 라인 모든 승인 완료 후 실제 코어 데이터 변경 과정에서 오류 발생
+   - 승인은 아직 ONGOING 상태로 남아있음
+   - 코어 데이터는 변경되지 않은 채 남아있음
+   - 대응: `cloud_event_entity`에서 문제 이벤트 ID 조회 → `/action/operation/v2/approval/re-produce-messages` Operation API로 이벤트 재발행
+   - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
 
 #### 조사 플로우
 
@@ -746,11 +527,7 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
    └─ 호출 없음 → 다른 사용자가 발송한 것. 결과 목록에서 실제 발송자 안내
 ```
 
-#### 과거 사례
-- **퇴직자 승인자 교체 — 고아 승인 요청**: "교체 필요 3건" 표시되나 실제 휴가 사용 건 없음. `target_uid`와 데이터 불일치. 수동 처리로 해결 — **버그 추정 (수동 대응)** [CI-3951]
-- **승인 완료 문서가 진행중 표시 — 승인-워크플로우 이벤트 동기화 실패**: approval_process는 APPROVED인데 workflow_task가 ONGOING으로 잔류. 승인 이벤트가 워크플로우로 전파되지 않아 문서함에서 진행중으로 표시됨. `sync-with-approval` Operation API로 보정 — **버그 (운영 대응)** [CI-4019] [CI-4182]
-- **승인 리마인드 발송자 추적**: 관리자가 갑자기 승인 확인 알림을 받았다고 문의. access log 조회로 실제 발송자(다른 관리자)를 특정 — **스펙 (로그 확인)** [CI-4203]
-- **경력/학력 변경 요청 댓글 누락/중복**: FE가 UserDataApproval activities API를 `sort=ASC&size=1`로 호출하여 action history만 반환, 댓글 누락. BE 응답은 정상(targetUid 기반 UUID 고유키로 cross-contamination 없음). 동일 댓글 2회 POST도 확인(idempotency 미적용) — **버그 (FE)** [CI-4193]
+→ 상세: [cookbook/approval.md](cookbook/approval.md)
 
 ---
 
@@ -761,8 +538,7 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
 1. 근무 기록 다운로드 실패 → consumer → core-api 내부 호출 시 OkHttp 소켓 타임아웃(3초) 확인. 대규모 데이터(수백 명) 다운로드 시 타임아웃 발생 가능 [CI-4121]
 2. 특정 구성원만 누락 → "근태/휴가" 도메인의 퇴사자 휴가 데이터 추출 항목 참조 [CI-3976]
 
-#### 과거 사례
-- **근무 기록 다운로드 타임아웃**: consumer → core-api 간 OkHttp 3초 타임아웃으로 `SocketTimeoutException`. 32건 실패 — **버그 (조사 중)** [CI-4121]
+→ 상세: [cookbook/data-export.md](cookbook/data-export.md)
 
 ---
 
@@ -868,8 +644,7 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
 > 내 목표 탭에서 최대 500건까지 표시됩니다. 500건을 초과하는 경우 검색 기능을 활용해주세요.
 > 전체 목표 > 조직 선택 시 서버 내부적으로 최대 5,000건의 목표를 처리합니다.
 
-#### 과거 사례
-- **cross-year 트리로 이전 연도 목표 노출**: 고객이 2025 root 하위에 2026 자식 배치 → `hit=false`로 회색 표시. FE·BE 모두 정상 동작 — **스펙** [CI-4126]
+→ 상세: [cookbook/goal.md](cookbook/goal.md)
 
 ---
 
@@ -907,27 +682,7 @@ SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?
    └─ 다른 사용자 → 해당 사용자에게 확인 안내
 ```
 
-#### 데이터 접근
-```sql
--- 삭제된 서식 목록 (soft delete)
-SELECT id, name, deleted_at, created_at
-FROM customer_digicon_template
-WHERE customer_id = ? AND deleted_at IS NOT NULL
-ORDER BY deleted_at DESC;
-
--- 서명 완료 계약서 조회 (삭제 불가 확인)
-SELECT id, progress_status, file_key, created_date_time
-FROM digicon
-WHERE customer_id = ? AND user_id = ?
-ORDER BY created_date_time DESC;
-
--- 삭제된 서식 복구 (Operation API)
-POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates
-```
-
-#### 과거 사례
-- **서명 완료 계약서 삭제 불가**: SUCCEED 상태 계약서는 `cancelable() = this === IN_PROGRESS`로 취소 불가, Operation API에도 삭제 엔드포인트 없음. 법적 효력 보존이 설계 의도. 정석: 올바른 내용으로 재계약 발송 — **스펙** [CI-4152]
-- **서식 삭제자 access log 추적**: 감사로그에 서식 삭제 미기록. access log traceId → permission-api 호출 체인으로 삭제자 특정 가능. soft delete로 Operation API 복구 가능 — **스펙 (개선 필요)** [CI-4168]
+→ 상세: [cookbook/contract.md](cookbook/contract.md)
 
 ---
 
@@ -945,32 +700,9 @@ POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates
 6. 급여정산 해지 후 명세서 공개/알림 문의 → 알림은 해지와 무관하게 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실제 열람 불가. 1달 연장 권장 안내 [QNA-1933]
 7. 중도정산 시 건강보험 제외 대상인데 사회보험 금액 표시 → 확정→확정해제→최신정보반영 경로를 거쳤는지 확인. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 [CI-4174]
 
-#### 데이터 접근
-```sql
--- 초과근무수당 올림 설정 (현재)
-SELECT rounding_digit, rounding_method
-FROM payroll_legal_payment_setting
-WHERE customer_id = ? AND type = 'GROUP_EXCEEDED_WORK_EARNING';
-
--- 정산근거의 올림 스냅샷 (정산 생성 시점)
-SELECT rounding_digit, rounding_method
-FROM work_income_over_work_payment_calculation_basis
-WHERE settlement_id = ?;
-
--- 정산 대상자의 부양가족 수 스냅샷 확인
-SELECT user_id, dependent_families_count, under_age_dependent_families_count
-FROM flex_payroll.work_income_settlement_payee
-WHERE settlement_id = ? AND user_id = ?;
-```
-
-#### 과거 사례
-- **올림 설정 변경 후 기존 정산 미반영**: 정산 생성 시 올림 설정을 스냅샷. 100의 자리 → 10의 자리로 변경해도 기존 정산은 이전 설정 유지. 신규 정산에서 정상 반영 — **스펙** [CI-4131]
-- **정산 재처리 시 소득세 변경 — 부양가족 수 최신화**: 정산 자물쇠 해제 후 재처리 시 PAYEES 단계에서 전체 대상자의 payee 스냅샷 최신화. 1차 정산 이후 부양가족 추가/변경이 있었으면 소득세 재계산됨 — **스펙** [CI-4149]
-<!-- TODO: 시나리오 테스트 추가 권장 — 정산 재처리 시 payee 스냅샷 최신화로 소득세 변경 검증 -->
-- **구독 해지 후 명세서 알림 발송**: payroll 스케줄러/pavement 모두 구독 상태 미체크. 알림은 정상 발송되나 급여 탭 접근 차단으로 실제 열람 불가. 1달 연장 안내 권장 — **스펙** [QNA-1933]
-- **중도정산 확정해제 후 전년도 사회보험 금액 미리버트**: 확정 시 정산 결과에 저장된 사회보험 연말정산 금액이 확정해제 시 리버트되지 않음. 2월 말 합산 픽스 이후 이 금액이 납부한 보험료에 합산됨. **2026-03-20 핫픽스로 근본 수정 완료** (확정해제 시 리버트 추가). 핫픽스 이전 데이터 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 — **버그(수정완료)** [CI-4174]
-
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
+
+→ 상세: [cookbook/payroll.md](cookbook/payroll.md)
 
 ---
 
@@ -1041,44 +773,7 @@ WHERE settlement_id = ? AND user_id = ?;
    → form_user_form 생성 확인 → user_form_ids 채워짐 → 해결
 ```
 
-#### 데이터 접근
-```sql
--- 삭제된 평가 조회
-SELECT id, name, status, deleted_at, deleted_user_id
-FROM flex_review.evaluation
-WHERE customer_id = ? AND deleted_at IS NOT NULL
-ORDER BY deleted_at DESC;
-
--- 삭제된 평가 복구 (결재 필요)
-UPDATE flex_review.evaluation
-SET deleted_at = NULL, deleted_user_id = NULL
-WHERE id = ?;
-
--- 복구 롤백
--- UPDATE flex_review.evaluation
--- SET deleted_at = '{원래_deleted_at}', deleted_user_id = {원래_deleted_user_id}
--- WHERE id = ?;
-```
-
-```sql
--- 평가지 미생성 reviewer 조회
-SELECT id, reviewee, reviewer, step_type, user_form_ids, writing_requested_at, created_at
-FROM evaluation_reviewer
-WHERE customer_id = ? AND evaluation_id = ?
-ORDER BY created_at;
-
--- form 생성 확인
-SELECT id, created_at FROM form_user_form
-WHERE id IN (?);
-```
-
-#### 과거 사례
-- **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
-- **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
-<!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
-- **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
-- **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
-- **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
+→ 상세: [cookbook/review.md](cookbook/review.md)
 
 ---
 
@@ -1113,16 +808,7 @@ WHERE id IN (?);
    POST /customers/{customerId}/subdomains/{siteSubdomainChangeId}/change/approve
 ```
 
-#### 데이터 접근
-```sql
--- 채용사이트 subdomain 변경 요청 조회
-SELECT * FROM flex_recruiting.site_subdomain_change
-WHERE customer_id = ?
-ORDER BY created_at DESC;
-```
-
-#### 과거 사례
-- **subdomain 변경 검토중 방치**: 온콜 담당자가 `#alarm-recruiting-operation` 알림을 모니터링하지 않아 9일간 방치. operation API로 즉시 승인 처리 — **운영 요청** [CI-4170]
+→ 상세: [cookbook/recruiting.md](cookbook/recruiting.md)
 
 ---
 
@@ -1143,7 +829,7 @@ ORDER BY created_at DESC;
    - 조직 변경 취소 → 발령이 해당 조직을 참조하므로 불가
    - 발령 취소 → 삭제된 조직으로 발령을 이어줘야 하므로 불가
    - 고급 설정 → 발령 걸려있으면 수정 불가
-   - **해결**: SQL로 조직 종료일 임시 제거 → 발령 취소 → 종료일 복구 (아래 SQL 참조)
+   - **해결**: SQL로 조직 종료일 임시 제거 → 발령 취소 → 종료일 복구 (상세 SQL은 cookbook/department.md 참조)
 4. **조직 종료일 변경 시 오류** → 구성원 목록 필터에서 퇴직 상태 제외가 기본이므로 "아무도 없다"고 착각하는 경우 많음. 퇴직자 포함 여부 확인 + 400 응답 body 확인
    - 간혹 발령 처리가 안 되는 경우 → 조직 종료일을 수동으로 먼저 조정 → 발령 처리 → 종료일 다시 조정
 5. **조직 시계열 데이터 조회** → metabase로 전환됨. [Metabase #5082](https://metabase.dp.grapeisfruit.com/question/5082?customerId=44879) 링크로 안내
@@ -1188,54 +874,7 @@ ORDER BY created_at DESC;
    UPDATE department_time_series_segment SET end_date_time = {원래 종료일}
 ```
 
-#### 데이터 접근
-```sql
--- 조직 삭제 전: 해당 조직에 소속된 구성원 확인 (전 시점)
-SELECT * FROM user_position_time_series
-WHERE department_id = ? AND deleted_date_time IS NULL;
-
--- 조직 삭제 전: 하위 조직 확인
-SELECT id, name, parent_id, begin_date_time, end_date_time
-FROM department_time_series_segment
-WHERE parent_id = ? AND deleted_date_time IS NULL;
-
--- 조직 시계열 데이터 조회 (Metabase #5082)
-SELECT
-    d.id AS '조직 ID', d.code AS '조직 코드',
-    DATE_FORMAT(DATE_ADD(IF(d.begin_date_time = '1000-01-01 00:00:00', NULL, d.begin_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '조직 시작일',
-    DATE_FORMAT(DATE_ADD(IF(d.end_date_time = '9999-12-31 23:59:59', NULL, d.end_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '조직 종료일',
-    d_seg.id AS '시점별 정보 ID', d_seg.name AS '조직명', d_seg.parent_id AS '상위조직 ID',
-    DATE_FORMAT(DATE_ADD(IF(d_seg.begin_date_time = '1000-01-01 00:00:00', NULL, d_seg.begin_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '시점별 정보 시작일',
-    DATE_FORMAT(DATE_ADD(IF(d_seg.end_date_time = '9999-12-31 23:59:59', NULL, d_seg.end_date_time), INTERVAL 1 DAY), '%Y-%m-%d') AS '시점별 정보 종료일'
-FROM flex.department_time_series_segment d_seg
-  JOIN flex.department d ON d_seg.department_id = d.id
-WHERE d.customer_id = ? AND d_seg.deleted_date_time IS NULL AND d.deleted_at IS NULL
-ORDER BY d.id, d_seg.begin_date_time;
-
--- 발령+조직변경 데드락: 예약 발령일 기준 종료되는 조직 조회
-SELECT id FROM department
-WHERE customer_id = ? AND end_date_time = ? AND deleted_at IS NULL;
-
-SELECT id FROM department_time_series_segment
-WHERE department_id IN (?) AND deleted_date_time IS NULL AND end_date_time = ?;
-
--- 조직 종료일 임시 제거 (데드락 해소용)
-UPDATE flex.department SET end_date_time = '9999-12-31 23:59:59.999999'
-WHERE customer_id = ? AND id IN (?) AND end_date_time = ?;
-
-UPDATE flex.department_time_series_segment SET end_date_time = '9999-12-31 23:59:59.999999'
-WHERE customer_id = ? AND id IN (?) AND department_id IN (?) AND end_date_time = ?;
-```
-
-> ⚠️ **일반 설정 vs 고급 설정의 종료일 처리 차이**: 일반 설정은 오늘의 00:00, 고급 설정은 해당 날짜의 23:59.999999로 종료일 적용
-
-#### 과거 사례
-- **발령+조직변경 데드락**: 미래 날짜 기준 발령과 조직 삭제/생성 동시 예약 → 상호 참조로 양쪽 다 취소 불가. SQL로 종료일 임시 제거→발령 취소→종료일 복구로 해소 — **운영 대응** [코어 런북]
-- **조직 삭제 — 시작일=오늘 우회**: 제품 상 삭제 기능은 없지만, 일반 설정에서 오늘 종료 처리 시 시작일=종료일이 되면서 삭제됨 — **스펙 (우회 경로)**
-- **조직 시계열 조회 → Metabase 전환**: 쿼리 대응에서 Metabase #5082로 전환. 문의 시 링크 안내 — **운영 요청**
-- **종료된 조직 코드 마이그레이션**: 과거 발령 마이그레이션 위해 종료된 조직에 코드 입력 필요. 엑셀→DML — **운영 요청**
-- **구성원 없는 조직 종료 불가 — 예약발령 잔존**: 구성원이 모두 타조직으로 이동 예정이어도, 예약발령 실행 전이면 validator가 미래 position을 감지하여 차단(`DEPA_400_017`). 발령 실행 후 종료 또는 발령 취소→종료→재발령으로 해소 — **스펙** [CI-4201]
-<!-- TODO: 시나리오 테스트 추가 권장 -->
+→ 상세: [cookbook/department.md](cookbook/department.md)
 
 ---
 
@@ -1249,28 +888,9 @@ WHERE customer_id = ? AND id IN (?) AND department_id IN (?) AND end_date_time =
    - Operation API: `POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel`
    - 전체 요청 시 body 없이 요청
    - 타임아웃 발생 시 → user id 기준으로 적절히 나눠서 여러 번 호출 후 엑셀 병합
-2. **특정 시점 조직 추출** → `user_position_time_series_segment` + `department` JOIN으로 `union all` 쿼리 구성 (아래 SQL 참조)
+2. **특정 시점 조직 추출** → `user_position_time_series_segment` + `department` JOIN으로 `union all` 쿼리 구성 (상세 SQL은 cookbook/personnel-appointment.md 참조)
 
-#### 데이터 접근
-```sql
--- 인사발령 엑셀 추출 (Operation API)
-POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel
-
--- 유저별 특정 시점 조직 추출
-SELECT pt.user_id, GROUP_CONCAT(d.name ORDER BY pt.is_primary DESC SEPARATOR ', ') AS names
-FROM user_position_time_series_segment pt, department d
-WHERE pt.department_id = d.id
-  AND pt.customer_id = ?
-  AND pt.deleted_date_time IS NULL
-  AND pt.user_id = ?
-  AND pt.begin_date_time < ?  -- target_date
-  AND (pt.end_date_time > ? OR pt.end_date_time = '9999-12-31 23:59:59.999999')
--- 여러 유저는 UNION ALL로 연결
-```
-
-#### 과거 사례
-- **인사발령 엑셀 타임아웃**: 대규모 고객사에서 타임아웃 발생 → user id 기준 분할 호출 후 병합 — **운영 요청**
-- **특정 시점 조직 추출**: 유저 리스트+시점 기반 union all 쿼리로 대응 — **운영 요청**
+→ 상세: [cookbook/personnel-appointment.md](cookbook/personnel-appointment.md)
 
 ---
 
@@ -1283,164 +903,7 @@ WHERE pt.department_id = d.id
 1. **언급한 Task가 존재하지 않는 경우** → 템플릿을 변경했을 때 기존 체크리스트에 자동 적용되지 않음. 이미 생성된 체크리스트에 템플릿의 task를 추가할 수 없음 (스펙)
 2. **온보딩 완료 처리 여부** → 온보딩 완료 기능으로 완료 처리된 경우 체크리스트가 발송되지 않음
 
-#### 과거 사례
-- **체크리스트 미발송 — 템플릿 변경**: 관리자가 템플릿을 변경 후 기존 체크리스트에도 적용될 것으로 기대했으나, 이미 생성된 체크리스트에는 반영 안 됨 — **스펙**
-- **체크리스트 미발송 — 온보딩 완료 처리**: 온보딩 완료 처리된 구성원에게는 체크리스트 미발송 — **스펙**
-
----
-
-### 계정/구성원 (Account / Member) — 코어 런북 보강
-
-> 아래는 기존 계정/구성원 섹션에 추가되는 코어 런북 항목
-
-#### 진단 체크리스트 (추가)
-문의: "입사일 변경해주세요" / "삭제된 구성원 복구해주세요" / "개인정보 보유현황 파악" / "이메일 대량 변경해주세요"
-1. **입사일 변경 요청** → 입사일을 미래로 설정해 접속 불가한 경우. 어드민 페이지 생성됨 (확인 필요)
-   - Operation API: `PATCH /action/operation/v2/core/bundle/user-basic/update-join-date`
-   - ⚠️ patch 스펙이 아니므로 `company_join_date`, `company_group_join_date`, `is_company_group_join_date_used`를 모두 채워야 함
-   - [Metabase #7227](https://metabase.dp.grapeisfruit.com/question/7227?userId=911010&userEmail=)로 기존 값 확인
-2. **삭제된 구성원 정보 복구** →
-   1. 삭제 처리 시기 파악 → DB Snapshot 복구 요청
-   2. Snapshot에서 삭제된 정보 확인 및 복구 ([복구 가이드 참조](https://www.notion.so/1df7b0f913a94fbaa0c2fd2610f6b95f))
-   3. opensearch, bullseye 동기화:
-      - bullseye: `/action/operation/v2/bullseye/users/produce`
-      - opensearch: `/action/operation/v2/workspace/users/produce`
-3. **개인정보 보유현황 파악** → 시즈널, 대기업 컴플라이언스 목적. 아래 SQL 참조
-4. **이메일 대량 변경** (기존 일괄 변경 보강) → `PATCH /action/v2/operation/core/customers/{customerId}/emails/change/bulk`
-   - 자동화됨 (Operation API Y)
-
-#### 데이터 접근 (추가)
-```sql
--- 입사일 변경 전 기존 값 확인 (Metabase #7227)
-SELECT c.name AS '고객사명', u.id, u.email,
-       ue.company_join_date, m.company_group_join_date, m.is_company_group_join_date_used
-FROM user u
-  LEFT JOIN user_employee ue ON u.id = ue.user_id
-  LEFT JOIN member_user_mapping ON u.id = member_user_mapping.user_id
-  LEFT JOIN flex.member m ON member_user_mapping.member_id = m.id
-  LEFT JOIN customer c ON u.customer_id = c.id
-WHERE ue.user_id = ?;
-
--- 개인정보 보유현황: 이름/이메일 (user 테이블 — 필수값이므로 유저 수와 동일)
--- name_in_office (닉네임)
-SELECT COUNT(*) FROM user
-WHERE customer_id = ? AND deleted_date IS NULL
-  AND name_in_office != '{cipher}44062be3131a4b6ffcdc870e02696817';
-
--- 사번
-SELECT COUNT(*) FROM user_employee
-WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL)
-  AND employee_number IS NOT NULL;
-
--- 주민등록번호
-SELECT COUNT(*) FROM member
-WHERE id IN (SELECT member_id FROM member_user_mapping
-             WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL))
-  AND ssn IS NOT NULL;
-
--- 생년월일 / 휴대폰번호 / 국적 / 집주소
-SELECT COUNT(*) FROM user_personal
-WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL)
-  AND birth_date IS NOT NULL;
--- phone_number: != '{cipher}44062be3131a4b6ffcdc870e02696817'
--- nationality: != 'UNKNOWN'
--- address_full: != '{cipher}44062be3131a4b6ffcdc870e02696817'
-
--- 계좌번호
-SELECT COUNT(*) FROM user_bank_account
-WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
-
--- 경력사항 / 학력사항
-SELECT COUNT(*) FROM user_work_experience
-WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
-
-SELECT COUNT(*) FROM user_education_experience
-WHERE user_id IN (SELECT id FROM user WHERE customer_id = ? AND deleted_date IS NULL);
-```
-
-> ⚠️ `{cipher}44062be3131a4b6ffcdc870e02696817`은 공백을 의미
-
-#### 과거 사례 (추가)
-- **입사일 변경 — 미래 입사일로 접속 불가**: 최고관리자 1명인 고객사에서 미래 입사일 설정 → 접속 차단 → CS 인입. Operation API로 입사일 변경 — **운영 요청** [코어 런북]
-- **삭제된 구성원 복구**: 휴먼 에러로 마스킹 처리 → DB Snapshot에서 복구 → opensearch/bullseye 동기화 — **운영 요청** [코어 런북]
-- **개인정보 보유현황 파악**: 시즈널 요청. 삭제되지 않은 유저 대상 테이블별 count — **운영 요청** [코어 런북]
-
----
-
-### 승인 (Approval) — 코어 런북 보강
-
-> 아래는 기존 승인 섹션에 추가되는 코어 런북 항목
-
-#### 진단 체크리스트 (추가)
-문의: "승인은 완료됐는데 데이터가 안 바뀌었어요"
-1. **승인 완료 후 데이터 반영 오류** → 승인 라인 모든 승인 완료 후 실제 코어 데이터 변경 과정에서 오류 발생
-   - 승인은 아직 ONGOING 상태로 남아있음
-   - 코어 데이터는 변경되지 않은 채 남아있음
-   - 대응: `cloud_event_entity`에서 문제 이벤트 ID 조회 → `/action/operation/v2/approval/re-produce-messages` Operation API로 이벤트 재발행
-   - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
-
-#### 과거 사례 (추가)
-- **승인 완료 후 데이터 반영 오류**: 승인 완료 이벤트 처리 중 오류 → ONGOING 상태 잔류. `re-produce-messages` Operation API로 이벤트 재발행하여 정상 처리 — **운영 대응** [코어 런북]
-- **승인 완료 문서가 진행중 표시 (워크플로우 동기화)**: approval_process APPROVED인데 workflow_task ONGOING 잔류. `sync-with-approval` Operation API로 보정. 반복 발생 패턴 — **버그 (운영 대응)** [CI-4019] [CI-4182]
-
----
-
-### OpenSearch sync / 조직도 통계 — 코어 런북 보강
-
-> 아래는 기존 도메인에 추가되는 항목
-
-#### 진단 체크리스트 (추가)
-문의: "검색에서 구성원이 안 나와요" / "조직도 월별 통계 오류"
-1. **OpenSearch sync 깨진 경우 보정** → Operation API로 대응
-   - produce type: `USER` → `userIds`만, `CUSTOMER` → `customerId` (null이면 `customerIdRange`), `ALL` → 전체 싱크
-   - `deletedUsersOnly: true` → 삭제된 유저만 필터링 sync
-   - ⚠️ 구성원 삭제 → 퇴직 정보 삭제 과정에서 `user data changed` 이벤트 발행으로 다시 생성될 수 있음
-2. **조직도 월별 통계 오류** (`Key XXX is missing in the map`) → 삭제된 구성원 데이터가 ES에 남아서 발생. projection은 삭제된 구성원 포함, search는 제외 → 불일치. ES 싱크 한 번 맞추면 해결
-3. **청구일 구성원 수 불일치** → 매월 5일 09:05 청구 시점 vs 이후 조회 시점 차이
-   - 줄어드는 경우: 청구일 이후 퇴직일을 청구일 이전으로 설정 / 구성원 삭제
-   - 늘어나는 경우: 청구일 이후 입사일을 청구일 이전으로 설정 / 입사 예정자 포함(as-is)
-
-#### 데이터 접근 (추가)
-```sql
--- 청구일 구성원 수 불일치: 청구일 이후 퇴직 처리된 구성원
-SELECT * FROM flex.user_resignation
-WHERE status = 'VALID' AND customer_id = ?
-  AND db_updated_at > ?  -- paid_date
-  AND begin_date < ?     -- paid_date
-ORDER BY db_updated_at DESC;
-
--- 청구일 이후 입사 처리된 구성원 (입사일이 청구일 이전)
-SELECT * FROM flex.user_employee
-WHERE deleted_at IS NULL AND customer_id = ?
-  AND db_created_at > ?      -- paid_date
-  AND company_join_date < ?  -- paid_date
-ORDER BY db_updated_at DESC;
-
--- 이메일 인증 요청 조회
-SELECT * FROM flex_auth.email_verification
-WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
-```
-
-#### 과거 사례 (추가)
-- **조직도 월별 통계 오류**: 삭제된 구성원이 ES에 잔존 → projection/search 결과 불일치. ES 싱크로 즉시 해결 — **버그 (설계 한계)** [코어 런북]
-- **청구일 구성원 수 불일치**: 청구 시점 스냅샷 vs 현재 시점 조회 차이. 퇴직/입사 처리 시점 확인으로 원인 설명 — **스펙** [코어 런북]
-
----
-
-### 메일 미수신 — 코어 런북 보강
-
-> 아래는 기존 알림 도메인 보강
-
-#### 진단 체크리스트 (추가)
-문의: "메일이 오지 않아요" (코어 런북 관점)
-1. opensearch mgmt에서 해당 email의 발송 이력 확인 (별도 권한 필요)
-   - `MessageObject.mail.destination`에 문제 이메일 검색
-   - EventType: Send(전송 요청 성공) → Delivery(메일 서버 전송 성공) → Bounce(수신 거부) → Open(클라이언트 확인)
-2. 해당 email 도메인의 MX record 확인 → [MX Lookup](https://mxtoolbox.com/)
-3. **주로 문제가 되는 케이스**:
-   - 수신 메일 서버 문제 → Send만 찍히고 Delivery 없음 → MX record로 서버 상태 확인
-   - 유효하지 않은 이메일로 초대메일 발송 → 즉시 suppress list 등록 → CS팀이 수동 초대메일 발송하도록 유도
-4. ⚠️ flex team 내부 메일은 **Mailgun**으로 발송 → opensearch mgmt의 SES 인덱스에서 확인 불가
+→ 상세: [cookbook/checklist.md](cookbook/checklist.md)
 
 ---
 
@@ -1477,9 +940,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
    └─ /start 호출됐으나 에러 → 에러 응답 확인
 ```
 
-#### 데이터 접근
-- 서비스: `time-tracking-api` (K8s label: `flex-prod-prod-time-tracking-api`)
-- 근무 위젯 편집기 요청 시 사용된 IP → Kibana access log에서 확인
+→ 상세: [cookbook/work-clock.md](cookbook/work-clock.md)
 
 ---
 
@@ -1564,26 +1025,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
    └─ 위 항목 중 하나라도 해당 → 사용일수 0일은 스펙
 ```
 
-#### 데이터 접근
-```sql
--- 휴직 설정 확인
-SELECT * FROM flex.user_leave_of_absence WHERE user_id = ?;
-
--- 연차 정책 확인
-SELECT * FROM flex.v2_customer_annual_time_off_policy WHERE customer_id = ?;
-
--- 연차 사용 이벤트
-SELECT * FROM flex.v2_user_time_off_event WHERE user_id = ? AND customer_id = ?;
-
--- 연차 조정 이력
-SELECT * FROM flex.v2_user_annual_time_off_adjust_assign WHERE user_id = ?;
-```
-
-#### 환경 재현 시 필요 테이블
-- 입사일: `user_employee_audit`
-- 근무유형: `v2_user_work_rule`, `v2_customer_work_rule`, `v2_customer_work_record_rule`
-- 연차정책: `v2_customer_annual_time_off_policy`
-- 연차사용/조정: `v2_user_time_off_event`, `v2_user_time_off_event_block`, `v2_user_annual_time_off_adjust_assign`
+→ 상세: [cookbook/annual-time-off.md](cookbook/annual-time-off.md)
 
 ---
 
@@ -1613,17 +1055,7 @@ SELECT * FROM flex.v2_user_annual_time_off_adjust_assign WHERE user_id = ?;
    └─ 계산 불일치 → assign/withdrawal 테이블 직접 조회
 ```
 
-#### 데이터 접근
-```sql
--- 맞춤휴가 부여 확인
-SELECT * FROM flex.v2_user_custom_time_off_assign WHERE user_id = ? AND customer_id = ?;
-
--- 맞춤휴가 회수 확인
-SELECT * FROM flex.v2_user_custom_time_off_assign_withdrawal WHERE customer_id = ?;
-
--- 일괄 부여 확인
-SELECT * FROM flex.v2_customer_bulk_time_off_assign WHERE customer_id = ?;
-```
+→ 상세: [cookbook/custom-time-off.md](cookbook/custom-time-off.md)
 
 ---
 
@@ -1639,14 +1071,7 @@ SELECT * FROM flex.v2_customer_bulk_time_off_assign WHERE customer_id = ?;
 4. 관리자는 IP 제한 패스 가능 (수정 예정)
 5. 클라이언트 WorkPlaceTicket V1 파싱으로 상세 정보 확인 가능
 
-#### 데이터 접근
-```sql
--- GPS/근무지 설정 확인
-SELECT * FROM flex.workplace WHERE customer_id = ?;
-
--- IP 제한 설정 확인
-SELECT * FROM flex_auth.customer_ip_access_control_setting WHERE customer_id = ?;
-```
+→ 상세: [cookbook/work-place.md](cookbook/work-place.md)
 
 ---
 
@@ -1680,20 +1105,7 @@ SELECT * FROM flex_auth.customer_ip_access_control_setting WHERE customer_id = ?
    └─ 휴일 등록됨 → 날짜/타입 확인, 대체휴일 설정 확인
 ```
 
-#### 데이터 접근
-```sql
--- 유저의 휴일 그룹 매핑
-SELECT * FROM flex.v2_user_holiday_group_mapping WHERE user_id = ?;
-
--- 휴일 그룹 상세
-SELECT * FROM flex.v2_customer_holiday_group WHERE customer_id = ?;
-
--- 개별 휴일 목록
-SELECT * FROM flex.v2_customer_holiday WHERE customer_holiday_group_id = ?;
-
--- 휴일대체 이벤트
-SELECT * FROM flex.v2_time_tracking_user_alternative_holiday_event WHERE user_id = ?;
-```
+→ 상세: [cookbook/holiday.md](cookbook/holiday.md)
 
 ---
 
@@ -1728,11 +1140,7 @@ SELECT * FROM flex.v2_time_tracking_user_alternative_holiday_event WHERE user_id
        → 담당: @ug-team-service-platform-on-call
 ```
 
-#### 데이터 접근
-```sql
--- 캘린더 이벤트 매핑 확인
-SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
-```
+→ 상세: [cookbook/calendar.md](cookbook/calendar.md)
 
 ---
 
@@ -1787,20 +1195,6 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
 
 **원칙: DB 직접 수정은 하지 않음. 고객이 직접 처리하도록 안내**
 
-근무 기록 삭제 시 영향 테이블:
-- `v2_user_work_record_event` (근무 이벤트)
-- `v2_user_work_record_event_block` (블럭)
-- `v2_user_work_record_approval_content` (승인 문서)
-- `v2_user_work_record_event_approval_mapping` (매핑)
-- `v2_time_tracking_approval_event` (승인 상태)
-
-휴가 기록 삭제 시 영향 테이블:
-- 부여/조정: `v2_user_custom_time_off_assign`, `v2_user_custom_time_off_assign_withdrawal`, `v2_customer_bulk_time_off_assign`, `v2_user_compensatory_time_off_assign`, `v2_user_compensatory_time_off_assign_times`, `v2_user_annual_time_off_adjust_assign`
-- 사용: `v2_user_time_off_use`, `v2_user_time_off_event`, `v2_user_time_off_event_block`
-- 연촉: `v2_annual_time_off_boost_setting`, `annual_time_off_boost_history`, `v2_user_annual_time_off_boost_evidence_record`
-- 승인: `v2_time_off_approval_content`, `v2_time_off_approval_content_unit`, `v2_time_tracking_time_off_approval_content`
-- ES: document 삭제 필요 (sync가 아닌 delete)
-
 #### 조사 플로우
 
 **F1: 근무/휴가 기록 삭제 요청 대응** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
@@ -1814,19 +1208,13 @@ SELECT * FROM flex.v2_time_tracking_flex_calendar_event_map WHERE user_id = ?;
    └─ 변경 예정 근무유형 삭제 → 제품에서 한 명씩 처리, 벌크는 operation API 필요
 ```
 
-FAQ:
-- 근무 기록 삭제 → 안 됨. 고객이 직접 처리
-- 삭제 데이터 복구 → 별도 절차 문서 참조
-- 휴가 기록 삭제 → DB 직접 건드리지 않음
-- 변경 예정 근무유형 삭제 → 제품에서 한 명씩, 벌크는 operation API 필요
+→ 상세: [cookbook/work-record.md](cookbook/work-record.md)
 
 ---
 
 ### 시스템 모니터링
 
 > 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
-
-#### 진단 체크리스트
 
 #### 모니터링 도구 가이드
 | 대상 | 도구 | 비고 |
@@ -1849,11 +1237,9 @@ Kibana 참고:
 
 #### 진단 체크리스트
 
-#### 부여된 휴가보다 더 사용한 케이스
-원인: 휴가 사용 → 해당일에 휴일 등록 → 버킷 복구 → 또 휴가 사용 → 휴일 삭제 순서로 발생
+상세 사례는 cookbook/edge-cases.md 참조
 
-#### 공동연차 패턴
-시즌오프일에 휴일 설정 → 출근자는 휴일근무로 등록 → 휴일 제거. 이 과정에서 맞춤휴가(보상휴가) 버킷 초과 사용 가능
+→ 상세: [cookbook/edge-cases.md](cookbook/edge-cases.md)
 
 ---
 
@@ -1944,9 +1330,7 @@ Kibana 참고:
    └─ 실패 (API 기간 제한) → 담당 개발자에게 별도 코드 작업 요청
 ```
 
-#### 과거 사례
-- **국세청 세금계산서 소급 연동**: 최근 12개월까지 수집 가능. 어드민쉘 수동 동기화로 즉시 처리. 카드 데이터는 승인/매입 API별 조회 기간이 상이하여 특정 기간 이전은 별도 코드 작업 필요 — **운영 대응** [CI-4179]
-- **카드 부분 취소가 전체 취소로 표시**: 하나카드 부분취소 시 취소금액 필드 미사용 버그. hotfix + 영수증 재생성 — **버그** [CI-4071]
+→ 상세: [cookbook/fins.md](cookbook/fins.md)
 
 ---
 
@@ -1954,6 +1338,7 @@ Kibana 참고:
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-24 | 전체 | COOKBOOK.md를 Tier-1/Tier-2로 분리 — 과거 사례·SQL 템플릿을 cookbook/ 디렉토리로 이동, 진단 체크리스트·조사 플로우·레퍼런스는 유지 |
 | 2026-03-24 | CI-4193 | 승인: 경력/학력 변경 댓글 누락 — 과거 사례 추가 (FE 버그, code-fix이므로 플로우 스킵) |
 | 2026-03-24 | CI-4142 | 알림: 메일 미수신 진단 체크리스트#7.4 — admin-shell 이메일 발송 로그 조회 도구 반영 |
 | 2026-03-24 | CI-4203 | 승인: 리마인드 발송자 추적 — 체크리스트 + F1 플로우 + 과거 사례 추가 (스펙) |
