@@ -36,6 +36,7 @@
 | 연차 사용 내역이 사라졌어요 | 부여 시작일 이전 미표시 grant_start_date | flex-timetracking-backend |
 | 퇴사자 휴가 데이터 추출해주세요 | Operation API departmentIds includeResignatedUsers | flex-raccoon |
 | 근무유형 적용 시 오류가 나요 | v2_user_work_rule 마지막 이벤트 CANCEL 여부 확인 → 매핑 없는 상태면 데이터 보정 | flex-timetracking-backend |
+| 대휴 기간 설정해주세요 | 주휴일 휴일대체 gap 커스텀 — customGapOfWeeklyHoliday config 변경 | flex-timetracking-config |
 
 ## 스케줄링 (Scheduling)
 
@@ -76,6 +77,12 @@
 | 구성원 이메일 일괄 변경해주세요 | Operation API 일괄 이메일 변경 | flex-raccoon |
 | 결제 취소 후 로그인이 안 돼요 | raccoon billing operation `force-open` → 카드 재등록 → `close-forced-open` | flex-raccoon |
 
+## 조직 관리 (Department)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 구성원이 없는데 조직 종료가 안 돼요 | 예약발령 잔존 — 발령 실행 후 종료 처리, 또는 발령 취소 후 종료. DEPA_400_017 에러 | flex-core-backend |
+
 ## 승인 (Approval)
 
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
@@ -85,6 +92,8 @@
 | 승인은 완료됐는데 데이터가 안 바뀌었어요 | cloud_event_entity → re-produce-messages Operation API | flex-timetracking-backend |
 | 위젯 종료 시 승인이 안 돼요 | 기본 근무일 위젯 종료 시 승인 미발생 — 스펙 | flex-timetracking-backend |
 | 승인 완료인데 진행중으로 보여요 | approval_process APPROVED인데 workflow_task ONGOING — 이벤트 동기화 실패. `sync-with-approval` Operation API로 보정 | flex-core-backend |
+| 경력/학력 변경 댓글이 사라져요 / 중복으로 보여요 | FE가 UserDataApproval activities API를 sort=ASC&size=1로 호출하여 댓글 누락 — FE 버그 | flex-core-backend, flex-flow-backend |
+| 승인 댓글이 보였다 사라졌다 해요 | FE activities 조회 size 파라미터 부족 — sort=ASC&size=1 요청이 action history만 반환, 댓글 제외 | flex-core-backend, flex-flow-backend |
 
 ## 평가 (Evaluation / Performance Management)
 
@@ -94,6 +103,7 @@
 | 마감 리뷰 | progressStatus IN (ANSWER_NOT_OPEN, ANSWER_OPEN) | flex-review-backend |
 | 평가지 생성 중 | evaluation_reviewer.user_form_ids = [] — UserForm 미초기화 상태 | flex-review-backend |
 | 평가지가 안 보여요 | 후발 추가 reviewer의 UserForm lazy initialization 미트리거. Operation API `initialize-user-form`으로 해결 | flex-review-backend |
+| 삭제된 평가 복구해주세요 | `evaluation` 테이블 soft delete 방식. `deleted_at = NULL, deleted_user_id = NULL`로 복구. `draft_evaluation`도 동일 구조. Operation API PR #5181 머지 후 API 복구 가능 | flex-review-backend |
 
 ## 데이터 추출 (Data Export)
 

@@ -58,7 +58,8 @@
         "초과근로 가산율이 이상해요" , "단시간 근로자 연장이 이상해요" ,
         "보상휴가 시간이 이상해요" , "포괄임금 설정이 뭐예요" ,
         "연차 촉진 절차가 뭐예요" , "5인 미만 사업장 적용이 달라요" ,
-        "근무유형 적용 시 오류가 나요" ;
+        "근무유형 적용 시 오류가 나요" ,
+        "대휴 기간 설정해주세요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -93,10 +94,12 @@
   d:kw  "세콤" , "SECOM" , "캡스" , "CAPS" , "텔레캅" , "외부연동" ,
         "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ,
         "EventProvider" , "WORK_START" , "WORK_STOP" , "transmitter" ,
-        "ODBC" , "odbc_connection_limit" , "CONNECTION LIMIT" ;
+        "ODBC" , "odbc_connection_limit" , "CONNECTION LIMIT" ,
+        "테이블매핑" , "e_date" ;
   d:syn "세콤 연동이 풀렸어요" , "수동 전송했는데 반영 안 돼요" ,
         "세콤으로 퇴근했는데 정시로 찍혀요" ,
-        "ODBC 연결이 안 돼요" ;
+        "ODBC 연결이 안 돼요" ,
+        "수동 동기화 실패" ;
   d:x   :time-tracking , :account , :work-event-transmitter .
 
 :permission
@@ -141,12 +144,14 @@
   d:kw  "조직삭제" , "조직종료" , "조직변경예약" , "발령예약" , "데드락" ,
         "department_time_series_segment" , "department_change_history_set" ,
         "조직시계열" , "조직코드" , "조직종료일" , "종료된조직" , "하위조직" ,
-        "end_date_time" , "begin_date_time" , "parent_id" ;
+        "end_date_time" , "begin_date_time" , "parent_id" ,
+        "DEPA_400_017" , "DepartmentPersonnelAppointmentDetailValidator" ;
   d:syn "조직 삭제해주세요" , "조직을 지울 수 있나요?" ,
         "조직 변경 예약을 취소할 수 없어요" , "발령과 조직변경이 꼬였어요" ,
         "조직 시계열 데이터 뽑아주세요" ,
         "조직 종료일 변경 시 오류가 나요" ,
-        "종료된 조직에 조직코드 넣어주세요" ;
+        "종료된 조직에 조직코드 넣어주세요" ,
+        "구성원이 없는데 조직 종료가 안 돼요" ;
   d:x   :personnel-appointment , :account .
 
 :personnel-appointment
@@ -178,13 +183,18 @@
   d:kw  "승인" , "퇴직자승인자교체" , "고아승인요청" , "승인정책" , "target_uid" ,
         "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ,
         "workflow_task" , "workflow_task_stage" , "customer_workflow_task_template" ,
-        "승인라인" , "위젯종료승인" , "sync-with-approval" , "approval_process" ;
+        "승인라인" , "위젯종료승인" , "sync-with-approval" , "approval_process" ,
+        "리마인드" , "remind/pending-approval" ,
+        "경력변경" , "학력변경" , "UserDataApproval" , "activities" , "댓글중복" ,
+        "ThreadTopicType.USER_DATA" ;
   d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
         "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
         "승인 설정/라인 확인해주세요" ,
         "위젯 종료 시 승인이 안 돼요" ,
-        "승인 완료인데 진행중으로 보여요" ;
-  d:x   :notification , :time-tracking .
+        "승인 완료인데 진행중으로 보여요" ,
+        "경력 변경 요청 댓글이 사라져요" ,
+        "승인 댓글이 중복으로 보여요" ;
+  d:x   :notification , :time-tracking , :flow .
 
 :data-export
   d:n   "데이터 추출 (Data Export)" ;
@@ -227,7 +237,8 @@
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
-        "평가지 생성 중이에요" , "평가지가 안 보여요" ;
+        "평가지 생성 중이에요" , "평가지가 안 보여요" ,
+        "삭제된 평가 복구해주세요" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -331,6 +342,11 @@
 # ============================================================
 # Notes — active (brain/notes/)
 # ============================================================
+
+n:CI-4202
+  d:in :integration ;
+  d:v  "config-fix" ;
+  d:s  "캡스 수동 동기화 실패 — 고객 테이블 매핑 설정 오류, Grafana에서 e_date 컬럼 오류 확인" .
 
 n:CI-4190
   d:in :integration ;
@@ -549,6 +565,21 @@ n:CI-4169
   d:v  "spec" ;
   d:s  "결제 취소 후 라쿤 billing force-open으로 카드 재등록 — 체험 종료일 변경 불가 스펙" .
 
+n:CI-4195
+  d:in :review ;
+  d:v  "ops" ;
+  d:s  "삭제된 진행 중 평가 복구 — evaluation 테이블 soft delete(deleted_at, deleted_user_id) NULL 복구 DML 실행. Operation API PR #5181 대기 중" .
+
+n:CI-4204
+  d:in :review ;
+  d:v  "investigating" ;
+  d:s  "평가 등급 배분 완료 시 오류 — gradeToCalculation=empty인데 enabledGradeFactors[CUSTOM] 존재, 등급 설정 초기화 불일치" .
+
+n:CI-4197
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "급여정산 결과 검색 필터 포커스 빠짐 — onFilterChanged 로직 추가로 한글 입력 시 포커스 유실, FE 핫픽스(#1708) 완료" .
+
 n:CI-4182
   d:in :approval ;
   d:v  "bug" ;
@@ -557,6 +588,12 @@ n:CI-4182
 # ============================================================
 # Notes — archive (brain/notes/archive/)
 # ============================================================
+
+n:CI-4201
+  d:in :department ;
+  d:v  "spec" ;
+  d:s  "구성원이 없는 조직이 종료 처리되지 않음 — 예약발령 잔존 시 validator가 미래 position 감지하여 차단 (DEPA_400_017). 의도된 보수적 제약" ;
+  d:x  :personnel-appointment , :account .
 
 n:CI-4188
   d:in :review ;
@@ -638,6 +675,11 @@ n:CI-4186
   d:v  "spec" ;
   d:s  "주휴일 휴일대체 지정 기간 ±30일 변경 요청 — CI-3897 동일 패턴" .
 
+n:CI-4199
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "주휴일 휴일대체 지정 기간 ±180일 변경 요청 — CI-3897/CI-4186 동일 패턴" .
+
 n:CI-3907
   d:in :annual-promotion ;
   d:v  "bug" ;
@@ -717,6 +759,16 @@ n:CI-4124
   d:in :account ;
   d:v  "spec" ;
   d:s  "일괄 이메일 변경" .
+
+n:CI-4203
+  d:in :approval ;
+  d:v  "spec" ;
+  d:s  "승인 리마인드 알림 발송자 확인 — younghoon.jo가 아닌 jinhee.kim/jungil.um이 발송한 것으로 확인" .
+
+n:CI-4200
+  d:in :account ;
+  d:v  "spec" ;
+  d:s  "재직자 메일주소 일괄 변경 문의 — CI-4124와 동일 패턴, Operation API 안내로 해결" .
 
 n:CI-4125
   d:in :goal ;
@@ -918,6 +970,12 @@ n:CI-4156
   d:v  "bug" ;
   d:s  "근무유형 변경 예약 취소 불가" .
 
+n:CI-4193
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "경력 변경 요청 댓글이 중복 노출되거나 사라짐 — FE가 sort=ASC&size=1로 요청하여 댓글 누락" ;
+  d:x  :flow .
+
 # ============================================================
 # Glossary — notification
 # ============================================================
@@ -984,6 +1042,11 @@ g:tt-04
   d:in :time-tracking ;
   d:q  "휴일대체 탭에 날짜가 안 보여요" ;
   d:a  "OpenSearch holidayProps sync v2_user_work_rule 확인" .
+
+g:tt-05a
+  d:in :time-tracking ;
+  d:q  "대휴 기간 설정해주세요" ;
+  d:a  "주휴일 휴일대체 gap 커스텀 — customGapOfWeeklyHoliday config 변경" .
 
 g:tt-05
   d:in :time-tracking ;
@@ -1184,6 +1247,11 @@ g:dept-05
   d:q  "종료된 조직에 조직코드 넣어주세요" ;
   d:a  "엑셀→이름으로 ID 찾기→DML 수행" .
 
+g:dept-06
+  d:in :department ;
+  d:q  "구성원이 없는데 조직 종료가 안 돼요" ;
+  d:a  "예약발령 잔존 — 발령 실행 후 종료 처리, 또는 발령 취소 후 종료. DEPA_400_017 에러" .
+
 # ============================================================
 # Glossary — personnel-appointment
 # ============================================================
@@ -1239,6 +1307,11 @@ g:appr-05
   d:in :approval ;
   d:q  "승인 완료인데 진행중으로 보여요" ;
   d:a  "approval_process APPROVED인데 workflow_task ONGOING — 이벤트 동기화 실패. sync-with-approval Operation API로 보정" .
+
+g:appr-06
+  d:in :approval ;
+  d:q  "경력/학력 변경 댓글이 사라져요" , "승인 댓글이 중복으로 보여요" ;
+  d:a  "FE가 activities API를 sort=ASC&size=1로 호출하여 댓글 누락 — FE 버그. BE 응답 정상 (targetUid UUID 고유키)" .
 
 # ============================================================
 # Glossary — data-export
@@ -1349,6 +1422,11 @@ g:review-04
   d:in :review ;
   d:q  "평가지가 안 보여요" ;
   d:a  "후발 추가 reviewer의 UserForm lazy init 미트리거. evaluation_reviewer.user_form_ids 빈 배열 확인 후 Operation API 호출" .
+
+g:review-05
+  d:in :review ;
+  d:q  "삭제된 평가 복구해주세요" ;
+  d:a  "evaluation 테이블 soft delete — deleted_at=NULL, deleted_user_id=NULL로 복구. draft_evaluation도 동일 구조. Operation API PR #5181 머지 후 API 복구 가능" .
 
 g:fins-02
   d:in :fins ;
