@@ -401,7 +401,7 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 ### 외부 연동 (Integration)
 
 #### 진단 체크리스트
-문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요" / "ODBC 연결이 안 돼요" / "수동 동기화 실패"
+문의: "세콤 연동이 풀렸어요" / "수동 전송했는데 반영 안 돼요" / "세콤 연동 프로토콜 타입이 뭔가요?" / "세콤으로 퇴근했는데 정시로 찍혀요" / "세콤 출근이 반영 안 돼요" / "진행중 블럭이 여러 개 떠요" / "ODBC 연결이 안 돼요" / "수동 동기화 실패" / "캡스 연결이 안 돼요" / "방화벽 해제 방법 알려주세요" / "flex IP 주소 알려주세요"
 1. 연동 비활성화 주체 확인 → 구독 해지 외 자동 변경 없음. log-dashboard에서 API 호출 이력 확인 [CI-3849]
 2. 비활성화 상태에서 수동 전송 → 비활성화 기간 데이터는 소급 불가 [CI-3849]
 3. 수동 전송 반영 안 됨 → 세콤 데이터 수신 순서 확인 (퇴근→출근 역순 수신 가능) [CI-3861]
@@ -413,6 +413,8 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
 8. 세콤/외부 이벤트로 진행중 블럭 다건 발생 → 다수 터미널에서 동시 이벤트 수신 시 Kafka 동시성 race condition으로 중복 START 등록 가능. `isDraftEventRegistrationAllowed`가 이벤트 타입(START/STOP) 미구분하여 통과시킴 [CI-4165]
 9. ODBC 연결 실패 (CONNECTION LIMIT 0) → `v2_customer_external_provider`에서 `odbc_connection_limit` 조회. 0이면 PostgreSQL ROLE의 `CONNECTION LIMIT 0`으로 모든 연결 차단. Operation API로 connectionLimit을 기본값(SECOM/CAPS=2, TELECOP=3)으로 변경 [CI-4190]
 10. 캡스 수동 동기화 "전송 실패" → Grafana 캡스 RDB 모니터링에서 로그 확인. `e_date` 컬럼이 보이면 **테이블 매핑 설정 오류**. 고객에게 올바른 매핑 설정 가이드 안내 [CI-4202]
+11. 캡스/세콤 연결 실패 + "방화벽 문제" 주장 → **먼저 DB 로그에서 패스워드 실패 여부 확인**. 고객/기사의 PW 오입력이 원인인 경우가 많음. ODBC 연결 성공했다면 방화벽은 거의 아님 [FT-12290]
+12. 방화벽 해제 / flex IP 요청 → **IP는 변경될 수 있으므로 제공 불가**. 도메인(`flex-caps.flex.team`, `flex-secom.flex.team`) 기반 예외처리를 안내. CMD 명령어(`nslookup`, `telnet`, `tracert`)로 네트워크 연결 상태 확인 후 결과 전달 요청 [FT-12290]
 
 #### 조사 플로우
 
@@ -482,13 +484,34 @@ WHERE customer_id = ? AND user_id = ? AND date = ?;
    → MySQL(odbc_connection_limit) + PostgreSQL ROLE(CONNECTION LIMIT) 모두 변경됨
 ```
 
+**F5: 캡스/세콤 연결 실패 — 인증 오류 vs 방화벽 구분** · 히트: 1 · [FT-12290]
+> 트리거: "캡스 연결이 안 돼요" / "방화벽 해제해주세요" / "flex IP 알려주세요"
+
+```
+① 고객이 "방화벽 문제"라고 단정 → 검증 필요, 바로 수용하지 않음
+   ↓
+② DB 로그에서 패스워드 실패 여부 확인
+   ├─ PW 실패 로그 있음 → 인증 정보 재입력 안내 (캡스 기사/고객에게)
+   └─ PW 실패 없음 → ③으로
+   ↓
+③ 고객에게 CMD 진단 명령어 실행 요청
+   nslookup flex-caps.flex.team  → amazonaws 나오면 DNS 정상
+   telnet flex-caps.flex.team 5432 → 빈 화면이면 연결 성공, "연결 불가"면 차단
+   tracert flex-caps.flex.team
+   ├─ 연결 차단 확인 → 도메인 기반 방화벽 예외처리 안내 (IP 제공 불가)
+   └─ 연결 정상 → 캡스/세콤 프로그램 설정 재확인
+```
+
+> ⚠️ **IP 제공 불가 정책**: flex 서버 IP는 변경될 수 있으므로 고객에게 직접 제공하지 않음.
+> 도메인 기반 예외처리를 안내하고, ODBC 연결 성공 여부로 방화벽 문제를 판별.
+
 **고객사 방화벽 허용 설정 안내값:**
 
 | 항목 | 값 |
 |------|-----|
 | 프로토콜 | TCP |
 | 접속 방식 | PostgreSQL 직접 연결 (ODBC/JDBC) |
-| 대상 호스트 | `flex-secom.flex.team` |
+| 대상 호스트 | `flex-secom.flex.team` (세콤) / `flex-caps.flex.team` (캡스) |
 | 포트 | `5432` |
 | 데이터베이스 | `postgres` |
 
@@ -537,6 +560,7 @@ WHERE customer_id = ?;
 - **세콤 다중 터미널 동시 이벤트 → 중복 START 등록**: Kafka 파티션 분산 + REQUIRES_NEW 트랜잭션 + REPEATABLE READ 격리 → 동시 dry-run에서 서로의 미커밋 데이터 미가시. `isDraftEventRegistrationAllowed`의 이벤트 타입 미구분도 기여 — **버그 (조사 중)** [CI-4165]
 - **세콤 ODBC 연결 실패 — CONNECTION LIMIT 0**: `odbc_connection_limit=0`으로 PostgreSQL ROLE의 CONNECTION LIMIT 0 적용, 모든 ODBC 연결 차단. JPA Entity 기본값이 0이므로 계정 생성 시 `getDefaultConnectionLimit()` 누락 가능. Operation API로 connectionLimit=2 변경으로 해결 — **설정 오류** [CI-4190]
 - **캡스 수동 동기화 전송 실패 — 테이블 매핑 설정 오류**: Grafana 캡스 RDB 모니터링에서 `e_date` 컬럼 오류 확인 → 고객이 캡스 테이블 매핑을 가이드대로 설정하지 않은 것이 원인. 고객 안내로 해결 — **고객 설정 오류** [CI-4202]
+- **캡스 연동 연결 실패 — 방화벽 아닌 PW 오입력**: 캡스 기사가 원격 지원 중 PW를 잘못 입력하여 연결 실패. 고객은 방화벽 문제로 추정했으나 DB 로그에서 PW 실패 확인. 2차 문의(시작→정지 복귀)에서는 실제 방화벽 차단 → 도메인 기반 예외처리 안내 — **운영 (고객 환경)** [FT-12290]
 
 ---
 

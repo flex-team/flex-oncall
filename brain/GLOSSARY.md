@@ -61,6 +61,8 @@
 | 수동 전송했는데 반영 안 돼요 | 이벤트 수신 순서 역순 확인 | flex-timetracking-backend |
 | 세콤으로 퇴근했는데 정시로 찍혀요 | 퇴근 타각 자정 조정 preference=ON_TIME | flex-timetracking-backend |
 | ODBC 연결이 안 돼요 | `v2_customer_external_provider.odbc_connection_limit` 확인 — 0이면 CONNECTION LIMIT 0으로 전체 차단. Operation API로 변경 | flex-timetracking-backend |
+| 캡스 연결이 안 돼요 / 방화벽 해제 방법 | CAPS 연동 연결 실패 — PW 오입력 or 방화벽 | flex-timetracking-backend |
+| flex IP 주소 알려주세요 | IP 제공 불가 — 도메인 기반 예외처리 안내 | flex-timetracking-backend |
 
 ## 권한 (Permission)
 

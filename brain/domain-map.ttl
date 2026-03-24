@@ -464,6 +464,11 @@ n:CI-4165
   d:v  "investigating" ;
   d:s  "SECOM 외부 출퇴근 이벤트 중복 등록으로 진행중 블럭 다건 발생" .
 
+n:FT-12290
+  d:in :integration ;
+  d:v  "resolved" ;
+  d:s  "캡스 연동 연결 실패 — 방화벽 아닌 PW 오입력 + 실제 방화벽 차단 대응" .
+
 n:CI-4168
   d:in :contract ;
   d:v  "spec" ;
