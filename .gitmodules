@@ -74,3 +74,7 @@
 	path = flex-timetracking-frontend
 	url = git@github.com:flex-team/flex-frontend-apps-time-tracking.git
 	branch = main
+[submodule "flex-approval-backend"]
+	path = flex-approval-backend
+	url = git@github.com:flex-team/flex-approval-backend.git
+	branch = main
