@@ -106,6 +106,8 @@
 | 평가지 생성 중 | evaluation_reviewer.user_form_ids = [] — UserForm 미초기화 상태 | flex-review-backend |
 | 평가지가 안 보여요 | 후발 추가 reviewer의 UserForm lazy initialization 미트리거. Operation API `initialize-user-form`으로 해결 | flex-review-backend |
 | 삭제된 평가 복구해주세요 | `evaluation` 테이블 soft delete 방식. `deleted_at = NULL, deleted_user_id = NULL`로 복구. `draft_evaluation`도 동일 구조. Operation API PR #5181 머지 후 API 복구 가능 | flex-review-backend |
+| 등급 배분 완료 시 오류 | `draft_evaluation.grades_to_calculate`가 비어있는데 `enabledGradeFactors`에 값 존재 — 과거 버그 수정 전 평가 복제로 발생. DML 보정 필요 | flex-review-backend |
+| 뉴성과관리 업데이트 | ReviewMigration (구 리뷰 → 뉴 성과관리 전환). `MigrationScheduler`가 매일 00:00 KST에 예약된 고객을 자동 마이그레이션. 진행 중 리뷰셋을 soft delete | flex-review-backend |
 
 ## 데이터 추출 (Data Export)
 
@@ -145,6 +147,7 @@
 | 정산 수정했는데 소득세가 바뀌었어요 | 부양가족 수 최신화 dependent_families_count — 스펙 | flex-payroll-backend |
 | 급여정산 해지하면 명세서 공개가 되나요? | 구독 해지 후 payslip 공개/알림 동작 — 스펙 | flex-payroll-backend |
 | 건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요 | 중도정산 확정해제 시 사회보험 연말정산 금액 미리버트 — 버그(핫픽스 완료) | flex-payroll-backend |
+| 중도정산 보험료가 공단 금액과 달라요 | 이관 회사 recipient 생성 시점 보수총액 불일치 → 보험료 리셋(DELETE /premium → recalculate) | flex-payroll-backend |
 
 ## 근로기준법 용어 (Labor Law Terms)
 

@@ -233,12 +233,17 @@
         "공동편집자" , "co-author" , "evaluation" , "폼" , "평가주기" ,
         "역량" , "competency" , "AI프롬프트" , "엑셀" , "배치" ,
         "Vaadin" , "admin" , "다운로드" , "마감리뷰" ,
-        "평가지" , "UserForm" , "initialize-user-form" , "user_form_ids" ;
+        "평가지" , "UserForm" , "initialize-user-form" , "user_form_ids" ,
+        "등급 배분" , "grades_to_calculate" , "factor_grade_calculations" ,
+        "마이그레이션" , "MigrationScheduler" , "review_set" ,
+        "ReviewMigration" , "뉴성과관리" ;
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
         "평가지 생성 중이에요" , "평가지가 안 보여요" ,
-        "삭제된 평가 복구해주세요" ;
+        "등급 배분 완료 시 오류" ,
+        "삭제된 평가 복구해주세요" ,
+        "뉴성과관리 업데이트 후 평가가 사라졌어요" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -280,10 +285,13 @@
         "payroll_legal_payment_setting" , "work_income_settlement_payee" ,
         "dependent_families_count" , "올림" , "구독해지" , "명세서" ,
         "연차휴가미사용수당" , "연차수당" , "주휴수당" , "연차휴가수당" ,
-        "중도정산" , "사회보험" , "건강보험" , "고용보험" , "확정해제" ;
+        "중도정산" , "사회보험" , "건강보험" , "고용보험" , "확정해제" ,
+        "이관" , "recipient" , "보험료리셋" , "보수총액" , "장기요양" ,
+        "RetireeYearEndSettlementSocialInsuranceRecipientFactory" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
-        "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ;
+        "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
+        "중도정산 보험료가 공단 금액과 달라요" ;
   d:x   :time-tracking , :scheduling .
 
 :flow
@@ -342,6 +350,31 @@
 # ============================================================
 # Notes — active (brain/notes/)
 # ============================================================
+
+n:CI-4214 d:in :personnel-appointment ;
+  d:s "엑셀 인사발령 업로드 후 정보 변경하러가기 버튼 미동작 — FE 폼 검증 버그" ;
+  d:v "bug" .
+
+n:CI-4216
+  d:in :payroll ;
+  d:v  "bug-fix" ;
+  d:s  "급여정산 지급항목 추가 시 이벤트 이중 발행으로 고아 레코드 생성 — v3.128.0 리그레션, 121개사 488건 영향, 핫픽스 #8686 완료, 데이터 패치 대기" .
+
+n:CI-4163
+  d:in :account ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:s  "원텍 이메일 일괄 변경 (wtlaser→wontech) 255건 — CI-4124/CI-4200과 동일 패턴" .
+
+n:CI-4212
+  d:in :payroll ;
+  d:v  "bug-workaround" ;
+  d:s  "이관 회사 중도정산 보험료 불일치 — recipient 생성 시점 보수총액 기반 1회 계산, 이관 후 자동 재계산 없음. 리셋 워크어라운드 존재" .
+
+n:CI-4209
+  d:in :scheduling ;
+  d:v  "investigating" ;
+  d:s  "엑셀 근무표 업로드 시 특정 구성원 3명 스케줄 오류 없이 누락 — 2개월 반복" .
 
 n:CI-4202
   d:in :integration ;
@@ -575,10 +608,15 @@ n:CI-4195
   d:v  "ops" ;
   d:s  "삭제된 진행 중 평가 복구 — evaluation 테이블 soft delete(deleted_at, deleted_user_id) NULL 복구 DML 실행. Operation API PR #5181 대기 중" .
 
+n:CI-4210
+  d:in :review ;
+  d:v  "spec" ;
+  d:s  "뉴성과관리 마이그레이션으로 구 리뷰 진행 중 리뷰셋 2건 soft delete — MigrationScheduler 의도적 삭제. review_set soft delete 복구 가능" .
+
 n:CI-4204
   d:in :review ;
-  d:v  "investigating" ;
-  d:s  "평가 등급 배분 완료 시 오류 — gradeToCalculation=empty인데 enabledGradeFactors[CUSTOM] 존재, 등급 설정 초기화 불일치" .
+  d:v  "ops" ;
+  d:s  "평가 등급 배분 완료 시 오류 — 과거 버그 수정 전 평가 복제로 grades_to_calculate 누락, DML 보정으로 해결" .
 
 n:CI-4197
   d:in :payroll ;
@@ -1395,6 +1433,16 @@ g:pay-05
   d:q  "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ;
   d:a  "중도정산 확정해제 시 사회보험 연말정산 금액 미리버트 — 버그(핫픽스 완료)" .
 
+g:pay-06
+  d:in :payroll ;
+  d:q  "중도정산 보험료가 공단 금액과 달라요" , "보험료가 다르다" ;
+  d:a  "이관 회사 여부 확인 → recipient 생성 시점 보수총액 불일치 → 보험료 리셋(DELETE /premium → recalculate)" .
+
+g:pay-07
+  d:in :payroll ;
+  d:q  "지급항목 추가했는데 이미 같은 코드라고 나와요" , "정산 템플릿에 항목이 계속 쌓여요" ;
+  d:a  "v3.128.0 리그레션(핫픽스 완료). 고아 매핑 발생 여부 확인 → customizable_allowance_template NOT EXISTS customizable_allowance 쿼리" .
+
 # ============================================================
 # Glossary — fins
 # ============================================================
@@ -1432,6 +1480,16 @@ g:review-05
   d:in :review ;
   d:q  "삭제된 평가 복구해주세요" ;
   d:a  "evaluation 테이블 soft delete — deleted_at=NULL, deleted_user_id=NULL로 복구. draft_evaluation도 동일 구조. Operation API PR #5181 머지 후 API 복구 가능" .
+
+g:review-06
+  d:in :review ;
+  d:q  "등급 배분 완료 시 오류" ;
+  d:a  "draft_evaluation.grades_to_calculate 비어있음 — 과거 버그 수정 전 평가 복제로 발생. enabledGradeFactors와 불일치. DML 보정 필요" .
+
+g:review-07
+  d:in :review ;
+  d:q  "뉴성과관리 업데이트 후 평가가 사라졌어요" ;
+  d:a  "MigrationScheduler가 구 리뷰 → 뉴 성과관리 전환 시 진행 중 리뷰셋 soft delete — 스펙. review_set 테이블 deleted=0, deletedAt=NULL로 복구 가능" .
 
 g:fins-02
   d:in :fins ;
