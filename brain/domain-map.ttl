@@ -70,9 +70,11 @@
   d:kw  "스케줄" , "게시" , "정시전출근불가" , "연장근무" , "dry-run" ,
         "validationLevel" , "v2_user_non_repetitive_work_plan" ,
         "agreedWorkingMinutes" , "requiredWorkingMinutes" ,
-        "탄력적근무시간제" , "법정최대근로시간" , "주52시간" ;
+        "탄력적근무시간제" , "법정최대근로시간" , "주52시간" ,
+        "bulk-upload" , "근무기록업로드" , "UserWorkScheduleBulkUpload" ;
   d:syn "스케줄 게시가 안 돼요" , "정시 전 출근 불가가 안 먹혀요" ,
-        "연장근무가 이상해요" ;
+        "연장근무가 이상해요" ,
+        "근무 기록 업로드 시 오류가 나요" ;
   d:x   :time-tracking , :shift , :payroll .
 
 :shift
@@ -354,6 +356,11 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:CI-4226
+  d:in :account ;
+  d:v  "investigating" ;
+  d:s  "기본 정보 변경 엑셀 미리보기에서 일부 구성원 중복 로우 생성 + 알 수 없음 표시" .
+
 n:CI-4214 d:in :personnel-appointment ;
   d:s "엑셀 인사발령 업로드 후 정보 변경하러가기 버튼 미동작 — FE 폼 검증 버그" ;
   d:v "bug" .
@@ -378,6 +385,11 @@ n:CI-4209
   d:in :scheduling ;
   d:v  "investigating" ;
   d:s  "엑셀 근무표 업로드 시 특정 구성원 3명 스케줄 오류 없이 누락 — 2개월 반복" .
+
+n:CI-4221
+  d:in :scheduling ;
+  d:v  "spec" ;
+  d:s  "근무기록 업로드 타임아웃 — 대량 데이터 N+1 처리 성능 이슈" .
 
 n:CI-4217
   d:in :time-tracking ;
