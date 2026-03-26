@@ -8,55 +8,12 @@
 - **이 repo는 도메인 스펙을 관리하지 않는다.** 도메인 스펙은 각 서브모듈 repo에서 관리한다. 이 repo는 운영 이슈 조사·기록·패턴 축적만 담당한다.
 - **서브모듈 변경은 이 repo에 커밋하지 않는다.** 서브모듈은 코드 탐색·조사 용도로만 사용하며, PR과 커밋은 각 서브모듈 repo에서 직접 수행한다. `git add` 시 서브모듈 경로(`flex-*`)는 항상 제외할 것.
 
-## 용어집
+## 도메인 라우팅
 
-- **용어집**: `brain/GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 → 서브모듈 매핑
-- 이슈 인입 시 사용자의 표현이 어떤 도메인에 해당하는지 찾을 때 참조
-
-## 서브모듈 맵
-
-| 서브모듈 | 브랜치 | 도메인 | 키워드 |
-|---------|--------|--------|--------|
-| `flex-timetracking-backend` | main | 근태, 휴가, 연차, 근무, 초과근무, 보상휴가, 연차촉진 | 근무스케줄, 근무기록, 연차, 휴일대체, 출퇴근, 근무유형, 포괄임금 |
-| `flex-pavement-backend` | main | 알림, 푸시, 이메일 | notification |
-| `flex-digicon-backend` | main | | |
-| `flex-core-backend` | main | 구성원, 직급, 직책, 직무, 직위 | 직4, 직5 |
-| `flex-payroll-backend` | main | 급여 | |
-| `flex-yearend-backend` | main | 연말정산, 공제, 퇴직소득, 세금정책 | 연말정산, 공제, 증빙서류, 퇴직정산, 정산보고서 |
-| `flex-flow-backend` | main | 협업, 커뮤니케이션 | 공지사항, 스레드, 할일, 미팅, 이슈, 요약, 음성전사, 협업문서 |
-| `flex-goal-backend` | main | 목표, OKR | 목표 리스트, objective, cycle, 내 목표, 전체 목표, 구성원 목표 |
-| `flex-fins-backend` | main | 비용관리, 경비 | 카드, 지출, 가맹점, 분개, 비용정책, 데이터동기화, codef, 세금계산서, 국세청, 스크래핑 |
-| `flex-permission-backend` | main | 권한, 인가 | OpenFGA, 분산락, PIP, authorization-cache |
-| `flex-v2-backend-commons` | main | | |
-| `flex-review-backend` | main | 평가, 리뷰 | evaluation, form, grade, 평가주기, 역량, AI프롬프트 |
-| `flex-work-event-transmitter-backend` | main | 출퇴근 이벤트 전송 | CAPS, SECOM, TELECOP, 캡콤 |
-| `flex-openapi-backend` | main | 외부 API, 데이터 통합 | OpenAPI, 토큰, SAP, 급여전기, 인사연동, 회계연동 |
-| `flex-timetracking-config` | prod | 근태 설정 | 피처플래그, feature flag |
-| `flex-raccoon` | main | Operation API, 운영 도구 | raccoon, operation-api, 운영 API |
-| `flex-admin-shell` | main | 관리자 쉘, 운영 콘솔 | admin-shell, 운영 콘솔, 설정 변경 |
-| `flex-github-actions` | main | GitHub Actions, CI/CD | github-actions, workflow, CI, CD |
-| `flex-timetracking-frontend` | main | 근태 프론트엔드 | 근태 UI, 프론트엔드, React |
-
-> 서브모듈이 추가될 때마다 이 테이블을 업데이트할 것
-
-## 도메인 → 코드 위치 가이드
-
-### 근태/휴가 (`flex-timetracking-backend`)
-
-- 근무유형(Work Rule): `/work-rule`
-- 연차/맞춤휴가(Time Off): `/time-off`
-- 근무기록(Work Record): `/work-record`
-- 근무스케줄(Work Schedule): `/work-schedule`
-- 출퇴근(Work Clock): `/work-clock`
-- 보상휴가(Compensatory Time Off): `/compensatory-time-off`
-- 승인(Approval): `/approval`
-- 외부 연동(External Work Clock): `/external-work-clock`
-- 공휴일(Holiday): `/holiday`
-- Operation API: 각 모듈의 `/operation-api` 하위
-
-### 알림 (`flex-pavement-backend`)
-
-- `flex-timetracking-backend` 알림 관련 코드가 이 repo를 참조
+- **도메인 맵**: `brain/domain-map.ttl` — 키워드/동의어 → 도메인 → repo/모듈 매핑 (이슈 라우팅의 단일 소스)
+- **용어집**: `brain/GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 변환
+- 서브모듈 목록·브랜치는 `.gitmodules` 에서 확인
+- 이슈 인입 시 `ops-find-domain` 스킬이 domain-map.ttl을 자동 탐색
 
 ## 온콜 워크플로우
 
@@ -66,40 +23,66 @@
 
 ```
 이슈 접수 (Linear/Slack)
-  → 도메인 파악 (ops-find-domain 스킬 사용)
-  → 쿡북 확인 (brain/COOKBOOK.md)
-  → 데이터 조사 (DB/OpenSearch/Kafka 스킬)
+  → 도메인 파악 (ops-find-domain)
+  → 쿡북 확인 (brain/COOKBOOK.md — 히트율 순 진단 플로우)
+  → API 이슈일 때: 가설 전에 access log부터 확인
+  → 데이터 조사 (DB/OpenSearch/Kafka)
   → 원인 분석 및 해결
-  → 운영 노트 기록
-  → ops-learn으로 brain 산출물 갱신 (GLOSSARY/COOKBOOK/domain-map.ttl)
+  → 운영 노트 기록 (ops-note-issue / ops-investigate-issue)
+  → 마감 (ops-close-note → brain 산출물 자동 갱신)
 ```
 
-## 사용 가능한 조사 도구
+## 사용 가능한 스킬
 
-온콜 이슈 조사에 쓸 수 있는 Claude Code 스킬:
+### 이슈 라이프사이클
 
 | 스킬 | 용도 |
 |------|------|
 | `ops-find-domain` | 이슈 키워드로 도메인 라우팅 — 관련 서브모듈, 쿡북 섹션, 과거 노트 탐색 |
-| `ops-close-note` | 완료된 이슈의 note 동기화 + 파생 산출물(COOKBOOK) 갱신 |
-| `ops-investigate-issue` | Linear 이슈 조회/조사 → 원인 파악 → operation-note 기록 |
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
+| `ops-investigate-issue` | Linear 이슈 조사 → 원인 파악 → operation-note 기록 |
 | `ops-fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
-| `ops-learn` | 지식 소스(Notion/Slack/Linear/노트)에서 brain 산출물 전체 갱신 |
-| `ops-compact` | brain 산출물 컴팩션 — 농축(keyword/synonym 흡수) → 퇴출(n:* 삭제) → COOKBOOK 계층 조정 → 히트율 리포트 |
-| `ops-maintain-notes` | 활성 노트 일괄 유지보수 + 아카이브. `--rebuild` 로 전체 재구성 |
-| `ops-db-query-builder` | DB 쿼리 필요 시 도메인 라우팅 → Entity 탐색 → 근거 있는 SQL 구성 |
+| `ops-close-note` | 완료된 이슈의 note 동기화 + 파생 산출물(COOKBOOK) 갱신 |
+
+### 데이터 조사
+
+| 스킬 | 용도 |
+|------|------|
+| `ops-db-query-builder` | 도메인 라우팅 → Entity 탐색 → 근거 있는 SQL 구성 |
 | `db:db-query` | Aurora MySQL DB 쿼리 (dev/qa/prod) |
+| `db:db-data-sync` | prod → dev 데이터 복제 (INSERT 생성) |
 | `opensearch:os-query-log` | 애플리케이션 로그 검색 (Kibana) |
 | `opensearch:os-query-service` | TT 서비스 문서 조회 (근무스케줄, 휴가사용 등) |
-| `operation-api:ops-api` | flex-raccoon Operation API 호출 |
 | `kafka:kafka-query` | Kafka 토픽/메시지/컨슈머그룹 조회 |
 | `slack:slack-search` | Slack 메시지/파일/채널 검색 |
+
+### 운영 도구
+
+| 스킬 | 용도 |
+|------|------|
+| `operation-api:ops-api` | flex-raccoon Operation API 호출 |
+| `operation:hashed-id` | DB Long ID ↔ HashedId 변환 |
+| `operation:log-analysis` | OpenSearch URL/Slack 에러/traceId 기반 로그 분석 |
+
+### 로컬 개발
+
+| 스킬 | 용도 |
+|------|------|
+| `local-dev:local-server` | 로컬 Spring Boot 서버 기동/종료/모니터링 |
+| `local-dev:local-debug` | 로컬 서버 디버깅 (브라우저+대시보드) |
+| `dev-tools:dev-loop` | dev 환경 통합 검증 루프 (서버, DB, Kafka, API) |
+
+### 지식 관리
+
+| 스킬 | 용도 |
+|------|------|
+| `ops-learn` | 지식 소스(Notion/Slack/Linear/노트)에서 brain 산출물 전체 갱신 |
+| `ops-compact` | brain 산출물 컴팩션 — 농축 → 퇴출 → COOKBOOK 계층 조정 → 히트율 리포트 |
+| `ops-maintain-notes` | 활성 노트 일괄 유지보수 + 아카이브. `--rebuild` 로 전체 재구성 |
 
 ## 운영 지식 참조
 
 - **쿡북**: `brain/COOKBOOK.md` — 도메인별 진단 체크리스트, SQL 템플릿, 과거 사례
-- **도메인 맵**: `brain/domain-map.ttl` — 키워드 → 문서 매핑 (전체 노트를 읽지 말고 여기서 관련 문서를 찾을 것)
 - **진행 중 노트**: `brain/notes/{ticket-id}.md` — notes/ 루트에 위치한 active 이슈
 - **해결 완료 노트**: `brain/notes/archive/{ticket-id}.md` — domain-map.ttl로 찾아서 필요한 것만 읽기
 - **티켓 노트 작성 규칙**: `brain/CLAUDE.md`
