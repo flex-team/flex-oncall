@@ -83,5 +83,5 @@
 	url = git@github.com:flex-team/flex-backend-gateway.git
 [submodule "flex-terraform"]
 	path = flex-terraform
-	url = http://github.com/flex-team/flex-terraform
+	url = git@github.com:flex-team/flex-terraform.git
 	branch = main
