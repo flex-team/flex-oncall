@@ -127,13 +127,16 @@
         "자동로그아웃" , "입사일변경" , "company_join_date" , "삭제된구성원" ,
         "정보복구" , "DB Snapshot" , "개인정보현황" , "이메일대량변경" ,
         "bullseye" , "opensearch싱크" ,
-        "force-open" , "close-forced-open" , "결제취소" , "체험종료일" , "billing" ;
+        "force-open" , "close-forced-open" , "결제취소" , "체험종료일" , "billing" ,
+        "UPER_400_011" , "UserPersonalValidatorImpl" , "personalEmail" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
         "삭제된 구성원 복구해주세요" , "구성원 정보가 마스킹됐어요" ,
         "개인정보 보유현황 파악해주세요" ,
-        "결제 취소 후 로그인이 안 돼요" ;
+        "결제 취소 후 로그인이 안 돼요" ,
+        "요청 정보가 올바르지 않습니다" , "주소 변경 시 오류" ,
+        "집주소 변경 시 오류" ;
   d:x   :permission , :department .
 
 :department
@@ -375,6 +378,22 @@ n:CI-4209
   d:in :scheduling ;
   d:v  "investigating" ;
   d:s  "엑셀 근무표 업로드 시 특정 구성원 3명 스케줄 오류 없이 누락 — 2개월 반복" .
+
+n:CI-4217
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "휴일대체 취소 시 구 이벤트 ID 전송으로 404 오류 — FE 캐시/갱신 문제" .
+
+n:CI-4213
+  d:in :account ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:s  "구성원 주소 변경 시 personalEmail RFC 5322 검증 실패" .
+
+n:CI-4207
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "세콤 퇴근 후 근무 확정 알림 수신 — 건너뛰기 설정 활성화 상태에서도 알림 발송" .
 
 n:CI-4202
   d:in :integration ;

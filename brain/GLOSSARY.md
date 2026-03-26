@@ -78,6 +78,8 @@
 | 이메일 변경해주세요 | Operation API UserEmailChange (단건) | flex-raccoon |
 | 구성원 이메일 일괄 변경해주세요 | Operation API 일괄 이메일 변경 | flex-raccoon |
 | 결제 취소 후 로그인이 안 돼요 | raccoon billing operation `force-open` → 카드 재등록 → `close-forced-open` | flex-raccoon |
+| 요청 정보가 올바르지 않습니다 | UPER_400_011 (`UserPersonalValidatorImpl`에서 발생하는 personalEmail RFC 5322 검증 에러) | flex-core-backend |
+| 주소 변경 시 오류 | 개인정보 번들 검증 실패 — personalEmail 등 다른 필드의 검증 에러로 주소 변경이 차단됨 | flex-core-backend |
 
 ## 조직 관리 (Department)
 
