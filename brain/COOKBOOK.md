@@ -699,6 +699,7 @@
 5. 정산 수정 후 소득세 변경 문의 → 정산 자물쇠 해제 후 재처리 시 소득세 변경 → 1차 정산 ~ 수정 정산 사이에 기본 공제 대상(부양가족 수)이 변경되었는지 확인. `work_income_settlement_payee`의 `dependent_families_count` 조회 [CI-4149]
 6. 급여정산 해지 후 명세서 공개/알림 문의 → 알림은 해지와 무관하게 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실제 열람 불가. 1달 연장 권장 안내 [QNA-1933]
 7. 중도정산 시 건강보험 제외 대상인데 사회보험 금액 표시 → 확정→확정해제→최신정보반영 경로를 거쳤는지 확인. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 [CI-4174]
+8. 이관 회사 중도정산 보험료(건강보험/장기요양) 불일치 → 이관 회사 여부 확인 → 맞으면 보험료 리셋(DELETE /premium → recalculate) 안내. 원인: recipient 생성 시점의 불완전한 보수총액으로 1회 계산·저장되며 이관 데이터 추가 후 자동 재계산 안 됨 — 히트: 1 (CI-4212) [CI-4212]
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -721,6 +722,18 @@
 3. Operation API PR #5181 머지 여부 확인
    - 머지됨 → Operation API로 복구
    - 미머지 → DML 실행 (`deleted_at = NULL, deleted_user_id = NULL`), 결재 필요 [CI-4195]
+
+문의: "평가 등급 배분 완료 시 오류" / "평가 finalize 시 알 수 없는 오류"
+1. Sentry/OpenSearch에서 `EvaluationValidationException` + `DraftEvaluationStageValidator.assertToComplete` 스택 확인 [CI-4204]
+2. 해당 evaluation ID로 `draft_evaluation.grades_to_calculate` 값 확인 → 비어있으면(`[]`) 등급 산출 설정 누락 [CI-4204]
+3. 고객에게 해당 평가가 기존 평가의 복제본인지 확인 — 과거 버그 수정 전 평가를 복제한 경우 잔존 데이터로 발생 [CI-4204]
+4. 고객이 원하는 등급 산출 방식 확인 후 `draft_evaluation` DML 보정 [CI-4204]
+
+문의: "뉴성과관리 전환 후 평가가 사라졌어요" / "뉴성과관리 업데이트 후 진행 중 평가가 없어요"
+1. `MigrationScheduler`에 의한 의도적 삭제(스펙) 확인 — OpenSearch에서 `[migrate]` 로그 + traceId로 마이그레이션 실행 여부 추적 [CI-4210]
+2. `flex_review.review_set` 테이블에서 `deleted = 1`인 리뷰셋 조회 — soft delete된 건 확인 [CI-4210]
+3. 복구 필요 시 `review_set` 테이블의 `deleted = 0, deletedAt = NULL`로 복구 가능. 단, 뉴성과관리 전환 완료 상태에서 구 리뷰 복구 적절성은 담당자 확인 필요 [CI-4210]
+4. `evaluation` 테이블(뉴 성과관리)은 마이그레이션에 영향받지 않음 — `evaluation` soft delete와 혼동 주의 [CI-4210]
 
 문의: "평가지 생성 중" / "평가지가 안 보여요"
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
@@ -754,6 +767,53 @@
    → 고객에게 복구 확인 요청
 ```
 
+**F3: 평가 등급 배분 완료 시 validation 오류** · 히트: 1 · [CI-4204]
+> 트리거: "등급 배분 완료 시 알 수 없는 오류", "EvaluationValidationException at assertToComplete" — 과거 버그 데이터가 평가 복제로 전파된 경우
+
+```
+① Sentry/OpenSearch에서 스택트레이스 확인
+   DraftEvaluationStageValidator.assertToComplete → EvaluationValidationException
+   → evaluation ID 확보
+   ↓
+② draft_evaluation 테이블에서 등급 설정 확인
+   SELECT id, grades_to_calculate, factor_grade_calculations
+   FROM flex_review.draft_evaluation WHERE id = ?
+   ├─ grades_to_calculate = '[]' (비어있음) → ③으로
+   └─ 값이 있음 → 다른 validation 항목 조사 필요
+   ↓
+③ 고객에게 원하는 등급 산출 방식 확인
+   "하향평가에서 커스텀 평가 요소 등급 산출을 원하시나요?"
+   → 확인 후 DML 보정 (적용 + 백업 쿼리)
+```
+
+**F4: 뉴성과관리 전환 후 구 리뷰 사라짐** · 히트: 1 · [CI-4210]
+> 트리거: "뉴성과관리 업데이트 후 진행 중 평가가 사라졌어요" — 마이그레이션 예약 실행 후 구 리뷰셋 삭제
+
+```
+① OpenSearch에서 마이그레이션 실행 로그 확인
+   키워드: "[migrate]" + customerId
+   → traceId 확보, "review sets sessions.size N" 로그로 삭제 건수 확인
+   ├─ 삭제 로그 있음 → ②로 (MigrationScheduler 의도적 삭제 — 스펙)
+   └─ 삭제 로그 없음 → 다른 원인 조사
+   ↓
+② review_set 테이블에서 soft delete 건 확인
+   SELECT id, title, progressStatus, deletedAt
+   FROM flex_review.review_set
+   WHERE customerId = ? AND deleted = 1
+   ORDER BY deletedAt DESC
+   → 삭제된 리뷰셋 목록과 삭제 시점 확인
+   ↓
+③ 복구 적절성 판단
+   뉴성과관리 전환 완료 상태에서 구 리뷰 복구가 의미 있는지 담당자 확인
+   ├─ 복구 진행 → ④로
+   └─ 복구 불필요 → 고객에게 스펙 안내 (마이그레이션 시 진행 중 리뷰 삭제는 의도된 동작)
+   ↓
+④ review_set soft delete 복구 (결재 필요)
+   UPDATE flex_review.review_set
+   SET deleted = 0, deletedAt = NULL
+   WHERE id = ?
+```
+
 **F2: 후발 추가 reviewer UserForm 미초기화** · 히트: 1 · [CI-4188]
 > 트리거: "특정 구성원 평가지가 생성 중", "평가지가 안 보여요" — finalize 이후 추가된 reviewer에서 발생
 
@@ -774,6 +834,73 @@
 ```
 
 → 상세: [cookbook/review.md](cookbook/review.md)
+
+#### 데이터 접근
+```sql
+-- 삭제된 평가 조회
+SELECT id, name, status, deleted_at, deleted_user_id
+FROM flex_review.evaluation
+WHERE customer_id = ? AND deleted_at IS NOT NULL
+ORDER BY deleted_at DESC;
+
+-- 삭제된 평가 복구 (결재 필요)
+UPDATE flex_review.evaluation
+SET deleted_at = NULL, deleted_user_id = NULL
+WHERE id = ?;
+
+-- 복구 롤백
+-- UPDATE flex_review.evaluation
+-- SET deleted_at = '{원래_deleted_at}', deleted_user_id = {원래_deleted_user_id}
+-- WHERE id = ?;
+```
+
+```sql
+-- 등급 산출 설정 확인
+SELECT id, grades_to_calculate, factor_grade_calculations
+FROM flex_review.draft_evaluation
+WHERE id = ?;
+
+-- 등급 산출 설정 보정 (고객 확인 후 적용, 결재 필요)
+UPDATE flex_review.draft_evaluation SET
+  grades_to_calculate = '["FACTOR_GRADE"]',
+  factor_grade_calculations = '[{"calculation": "WEIGHTED", "evaluationFactorType": "CUSTOM"}]'
+WHERE id = ?;
+```
+
+```sql
+-- 뉴성과관리 마이그레이션으로 삭제된 리뷰셋 조회
+SELECT id, title, progressStatus, deletedAt
+FROM flex_review.review_set
+WHERE customerId = ? AND deleted = 1
+ORDER BY deletedAt DESC;
+
+-- 리뷰셋 soft delete 복구 (결재 필요)
+UPDATE flex_review.review_set
+SET deleted = 0, deletedAt = NULL
+WHERE id = ?;
+```
+
+```sql
+-- 평가지 미생성 reviewer 조회
+SELECT id, reviewee, reviewer, step_type, user_form_ids, writing_requested_at, created_at
+FROM evaluation_reviewer
+WHERE customer_id = ? AND evaluation_id = ?
+ORDER BY created_at;
+
+-- form 생성 확인
+SELECT id, created_at FROM form_user_form
+WHERE id IN (?);
+```
+
+#### 과거 사례
+- **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
+- **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
+<!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
+- **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
+- **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
+- **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
+- **평가 등급 배분 완료 시 validation 오류**: 과거 버그 수정 전 평가를 복제하여 `grades_to_calculate`가 비어있는 상태로 전파. `draft_evaluation` DML 보정으로 해결 — **운영 대응** [CI-4204]
+- **뉴성과관리 전환 후 진행 중 평가 사라짐**: `MigrationScheduler`가 구 리뷰 → 뉴 성과관리 전환 시 진행 중 리뷰셋을 의도적으로 soft delete. `review_set` 테이블 `deleted=0, deletedAt=NULL` 복구 가능 — **스펙** [CI-4210]
 
 ---
 
@@ -1338,16 +1465,21 @@ Kibana 참고:
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-25 | CI-4216 | 급여: 정산 중 지급항목 이벤트 이중 발행 고아 레코드 — 과거 사례 + SQL 템플릿(고아 매핑 탐지) + glossary(g:pay-07) 추가. code-fix이므로 진단 플로우 스킵 |
+| 2026-03-25 | CI-4163 | 계정/구성원: 일괄 이메일 변경 히트 +1 (원텍 256건, CI-4124/CI-4200과 동일 패턴) |
+| 2026-03-25 | CI-4210 | 평가: 뉴성과관리 전환 후 구 리뷰 사라짐 — 진단 체크리스트 + 플로우(F4) + SQL 템플릿(review_set 조회/복구) + 과거 사례 추가 (스펙) |
 | 2026-03-24 | 전체 | COOKBOOK.md를 Tier-1/Tier-2로 분리 — 과거 사례·SQL 템플릿을 cookbook/ 디렉토리로 이동, 진단 체크리스트·조사 플로우·레퍼런스는 유지 |
 | 2026-03-24 | CI-4193 | 승인: 경력/학력 변경 댓글 누락 — 과거 사례 추가 (FE 버그, code-fix이므로 플로우 스킵) |
 | 2026-03-24 | CI-4142 | 알림: 메일 미수신 진단 체크리스트#7.4 — admin-shell 이메일 발송 로그 조회 도구 반영 |
 | 2026-03-24 | CI-4203 | 승인: 리마인드 발송자 추적 — 체크리스트 + F1 플로우 + 과거 사례 추가 (스펙) |
 | 2026-03-24 | CI-4201 | 조직 관리: 예약발령 잔존으로 조직 종료 불가 — 체크리스트#7 + 과거 사례 추가 (스펙) |
+| 2026-03-24 | CI-4204 | 평가: 등급 배분 완료 시 validation 오류 — 진단 체크리스트 + 플로우(F3) + SQL 템플릿 + 과거 사례 추가 |
 | 2026-03-24 | CI-4179 | 비용관리: 어드민쉘 수동 동기화 절차 + 카드 API 기간 제약 보강, 과거 사례 갱신 |
 | 2026-03-24 | CI-4199 | 근태/휴가: 휴일대체 기간 커스텀 — 체크리스트#2 히트 +1, 과거 사례에 CI-4199 추가 |
 | 2026-03-24 | CI-4202 | 외부 연동: 캡스 테이블 매핑 설정 오류 — 진단 체크리스트 #10 + 과거 사례 추가 |
 | 2026-03-24 | CI-4200 | 계정/구성원: 일괄 이메일 변경 과거 사례에 CI-4200 히트 추가 (주식회사 이도, 문의성 — CI-4124와 동일 패턴) |
 | 2026-03-24 | CI-4195 | 평가: 삭제된 평가 복구 — 진단 체크리스트 + 플로우(F1) + SQL 템플릿(조회/복구/롤백) + 과거 사례 추가 |
+| 2026-03-25 | CI-4212 | 급여: 이관 회사 중도정산 보험료 불일치 — 체크리스트#8 + 과거 사례 + SQL 템플릿 추가. recipient 생성 시점 보수총액 1회 계산, 리셋 워크어라운드 |
 | 2026-03-23 | CI-4188 | 평가: 후발 추가 reviewer UserForm 미초기화 — 진단 체크리스트 + 플로우(F1→F2) + SQL 템플릿 + 과거 사례 추가 |
 | 2026-03-23 | CI-4190 | 외부 연동: ODBC 연결 실패(CONNECTION LIMIT 0) 체크리스트#9 + 플로우(F4) + SQL 템플릿 + 과거 사례 추가 |
 | 2026-03-23 | CI-4180 | 근태/휴가: 근무유형 적용 500 오류 체크리스트#16 + 과거 사례 추가 — validateBulk .first{} 방어 처리 부재, 데이터 보정 대응 |
