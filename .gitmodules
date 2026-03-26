@@ -78,3 +78,10 @@
 	path = flex-approval-backend
 	url = git@github.com:flex-team/flex-approval-backend.git
 	branch = main
+[submodule "flex-backend-gateway"]
+	path = flex-backend-gateway
+	url = git@github.com:flex-team/flex-backend-gateway.git
+[submodule "flex-terraform"]
+	path = flex-terraform
+	url = http://github.com/flex-team/flex-terraform
+	branch = main
