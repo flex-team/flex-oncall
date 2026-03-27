@@ -168,20 +168,40 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 
 ---
 
+## 모델 배분
+
+각 Phase별로 사용할 모델을 명시한다. Agent tool의 `model` 파라미터로 지정.
+
+| Phase | 모델 | 이유 |
+|-------|------|------|
+| Phase 1: ID 해석 | **haiku** | 단순 API 호출 + 파싱 |
+| Phase 1.5: 볼륨 추정 | **haiku** | 단순 검색 + cursor 유무 판별 |
+| Phase 2: 메시지 수집 + 카드 추출 | **sonnet** | 검색 → 스레드 읽기 → 지식 카드 판단·추출 |
+| 검증 게이트 | 메인(opus) | 결과 대조 + 보충 판단 |
+| Phase 3: 결과 병합 | **opus** | 552개 카드 통합, 중복 제거, 도메인 분류 |
+| Phase 4-5: 프로필 작성 | **opus** | 문서 구조화, 의사결정 원칙 도출, 응대 패턴 정리 |
+| 링크 검증 + 수정 | **sonnet** | 패턴 매칭 + permalink 검색·교체 |
+
+> **메인 오케스트레이터는 항상 opus.** 서브에이전트만 모델을 분리한다.
+
+---
+
 ## 실행 프로세스
 
 ```mermaid
 flowchart TD
-    A["Phase 1: ID 해석"] --> A2["Phase 1.5: 볼륨 추정<br/>채널×분기별 메시지 수 파악<br/>→ 에이전트 분할 계획 수립"]
-    A2 --> B["Phase 2: 구간별 서브에이전트 디스패치<br/>(채널×분기/월 단위, 100건 이내)"]
-    B --> V["검증 게이트<br/>전구간 ✅ 확인<br/>❌ 있으면 보충 디스패치"]
-    V --> C["Phase 3: 결과 병합 + 중복 통합"]
-    C --> D["Phase 4: 초안 제시 + 사용자 확인"]
-    D --> E["Phase 5: 최종 프로필 작성"]
-    E --> L["링크 검증<br/>permalink 형식 확인<br/>채널 ID 정합성 확인"]
+    A["Phase 1: ID 해석<br/>🟢 haiku"] --> A2["Phase 1.5: 볼륨 추정<br/>🟢 haiku"]
+    A2 --> B["Phase 2: 수집 + 카드 추출<br/>🔵 sonnet"]
+    B --> V["검증 게이트<br/>🟣 opus (메인)"]
+    V --> C["Phase 3: 결과 병합<br/>🟣 opus"]
+    C --> D["Phase 4: 초안 제시<br/>🟣 opus"]
+    D --> E["Phase 5: 프로필 작성<br/>🟣 opus"]
+    E --> L["링크 검증<br/>🔵 sonnet"]
 ```
 
-### Phase 1: Input Parsing & ID Resolution
+### Phase 1: Input Parsing & ID Resolution — 🟢 haiku
+
+> Agent tool 사용 시 `model: "haiku"` 지정
 
 1. `$ARGUMENTS`에서 email, channels[], after, before 파싱
 2. `slack_search_users`로 email → user_id 조회
@@ -190,7 +210,9 @@ flowchart TD
 4. 기존 프로필 확인: `brain/profiles/{slug}.md` 존재 여부
 5. 진행 보고
 
-### Phase 1.5: 볼륨 추정 + 에이전트 분할 계획
+### Phase 1.5: 볼륨 추정 + 에이전트 분할 계획 — 🟢 haiku
+
+> Agent tool 사용 시 `model: "haiku"` 지정
 
 Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 
