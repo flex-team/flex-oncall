@@ -80,6 +80,8 @@
 | 결제 취소 후 로그인이 안 돼요 | raccoon billing operation `force-open` → 카드 재등록 → `close-forced-open` | flex-raccoon |
 | 요청 정보가 올바르지 않습니다 | UPER_400_011 (`UserPersonalValidatorImpl`에서 발생하는 personalEmail RFC 5322 검증 에러) | flex-core-backend |
 | 주소 변경 시 오류 | 개인정보 번들 검증 실패 — personalEmail 등 다른 필드의 검증 에러로 주소 변경이 차단됨 | flex-core-backend |
+| 사번 정렬 시 무한 스크롤이 발생해요 | ValuesContinuation null→"null" 직렬화 버그 — search_after 커서 고정 | flex-core-backend |
+| 사번 정렬 시 겸직 인원이 중복으로 보여요 | ValuesContinuation null sort value 버그 — 실제 겸직과 무관, 사번 null 구성원 존재가 원인 | flex-core-backend |
 
 ## 조직 관리 (Department)
 
@@ -150,6 +152,11 @@
 | 급여정산 해지하면 명세서 공개가 되나요? | 구독 해지 후 payslip 공개/알림 동작 — 스펙 | flex-payroll-backend |
 | 건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요 | 중도정산 확정해제 시 사회보험 연말정산 금액 미리버트 — 버그(핫픽스 완료) | flex-payroll-backend |
 | 중도정산 보험료가 공단 금액과 달라요 | 이관 회사 recipient 생성 시점 보수총액 불일치 → 보험료 리셋(DELETE /premium → recalculate) | flex-payroll-backend |
+| 분할납부금액이 합산돼요 / 74번 코드 | HealthInsuranceSettlementReasonCode.74 (정산분할고지보험료) → PaidSocialInsuranceCalculator.getYearEndTotalAmountByType 귀속연도 필터링 확인 | flex-payroll-backend |
+| 기납보험료가 이상해요 | PaidSocialInsuranceCalculator — 사회보험 연말정산 기납보험료 합산 로직 확인 | flex-payroll-backend |
+| 보육수당이 0원으로 잡혀요 | allowance_on_leave_rule(DAILY_BASE) + 육아휴직 paymentRatio=0 → FULL로 변경 안내 — 스펙 | flex-payroll-backend |
+| 휴직자에게 수당이 안 나와요 | MonthlyAllowanceRecipientCalculator의 allowanceOnLeaveRule 확인 → NONE이면 0원, DAILY_BASE면 paymentRatio 확인 | flex-payroll-backend |
+| 급여정산 홈에서 퇴직자 수가 안 맞아요 | payeeCountByEmploymentStatus 집계에 퇴직예정자(RESIGNATION_SCHEDULED) 미포함 — 개선 예정(EPBE-194) | flex-payroll-backend |
 
 ## 근로기준법 용어 (Labor Law Terms)
 
@@ -233,9 +240,28 @@
 | 구글 캘린더에 휴가가 안 떠요 | v2_time_tracking_flex_calendar_event_map 확인 | flex-timetracking-backend |
 | 캘린더 연동이 안 돼요 | GoogleCalendarEventAdapter → FlexCalendarSyncEventConsumer 파이프라인 확인 | flex-timetracking-backend |
 
+## 워크플로우 (Flow / Approval Document)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 임시저장된 문서가 사라졌어요 | workflow_task_draft 테이블 조회, 작성하기 재진입에 의한 초기화 여부 확인 | flex-flow-backend |
+| 작성하던 문서가 날라갔어요 | workflow_task_draft 조회, draft 데이터 존재 시 text 필드에서 HTML 본문 추출 | flex-flow-backend |
+
 ## Kafka / 이벤트 (Event Processing)
 
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | Kafka 컨슘 에러 발생 | message_consume_log ce_id로 operation API 재발행 | flex-timetracking-backend |
 | 사용자 변경 이벤트 실패 | Workspace Operation API /action/operation/v2/workspace/users/produce 호출 (productType=USER) | flex-core-backend |
+
+## 단체보험 (Group Insurance)
+
+| 사용자 표현 | 시스템 용어 | 서브모듈 |
+|------------|------------|---------|
+| 보험 탭이 안 보여요 | InsuredUserProfileOptions.profileActive — hasActiveFeature(INSURANCE) + 피보험자 등록 여부로 결정 | flex-impact-backend |
+| 수동 가입했는데 보험이 안 보여요 | 수동 가입(메리츠 직접 요청)은 제품 미반영 — 스펙. Operation API 상태 변경 필요 | flex-impact-backend |
+| 보험증권 요청 | flex가 계약자이므로 고객에 증권 제공 의무 없음. 협약서/약관/보장범위로 대체 | flex-impact-backend |
+| 보험금 청구 방법 | 메리츠화재 홈페이지/앱에서 피보험자 본인 직접 청구. 단체상해상담센터 1811-8412 | flex-impact-backend |
+| 청약 | 최초 보험 계약 체결. 이 시점 등록 구성원만 제품 확인 가능 | flex-impact-backend |
+| 배서 | 보험 계약 변경 시 메리츠에 제출하는 변경 요청서 | flex-impact-backend |
+| 중도 가입 | 보험계약기간 내 신규 피보험자 추가. 케이스별 제품 가능 여부 다름 | flex-impact-backend |

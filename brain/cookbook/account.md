@@ -116,3 +116,7 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 
 - **조직도 월별 통계 오류**: 삭제된 구성원이 ES에 잔존 → projection/search 결과 불일치. ES 싱크로 즉시 해결 — **버그 (설계 한계)** [코어 런북]
 - **청구일 구성원 수 불일치**: 청구 시점 스냅샷 vs 현재 시점 조회 차이. 퇴직/입사 처리 시점 확인으로 원인 설명 — **스펙** [코어 런북]
+
+## 구성원 검색 페이지네이션 — 과거 사례
+
+- **사번 정렬 무한 스크롤 + 겸직 인원 중복 표시**: `ValuesContinuation.print()`에서 `joinToString()`이 null을 "null" 문자열로 변환 → OpenSearch `search_after`에서 keyword 필드의 null(missing)과 "null"은 다른 정렬 위치 → 커서가 null 구간을 벗어나지 못하고 무한 반복. 사번 null 구성원이 있는 모든 회사에서 재현. 겸직은 무관(1 user = 1 document) — **버그** [CI-4232]

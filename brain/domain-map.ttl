@@ -4,7 +4,7 @@
 @prefix g: <b:gloss/> .
 
 # ============================================================
-# Domains (19)
+# Domains (20)
 # ============================================================
 
 :notification
@@ -123,7 +123,7 @@
   d:n   "계정/구성원 (Account / Member)" ;
   d:cb  "계정/구성원 (Account / Member)" ;
   d:repo "flex-core-backend" , "flex-raccoon" ;
-  d:mod "user" , "Operation API" ;
+  d:mod "user" , "Operation API" , "search" ;
   d:kw  "이메일변경" , "관리자계정" , "퇴사자계정" , "primary_user_id" ,
         "UserEmailChange" , "다법인" , "계열사전환" , "로그인풀림" , "exchange" ,
         "자동로그아웃" , "입사일변경" , "company_join_date" , "삭제된구성원" ,
@@ -131,6 +131,9 @@
         "bullseye" , "opensearch싱크" ,
         "force-open" , "close-forced-open" , "결제취소" , "체험종료일" , "billing" ,
         "UPER_400_011" , "UserPersonalValidatorImpl" , "personalEmail" ;
+        "ValuesContinuation" , "search_after" , "continuation token" ,
+        "ContinuationExtensions" , "사번정렬" , "무한스크롤" ,
+        "V2OsSearchUserRepository" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -139,6 +142,8 @@
         "결제 취소 후 로그인이 안 돼요" ,
         "요청 정보가 올바르지 않습니다" , "주소 변경 시 오류" ,
         "집주소 변경 시 오류" ;
+        "사번 정렬 시 무한 스크롤이 발생해요" ,
+        "사번 정렬 시 겸직 인원이 중복으로 보여요" ;
   d:x   :permission , :department .
 
 :department
@@ -262,6 +267,19 @@
         "서명 완료된 계약서 삭제 가능한가요" ;
   d:x   :account .
 
+:insurance
+  d:n   "단체보험 (Group Insurance)" ;
+  d:cb  "단체보험 (Group Insurance)" ;
+  d:repo "flex-impact-backend" ;
+  d:mod "insurance" ;
+  d:kw  "단체보험" , "보험" , "보험탭" , "피보험자" , "청약" , "배서" ,
+        "중도가입" , "중도해지" , "메리츠" , "insurance" , "insured_user" ,
+        "insurance_insured_user" , "profileActive" , "hasActiveFeature" ,
+        "FEATURE_INSURANCE" , "보험증권" , "보험료" , "보험금청구" ;
+  d:syn "보험 탭이 안 보여요" , "수동 가입했는데 보험이 안 보여요" ,
+        "보험증권 요청" , "보험금 청구 방법" ;
+  d:x   :account .
+
 :fins
   d:n   "비용관리 (Expense Management / Fins)" ;
   d:cb  "비용관리 (Expense Management / Fins)" ;
@@ -292,11 +310,15 @@
         "연차휴가미사용수당" , "연차수당" , "주휴수당" , "연차휴가수당" ,
         "중도정산" , "사회보험" , "건강보험" , "고용보험" , "확정해제" ,
         "이관" , "recipient" , "보험료리셋" , "보수총액" , "장기요양" ,
-        "RetireeYearEndSettlementSocialInsuranceRecipientFactory" ;
+        "RetireeYearEndSettlementSocialInsuranceRecipientFactory" ,
+        "보육수당" , "Q02" , "allowanceOnLeaveRule" , "DAILY_BASE" ,
+        "퇴직예정자" , "정산대상자" , "offboardedDate" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
-        "중도정산 보험료가 공단 금액과 달라요" ;
+        "중도정산 보험료가 공단 금액과 달라요" ,
+        "보육수당이 0원으로 잡혀요" , "휴직자에게 수당이 안 나와요" ,
+        "급여정산 홈에서 퇴직자 수가 안 맞아요" ;
   d:x   :time-tracking , :scheduling .
 
 :flow
@@ -307,9 +329,13 @@
   d:kw  "공지사항" , "스레드" , "댓글" , "할일" , "미팅" , "회의록" ,
         "이슈" , "요약" , "음성전사" , "협업문서" , "flow" ,
         "notice" , "thread" , "todo" , "meeting" , "transcript" ,
-        "reaction" , "render-manager" ;
+        "reaction" , "render-manager" ,
+        "임시저장" , "기안서" , "워크플로우" , "workflow_task_draft" ,
+        "approval-document" , "작성하기" ;
+  d:cb  "워크플로우 (Flow / Approval Document)" ;
   d:syn "공지사항이 안 보여요" , "할일 목록이 안 나와요" ,
-        "미팅 요약이 안 돼요" , "댓글이 안 달려요" .
+        "미팅 요약이 안 돼요" , "댓글이 안 달려요" ,
+        "임시저장된 문서가 사라졌어요" , "작성하던 문서가 날라갔어요" .
 
 :openapi
   d:n   "외부 API / 데이터 통합 (OpenAPI)" ;
@@ -361,6 +387,11 @@ n:CI-4226
   d:v  "investigating" ;
   d:s  "기본 정보 변경 엑셀 미리보기에서 일부 구성원 중복 로우 생성 + 알 수 없음 표시" .
 
+n:CI-4219
+  d:in :payroll ;
+  d:v  "improvement" ;
+  d:s  "급여정산 홈 퇴직자 집계에 퇴직예정자 미포함 — payeeCountByEmploymentStatus가 RESIGNATION_SCHEDULED를 IN_EMPLOYMENT로 분류. EPBE-194로 개선 진행 중" .
+
 n:CI-4214 d:in :personnel-appointment ;
   d:s "엑셀 인사발령 업로드 후 정보 변경하러가기 버튼 미동작 — FE 폼 검증 버그" ;
   d:v "bug" .
@@ -380,6 +411,21 @@ n:CI-4212
   d:in :payroll ;
   d:v  "bug-workaround" ;
   d:s  "이관 회사 중도정산 보험료 불일치 — recipient 생성 시점 보수총액 기반 1회 계산, 이관 후 자동 재계산 없음. 리셋 워크어라운드 존재" .
+
+n:CI-4227
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "23년11월 급여이관 후 명세서 지급금액 0원 — 공제는 정상, 지급항목만 전체 누락. 이관 로직 vs 명세서 조회 로직 원인 추적 필요" .
+
+n:CI-4229
+  d:in :fins ;
+  d:v  "investigating" ;
+  d:s  "수동 추가 증빙 시간 정책 위반 오표시 — 시간 없는 증빙을 00:00으로 판단, 정책 범위 내인데 위반으로 표시. EP 버그 인정, 배포 예정" .
+
+n:CI-4225
+  d:in :payroll ;
+  d:v  "spec" ;
+  d:s  "육아휴직자 보육수당 자동산정 0원 — DAILY_BASE 규칙 + paymentRatio=0 조합. allowanceOnLeaveRule을 FULL로 변경하면 해결" .
 
 n:CI-4209
   d:in :scheduling ;
@@ -1050,6 +1096,17 @@ n:CI-4193
   d:s  "경력 변경 요청 댓글이 중복 노출되거나 사라짐 — FE가 sort=ASC&size=1로 요청하여 댓글 누락" ;
   d:x  :flow .
 
+n:CI-4220
+  d:in :flow ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "워크플로우 임시저장 문서 소실 — 할일>작성하기 재진입 시 기존 draft 초기화, workflow_task_draft 데이터는 존재" .
+
+n:CI-4222
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "건강보험 연말정산 분할납부금액(74번)이 전년도 기납보험료에 잘못 합산 — getYearEndTotalAmountByType 귀속연도 미필터링" .
+
 # ============================================================
 # Glossary — notification
 # ============================================================
@@ -1292,6 +1349,11 @@ g:acct-07
   d:q  "결제 취소 후 로그인이 안 돼요" ;
   d:a  "raccoon billing operation force-open → 카드 재등록 → close-forced-open" .
 
+g:acct-08
+  d:in :account ;
+  d:q  "사번 정렬 시 무한 스크롤이 발생해요" , "사번 정렬 시 겸직 인원이 중복으로 보여요" ;
+  d:a  "ValuesContinuation null→'null' 직렬화 버그 — search_after 커서 고정. 사번 null 구성원이 원인" .
+
 # ============================================================
 # Glossary — department
 # ============================================================
@@ -1436,6 +1498,20 @@ g:goal-07
   d:a  "Search API ancestorObjectiveIds 하위 탐색 → 클라이언트 트리 구성" .
 
 # ============================================================
+# Glossary — flow
+# ============================================================
+
+g:flow-01
+  d:in :flow ;
+  d:q  "임시저장된 문서가 사라졌어요" ;
+  d:a  "workflow_task_draft 조회 + 작성하기 재진입 초기화 여부 확인" .
+
+g:flow-02
+  d:in :flow ;
+  d:q  "작성하던 문서가 날라갔어요" ;
+  d:a  "workflow_task_draft data.text에서 HTML 본문 추출" .
+
+# ============================================================
 # Glossary — payroll
 # ============================================================
 
@@ -1473,6 +1549,16 @@ g:pay-07
   d:in :payroll ;
   d:q  "지급항목 추가했는데 이미 같은 코드라고 나와요" , "정산 템플릿에 항목이 계속 쌓여요" ;
   d:a  "v3.128.0 리그레션(핫픽스 완료). 고아 매핑 발생 여부 확인 → customizable_allowance_template NOT EXISTS customizable_allowance 쿼리" .
+
+g:pay-08
+  d:in :payroll ;
+  d:q  "보육수당이 0원으로 잡혀요" , "휴직자에게 수당이 안 나와요" ;
+  d:a  "allowance_on_leave_rule(DAILY_BASE) + 육아휴직 paymentRatio=0 → FULL로 변경 안내 — 스펙" .
+
+g:pay-09
+  d:in :payroll ;
+  d:q  "급여정산 홈에서 퇴직자 수가 안 맞아요" , "정산 대상자 수가 이상해요" ;
+  d:a  "payeeCountByEmploymentStatus 집계에 퇴직예정자(RESIGNATION_SCHEDULED) 미포함 — EPBE-194 개선 진행 중" .
 
 # ============================================================
 # Glossary — fins
@@ -1531,3 +1617,32 @@ g:fins-03
   d:in :fins ;
   d:q  "카드 부분 취소가 전체 취소로 나와요" ;
   d:a  "카드사별 취소금액 필드 처리 확인 (하나카드 hotfix 이력)" .
+
+# --- Insurance glossary ---
+g:ins-01
+  d:in :insurance ;
+  d:q  "보험 탭이 안 보여요" , "수동 가입했는데 보험이 안 보여요" ;
+  d:a  "수동 가입(메리츠 직접 요청)은 제품 미반영 — 스펙. 청약당시 등록 또는 Operation API 상태 변경 필요" .
+
+g:ins-02
+  d:in :insurance ;
+  d:q  "보험증권 요청" ;
+  d:a  "flex가 계약자이므로 고객사에 증권 제공 의무 없음. 협약서/약관/보장범위로 대체 안내" .
+
+g:ins-03
+  d:in :insurance ;
+  d:q  "보험금 청구 방법" ;
+  d:a  "피보험자 본인이 메리츠화재 홈페이지/앱에서 직접 청구. 미성년 자녀는 팩스/우편(200만원 초과 시 등기). 단체상해상담센터 1811-8412" .
+
+# --- Insurance note ---
+n:CI-4233
+  d:in :insurance ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:s  "수동 등록 구성원 보험 탭 미노출 — 청약 당시 등록 구성원만 제품 내 확인 가능. 수동 가입은 메리츠 직접 처리이므로 제품 미반영 스펙" .
+
+# --- Account note ---
+n:CI-4232
+  d:in :account ;
+  d:v  "bug" ;
+  d:s  "구성원 메뉴 사번 정렬 시 무한 스크롤 — ValuesContinuation.print()에서 null→'null' 직렬화 버그. search_after 커서가 null 구간을 벗어나지 못함. 사번 null 구성원이 있는 모든 회사에서 재현" .
