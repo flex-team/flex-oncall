@@ -194,6 +194,7 @@
 | 근무 위젯이 안 보여요 | work-clock current-status API 확인 | flex-timetracking-backend |
 | 출근 타각을 취소하고 싶어요 | work-clock 개별 취소 UI 제공 (API도 존재) | flex-timetracking-backend |
 | 자동 퇴근이 안 됐어요 | auto clock-out 설정 확인 | flex-timetracking-backend |
+| 근무를 종료하지 못했어요 | `WORK_CLOCK_STOP_FAILURE_GO_CONFIRM` 알림 — AUTO_WORK_STOP 실패 시 발송 | flex-timetracking-backend |
 
 ## 근태 대시보드 (Dashboard)
 

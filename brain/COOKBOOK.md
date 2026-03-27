@@ -213,9 +213,11 @@
 
 1. access log에서 `bulk-upload` 요청의 `responseStatus` + `elapsedTime` 확인
    - 400 (dry-run) → 엑셀 데이터 검증 실패. 반환 엑셀의 오류 표시 확인 안내
-   - 200 + elapsedTime > 60s → 타임아웃. 파일 분할 안내
+   - 200 + elapsedTime > **180초** → CloudFront origin_read_timeout 초과로 유저에게 504 표시. 서버는 정상 처리 완료. 파일 분할 안내
+   - 200 + elapsedTime 60~180초 → CF 통과하지만 느림. 파일 분할 권장
    - 500 → 서버 에러. traceId로 app log 추적
 2. 대량 데이터(구성원 × 날짜 많음)면 분할 업로드 안내
+3. 근본 원인: N+1 순차 처리 패턴. 후속 개선은 비동기 전환 검토 중 [CI-4221]
 
 ---
 
@@ -275,6 +277,7 @@
 6. 다법인 workspace에서 연동 등록 실패 (`하나의 계열사 안에 서로 다른 외부 연동 정보가 존재합니다`) → workspace 내 동일 providerType에 서로 다른 customerKey 존재 여부 확인. 다법인 지원 이전 데이터 마이그레이션 누락이 원인. 데이터 패치로 key 통일 필요 [TT-16783]
 7. 세콤 출근 미반영 + 진행중 위젯 잔존 → **먼저 잔존 위젯 확인**. 이전 근무의 위젯이 미종료 상태이면 새 출근 이벤트가 dry-run validation에서 차단됨. Operation API로 잔존 위젯 수동 종료 후 재처리 [CI-4157]
 8. 세콤/외부 이벤트로 진행중 블럭 다건 발생 → 다수 터미널에서 동시 이벤트 수신 시 Kafka 동시성 race condition으로 중복 START 등록 가능. `isDraftEventRegistrationAllowed`가 이벤트 타입(START/STOP) 미구분하여 통과시킴 [CI-4165]
+   - 세콤 배치 동기화 중복 START → `checkWorkClockStatus()` 의 `eventTimeStamp` vs `targetTime` 역전 버그. `min(eventTimeStamp, targetTime)` 으로 수정 완료 [CI-4207, PR #12058]
 9. ODBC 연결 실패 (CONNECTION LIMIT 0) → `v2_customer_external_provider`에서 `odbc_connection_limit` 조회. 0이면 PostgreSQL ROLE의 `CONNECTION LIMIT 0`으로 모든 연결 차단. Operation API로 connectionLimit을 기본값(SECOM/CAPS=2, TELECOP=3)으로 변경 [CI-4190]
 10. 캡스 수동 동기화 "전송 실패" → Grafana 캡스 RDB 모니터링에서 로그 확인. `e_date` 컬럼이 보이면 **테이블 매핑 설정 오류**. 고객에게 올바른 매핑 설정 가이드 안내 [CI-4202]
 11. 캡스/세콤 연결 실패 + "방화벽 문제" 주장 → **먼저 DB 로그에서 패스워드 실패 여부 확인**. 고객/기사의 PW 오입력이 원인인 경우가 많음. ODBC 연결 성공했다면 방화벽은 거의 아님 [FT-12290]
@@ -518,6 +521,14 @@
 1. 메타베이스 대시보드(#309)에서 `target_uid`로 승인 요청 확인 → 요청은 존재하나 대응하는 실제 휴가 사용 건이 없으면 고아 승인 요청 [CI-3951]
 2. 퇴직자가 휴가 승인 정책에 여전히 포함되어 있는지 확인 → 승인 정책에서 퇴직자 제거 안내 [CI-3951]
 
+문의: "삭제된 구성원이 승인 라인에 있어서 승인이 안 돼요" / "삭제한 사람 승인건 처리해주세요"
+1. [Metabase 퇴사자 미처리 승인 대시보드](https://metabase.dp.grapeisfruit.com/dashboard/245)에서 대상 userId의 미처리 승인건 확인 [CI-4228]
+2. **퇴직자 vs 삭제된 구성원 구분**: 퇴직자는 제품의 "퇴직자 승인자 교체" 기능 사용 가능. 삭제된 구성원은 퇴사 이벤트가 발행되지 않아 `approval_replacement_target`에 미등록 → 교체 불가, Operation API로 강제 승인 필요 [CI-4228] [CI-3769]
+3. 고객에게 "강제 승인 처리" 동의 확인 후 `bulk-approve-for-user` API 호출:
+   - `POST /api/operation/v2/approval/process/customers/{customerId}/users/{userId}/bulk-approve-for-user`
+   - Body: `{ "categories": ["TIME_OFF", "WORK_RECORD"] }` (카테고리는 대상에 맞게 조정)
+4. 응답의 `succeededProcesses` / `failedProcesses`로 처리 결과 확인
+
 문의: "승인 설정/라인을 확인해주세요" / "위젯 종료 시 근무 승인이 안 돼요"
 1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
 2. 위젯 종료 시 기본 근무일은 승인 미발생이 정상 동작 (스펙)
@@ -551,7 +562,29 @@
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 
-**F1: 승인 리마인드 발송자 추적** · 히트: 1 · [CI-4203]
+**F1: 삭제된 구성원 승인건 강제 승인** · 히트: 1 · [CI-4228] [CI-3769]
+> 트리거: "삭제된 구성원이 승인 라인에 있어 승인 불가" / "삭제한 사람 승인건 처리"
+
+```
+① Metabase 대시보드(#245)에서 미처리 승인건 확인
+   https://metabase.dp.grapeisfruit.com/dashboard/245 에서 userId 검색
+   ↓
+② 퇴직자 vs 삭제된 구성원 판별
+   ├─ 퇴직자(resigned) → 제품의 "퇴직자 승인자 교체" 기능 사용
+   └─ 삭제된 구성원(deleted) → 퇴사 이벤트 미발행, approval_replacement_target 미등록 → ③으로
+   ↓
+③ 고객에게 강제 승인 동의 확인
+   ↓
+④ bulk-approve-for-user API 호출
+   POST /api/operation/v2/approval/process/customers/{customerId}/users/{userId}/bulk-approve-for-user
+   Body: { "categories": ["TIME_OFF", "WORK_RECORD"] }
+   ↓
+⑤ 응답 확인
+   ├─ succeededProcesses 에 대상 건 포함 → 완료
+   └─ failedProcesses 에 건 포함 → 실패 원인 확인 (로그 조회)
+```
+
+**F2: 승인 리마인드 발송자 추적** · 히트: 1 · [CI-4203]
 > 트리거: "누가 리마인드 보냈나요" / "승인 확인 요청 알림이 갑자기 왔어요"
 
 ```
@@ -1611,6 +1644,8 @@ ORDER BY last_modified_date DESC;
 | 2026-03-27 | CI-4245 | 계정/구성원: 겸직 등록 진단 체크리스트 추가 — 같은 조직 겸직 불가 스펙 확인 |
 | 2026-03-27 | CI-4241 | 급여: 외국인 고용보험 공제 제외 진단 플로우(F-pay-1) 추가, 체크리스트 #11 추가 |
 | 2026-03-27 | CI-4239 | 근무 기록 삭제/복구: F1 히트 +1, 테스트 데이터 벌크 업로드 빈 값 workaround 분기 추가 |
+| 2026-03-26 | CI-4207 | 외부 연동: 세콤 배치 동기화 중복 START — 체크리스트#8에 코드 수정 참조 추가 (code-fix, PR #12058) |
+| 2026-03-26 | CI-4221 | 스케줄링: F-sched-upload 보강 — CF origin_read_timeout(180초) 기준 추가, N+1 근본 원인 명시 |
 | 2026-03-26 | CI-4221 | 스케줄링: F-sched-upload 추가 (근무기록 업로드 타임아웃) |
 | 2026-03-26 | CI-4232 | 계정/구성원: 사번 정렬 무한 스크롤 — 진단 체크리스트(구성원 검색 페이지네이션) + 과거 사례 추가. code-fix이므로 조사 플로우 스킵 |
 | 2026-03-26 | CI-4233 | 단체보험(Group Insurance) 도메인 신규 추가 — 진단 체크리스트, 중도 가입 케이스 매트릭스, 핵심 테이블, Notion 운영 프로세스 링크 |
