@@ -90,3 +90,6 @@
 	path = flex-impact-backend
 	url = git@github.com:flex-team/flex-impact-backend.git
 	branch = main
+[submodule "flex-billing-backend"]
+	path = flex-billing-backend
+	url = git@github.com:flex-team/flex-billing-backend.git
