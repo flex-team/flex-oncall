@@ -48,7 +48,8 @@
         "법정근로시간" , "소정근로시간" , "필수근로시간" , "계약근로시간" ,
         "초과근로" , "연장근로" , "야간근로" , "가산율" ,
         "단시간근로자" , "초단시간근로자" , "연소근로자" ,
-        "보상휴가제" , "고정OT" , "탄력근무제" ;
+        "보상휴가제" , "고정OT" , "탄력근무제" ,
+        "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
         "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
@@ -59,7 +60,9 @@
         "보상휴가 시간이 이상해요" , "포괄임금 설정이 뭐예요" ,
         "연차 촉진 절차가 뭐예요" , "5인 미만 사업장 적용이 달라요" ,
         "근무유형 적용 시 오류가 나요" ,
-        "대휴 기간 설정해주세요" ;
+        "대휴 기간 설정해주세요" ,
+        "구글 캘린더 미연동 일정 재연동" ,
+        "휴일대체 취소가 안 돼요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -130,10 +133,11 @@
         "정보복구" , "DB Snapshot" , "개인정보현황" , "이메일대량변경" ,
         "bullseye" , "opensearch싱크" ,
         "force-open" , "close-forced-open" , "결제취소" , "체험종료일" , "billing" ,
-        "UPER_400_011" , "UserPersonalValidatorImpl" , "personalEmail" ;
+        "UPER_400_011" , "UserPersonalValidatorImpl" , "personalEmail" ,
         "ValuesContinuation" , "search_after" , "continuation token" ,
         "ContinuationExtensions" , "사번정렬" , "무한스크롤" ,
-        "V2OsSearchUserRepository" ;
+        "V2OsSearchUserRepository" ,
+        "겸직" , "직책" , "겸조직" , "겸직책" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -143,7 +147,8 @@
         "요청 정보가 올바르지 않습니다" , "주소 변경 시 오류" ,
         "집주소 변경 시 오류" ;
         "사번 정렬 시 무한 스크롤이 발생해요" ,
-        "사번 정렬 시 겸직 인원이 중복으로 보여요" ;
+        "사번 정렬 시 겸직 인원이 중복으로 보여요" ,
+        "직책 2개 설정이 안 돼요" , "같은 조직에 겸직 등록이 안 돼요" ;
   d:x   :permission , :department .
 
 :department
@@ -246,10 +251,13 @@
         "평가지" , "UserForm" , "initialize-user-form" , "user_form_ids" ,
         "등급 배분" , "grades_to_calculate" , "factor_grade_calculations" ,
         "마이그레이션" , "MigrationScheduler" , "review_set" ,
-        "ReviewMigration" , "뉴성과관리" ;
+        "ReviewMigration" , "뉴성과관리" ,
+        "reviewee_evaluation_item" , "할일" , "평가 항목 작성 요청" ;
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
+        "평가 항목 작성 요청 했는데 할일이 안 와요" ,
+        "평가 대상자가 없어요" ,
         "평가지 생성 중이에요" , "평가지가 안 보여요" ,
         "등급 배분 완료 시 오류" ,
         "삭제된 평가 복구해주세요" ,
@@ -312,13 +320,21 @@
         "이관" , "recipient" , "보험료리셋" , "보수총액" , "장기요양" ,
         "RetireeYearEndSettlementSocialInsuranceRecipientFactory" ,
         "보육수당" , "Q02" , "allowanceOnLeaveRule" , "DAILY_BASE" ,
-        "퇴직예정자" , "정산대상자" , "offboardedDate" ;
+        "퇴직예정자" , "정산대상자" , "offboardedDate" ,
+        "원천징수확인서" , "발급번호" , "관리번호" , "자동채번" ,
+        "외국인" , "체류자격" , "residence_qualification" , "EXCLUDED" ,
+        "employment_insurance_deduction_recipient" , "임의가입" ,
+        "employment_insurance_qualification_history" ,
+        "원천징수영수증" , "async-bulk-download" , "withholding-receipts" ,
+        "async-bulk-download-withholding-receipts-by-filter" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
         "중도정산 보험료가 공단 금액과 달라요" ,
         "보육수당이 0원으로 잡혀요" , "휴직자에게 수당이 안 나와요" ,
-        "급여정산 홈에서 퇴직자 수가 안 맞아요" ;
+        "급여정산 홈에서 퇴직자 수가 안 맞아요" ,
+        "외국인 고용보험 공제가 빠졌어요" ,
+        "원천징수영수증 일괄 다운로드 실패" ;
   d:x   :time-tracking , :scheduling .
 
 :flow
@@ -382,6 +398,11 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:CI-4240
+  d:in :payroll ;
+  d:v  "investigating" ;
+  d:s  "원천징수영수증 일괄 다운로드 실패 — 비동기 백그라운드 태스크 실패/타임아웃. 파일 서비스 밀림(CI-4236) 연관 + dev 간헐적 재현" .
+
 n:CI-4226
   d:in :account ;
   d:v  "investigating" ;
@@ -414,8 +435,8 @@ n:CI-4212
 
 n:CI-4227
   d:in :payroll ;
-  d:v  "investigating" ;
-  d:s  "23년11월 급여이관 후 명세서 지급금액 0원 — 공제는 정상, 지급항목만 전체 누락. 이관 로직 vs 명세서 조회 로직 원인 추적 필요" .
+  d:v  "bug-fix" ;
+  d:s  "23년11월 급여이관 후 명세서 지급금액 0원 — 2025-03 backfill 시 검증 로직 실패로 일부 귀속월 누락. PR #8691로 LegacyPaymentDataReader fallback + validation 스킵 추가" .
 
 n:CI-4229
   d:in :fins ;
@@ -1354,6 +1375,11 @@ g:acct-08
   d:q  "사번 정렬 시 무한 스크롤이 발생해요" , "사번 정렬 시 겸직 인원이 중복으로 보여요" ;
   d:a  "ValuesContinuation null→'null' 직렬화 버그 — search_after 커서 고정. 사번 null 구성원이 원인" .
 
+g:acct-09
+  d:in :account ;
+  d:q  "직책 2개 설정이 안 돼요" , "같은 조직에 겸직 등록이 안 돼요" ;
+  d:a  "같은 조직 겸직 등록 불가 — 엑셀 validation 오류 또는 프로필 UI 저장 후 미노출. 스펙/Known 이슈 확인 중 [CI-4245]" .
+
 # ============================================================
 # Glossary — department
 # ============================================================
@@ -1608,6 +1634,16 @@ g:review-07
   d:q  "뉴성과관리 업데이트 후 평가가 사라졌어요" ;
   d:a  "MigrationScheduler가 구 리뷰 → 뉴 성과관리 전환 시 진행 중 리뷰셋 soft delete — 스펙. review_set 테이블 deleted=0, deletedAt=NULL로 복구 가능" .
 
+g:review-08
+  d:in :review ;
+  d:q  "평가 항목 작성 요청 했는데 할일이 안 와요" ;
+  d:a  "reviewee_evaluation_item 0건 확인 → useCompetencyItem=false + COMPETENCY factor 존재 + competencyGroupMappings=[] → createAll 필터 버그. PR#5199 수정됨" .
+
+g:review-09
+  d:in :review ;
+  d:q  "평가 대상자가 없어요" ;
+  d:a  "평가 항목 화면에서 대상자 미표시 — reviewee_evaluation_item 미생성 확인. g:review-08 동일 원인" .
+
 g:fins-02
   d:in :fins ;
   d:q  "이전 카드 내역 연동해주세요" ;
@@ -1646,3 +1682,34 @@ n:CI-4232
   d:in :account ;
   d:v  "bug" ;
   d:s  "구성원 메뉴 사번 정렬 시 무한 스크롤 — ValuesContinuation.print()에서 null→'null' 직렬화 버그. search_after 커서가 null 구간을 벗어나지 못함. 사번 null 구성원이 있는 모든 회사에서 재현" .
+
+n:CI-4235
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "구글 캘린더 미연동 11건 재연동 — Operation API로 해결" ;
+  d:st "C" .
+
+n:CI-4245
+  d:in :account ;
+  d:v  "spec" ;
+  d:s  "같은 조직 겸직 등록 불가 — 직책은 조직 결합 정보이므로 동일 조직 겸직은 스펙상 불가. 엑셀은 validation 차단, 프로필 UI는 저장 허용 후 조회 시 미노출" .
+
+n:CI-4238
+  d:in :review ;
+  d:v  "bug-fix" ;
+  d:s  "평가 항목 작성 요청 발송 후 대상자에게 할일 미도달 — useCompetencyItem=false일 때 createAll 필터 버그. PR#5199 핫픽스" .
+
+n:CI-4239
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:s  "테스트 근무기록 완전 삭제 불가(정책) — 벌크 업로드 빈 값 덮어씌우기 workaround" .
+
+n:CI-4241
+  d:in :payroll ;
+  d:v  "spec" ;
+  d:s  "외국인(F-4) 고용보험 미공제 — 체류자격 UNKNOWN→F4 변경 + 자격관리 취득일 미등록 → EXCLUDED 처리. 임의가입 스펙" .
+
+g:pay-10
+  d:in :payroll ;
+  d:q  "외국인 고용보험 공제가 빠졌어요" , "고용보험이 안 빠져요" ;
+  d:a  "체류자격별 임의/필수/제외 판정 → employment_insurance_qualification_history 취득일 확인 — 임의가입은 취득일 필요" .

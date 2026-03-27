@@ -501,6 +501,14 @@
 
 → 상세: [cookbook/account.md](cookbook/account.md)
 
+#### 진단 체크리스트 (겸직 등록)
+문의: "직책 2개 설정이 안 돼요" / "같은 조직에 겸직 등록이 안 돼요"
+1. 겸직 등록하려는 조직이 주조직과 **동일한지** 확인 [CI-4245]
+2. **동일 조직이면** → 같은 조직 내 직책 겸직 발령은 **스펙상 불가**. 직책은 조직과 결합된 정보로 취급됨 → 고객에게 안내
+3. **다른 조직이면** → 겸직 정상 동작해야 함 → 별도 조사 필요
+4. 엑셀 일괄등록: 서버 측 validation에서 "겸조직이 동일 조직" 오류로 차단
+5. 프로필 UI: 저장은 허용되지만 재조회 시 겸직 정보 미노출 (동작 불일치 — UX 개선 여지)
+
 ---
 
 ### 승인 (Approval)
@@ -733,6 +741,27 @@
 9. 사회보험 연말정산 기납보험료에 전년도 분할납부 합산 문의 → `HealthInsuranceSettlementReasonCode`의 `YEAR_END_REASON_CODES`에 74번(정산분할고지보험료) 포함 여부 확인 → `PaidSocialInsuranceCalculator.getYearEndTotalAmountByType()`이 귀속연도 필터 없이 전체 합산하는 버그. CI-4174 핫픽스 파생 — 버그 (수정 대기) [CI-4222]
 
 10. 휴직자 지급항목 금액 0원 문의 → `allowance_global` 테이블에서 해당 항목의 `allowance_on_leave_rule` 확인. `DAILY_BASE`이고 `paymentRatio=0`(육아휴직 등)이면 정상 동작. 고객에게 해당 항목의 "휴직월 지급 방법"을 `FULL`(전액지급)로 변경 안내 — 히트: 1 (CI-4225) [CI-4225]
+
+11. 외국인 고용보험 미공제 문의 → `work_income_settlement_payee`의 `residence_qualification` 확인. UNKNOWN이 아닌 외국인 체류자격이면 → `employment_insurance_qualification_history`에서 취득일 존재 여부 확인. 취득일 없음 → 사회보험 자격관리에서 고용보험 취득일 등록 안내 — 스펙 (임의가입 대상) [CI-4241]
+
+#### 조사 플로우
+
+**F-pay-1: 외국인 고용보험 공제 제외 — 체류자격+자격관리 확인** · 히트: 1 · [CI-4241]
+> 트리거: "외국인 고용보험이 빠졌어요" / 특정 월부터 고용보험 미공제
+
+```
+① work_income_settlement_payee에서 해당 정산의 residence_qualification 확인
+   ├─ UNKNOWN → 외국인 로직 미적용 (한국인 동일 처리) → 체류자격 미등록 문제
+   └─ F4 등 외국인 체류자격 → ②로
+   ↓
+② employment_insurance_deduction_recipient의 remarks 확인
+   ├─ EXCLUDED 포함 → ③으로
+   └─ EXCLUDED 미포함 → 다른 원인 조사
+   ↓
+③ employment_insurance_qualification_history에서 취득일 조회
+   ├─ 취득일 없음 → 사회보험 자격관리에서 취득일 등록 안내
+   └─ 취득일 있음 + 상실일 유효 → 상실일 이후 정산이라 EXCLUDED
+```
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -1276,28 +1305,34 @@ WHERE id IN (?);
 #### 진단 체크리스트
 문의: "구글 캘린더에 휴가가 안 떠요" / "캘린더 연동이 안 돼요"
 1. 연동 파이프라인: TT → 플렉스 캘린더 → 구글 캘린더
-2. `GoogleCalendarEventAdapter`가 토픽에 발행 → `FlexCalendarSyncEventConsumer`가 컨슘
+2. `FlexCalendarEventAdapter`가 토픽에 발행 → `FlexCalendarSyncEventConsumer`가 컨슘 <!-- corrected via CI-4235 investigation: GoogleCalendarEventAdapter → FlexCalendarEventAdapter -->
 3. 구캘 등록 조건:
    - 근무: 근무 정책별 상이
    - 휴가: 승인 완료 후 구캘 등록, 취소 승인 완료 후 구캘 삭제
 4. 동기화 안 됐을 경우 담당: `@ug-team-service-platform-on-call`
-5. ⚠️ 캘린더 지원 종료 예정: 2025. 7. 9
+5. ~~캘린더 지원 종료 예정: 2025. 7. 9~~ → 2026-03 기준 코드 활성 상태 확인됨 (CI-4235 조사) <!-- corrected via CI-4235 investigation -->
+6. **미연동 건 대응**: Metabase 대시보드(`/dashboard/244?email=`)에서 미연동 건 확인 → raccoon Operation API로 재동기화 (batch 5건, 2초 delay) [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
 
 #### 조사 플로우
 
-**F1: 구글 캘린더 동기화 실패** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
-> 트리거: "구글 캘린더에 휴가가 안 떠요"
+**F1: 구글 캘린더 동기화 실패** · 히트: 1 · [CI-4235] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
+> 트리거: "구글 캘린더에 휴가가 안 떠요" / "미연동 일정 재연동 요청"
 
 ```
 ① 승인 상태 확인
    ├─ 미승인 → 승인 완료 후 동기화되는 스펙
    └─ 승인 완료 → ②로
    ↓
-② flex_calendar_event_map 테이블에서 이벤트 매핑 확인
-   v2_time_tracking_flex_calendar_event_map WHERE user_id = ?
-   ├─ 매핑 없음 → Kafka produce 실패 가능성, 로그 확인
-   └─ 매핑 있음 → 플렉스 캘린더 → 구글 캘린더 구간 문제
-       → 담당: @ug-team-service-platform-on-call
+② Metabase 대시보드에서 미연동 건 확인
+   /dashboard/244?email={사용자이메일}
+   → 하단 "개발자를 위한 미연동 건 걸러보기"에서 calendar event ID 추출
+   ├─ 미연동 건 있음 → ③으로
+   └─ 미연동 건 없음 → flex_calendar_event_map 테이블 확인 (Kafka produce 실패 가능성)
+   ↓
+③ raccoon Operation API로 재동기화
+   엔드포인트: /proxy/calendar/api/operation/v2/calendar/customers/{customerId}/google-calendar-events/sync-created-member-schedule-group-calendar-by-ids
+   Metabase 쿼리 7387로 eventIds 추출 → batch 5건 + 2초 delay
+   ⚠️ 24년 10월 이전 데이터는 중복 생성 우려로 비권장
 ```
 
 → 상세: [cookbook/calendar.md](cookbook/calendar.md)
@@ -1357,12 +1392,13 @@ WHERE id IN (?);
 
 #### 조사 플로우
 
-**F1: 근무/휴가 기록 삭제 요청 대응** · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
-> 트리거: "근무 기록 삭제해주세요" / "휴가 기록 삭제해주세요"
+**F1: 근무/휴가 기록 삭제 요청 대응** · 히트: 1 · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c), [CI-4239]
+> 트리거: "근무 기록 삭제해주세요" / "휴가 기록 삭제해주세요" / "테스트 데이터 삭제하고 싶어요"
 
 ```
 ① 요청 유형 분류
    ├─ 근무 기록 삭제 → 고객이 직접 처리하도록 안내 (DB 직접 수정 불가)
+   │  └─ 테스트 데이터 일괄 초기화 → 벌크 업로드로 빈 값 덮어씌우기 workaround 안내 [CI-4239]
    ├─ 삭제 데이터 복구 → 별도 절차 문서 참조
    ├─ 휴가 기록 삭제 → DB 직접 건드리지 않음, 고객 안내
    └─ 변경 예정 근무유형 삭제 → 제품에서 한 명씩 처리, 벌크는 operation API 필요
@@ -1572,6 +1608,9 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-27 | CI-4245 | 계정/구성원: 겸직 등록 진단 체크리스트 추가 — 같은 조직 겸직 불가 스펙 확인 |
+| 2026-03-27 | CI-4241 | 급여: 외국인 고용보험 공제 제외 진단 플로우(F-pay-1) 추가, 체크리스트 #11 추가 |
+| 2026-03-27 | CI-4239 | 근무 기록 삭제/복구: F1 히트 +1, 테스트 데이터 벌크 업로드 빈 값 workaround 분기 추가 |
 | 2026-03-26 | CI-4221 | 스케줄링: F-sched-upload 추가 (근무기록 업로드 타임아웃) |
 | 2026-03-26 | CI-4232 | 계정/구성원: 사번 정렬 무한 스크롤 — 진단 체크리스트(구성원 검색 페이지네이션) + 과거 사례 추가. code-fix이므로 조사 플로우 스킵 |
 | 2026-03-26 | CI-4233 | 단체보험(Group Insurance) 도메인 신규 추가 — 진단 체크리스트, 중도 가입 케이스 매트릭스, 핵심 테이블, Notion 운영 프로세스 링크 |

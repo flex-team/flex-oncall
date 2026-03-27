@@ -82,6 +82,7 @@
 | 주소 변경 시 오류 | 개인정보 번들 검증 실패 — personalEmail 등 다른 필드의 검증 에러로 주소 변경이 차단됨 | flex-core-backend |
 | 사번 정렬 시 무한 스크롤이 발생해요 | ValuesContinuation null→"null" 직렬화 버그 — search_after 커서 고정 | flex-core-backend |
 | 사번 정렬 시 겸직 인원이 중복으로 보여요 | ValuesContinuation null sort value 버그 — 실제 겸직과 무관, 사번 null 구성원 존재가 원인 | flex-core-backend |
+| 직책 2개 설정이 안 돼요 | 같은 조직 겸직 등록 불가 — 엑셀 validation 오류 또는 프로필 UI 저장 후 미노출. 스펙/Known 이슈 확인 중 [CI-4245] | flex-core-backend |
 
 ## 조직 관리 (Department)
 
@@ -157,6 +158,9 @@
 | 보육수당이 0원으로 잡혀요 | allowance_on_leave_rule(DAILY_BASE) + 육아휴직 paymentRatio=0 → FULL로 변경 안내 — 스펙 | flex-payroll-backend |
 | 휴직자에게 수당이 안 나와요 | MonthlyAllowanceRecipientCalculator의 allowanceOnLeaveRule 확인 → NONE이면 0원, DAILY_BASE면 paymentRatio 확인 | flex-payroll-backend |
 | 급여정산 홈에서 퇴직자 수가 안 맞아요 | payeeCountByEmploymentStatus 집계에 퇴직예정자(RESIGNATION_SCHEDULED) 미포함 — 개선 예정(EPBE-194) | flex-payroll-backend |
+| 외국인 고용보험 공제가 빠졌어요 | EmploymentInsuranceRemark.EXCLUDED — 체류자격(residence_qualification)별 임의/필수/제외 판정 + 자격관리 취득일 | flex-payroll-backend |
+| 체류자격 변경 후 고용보험 안 빠져요 | user_personal.residence_qualification 변경 → 정산 payee에 반영 → 외국인 로직 적용 | flex-core-backend, flex-payroll-backend |
+| 원천징수영수증 일괄 다운로드 실패 | async-bulk-download-withholding-receipts-by-filter 비동기 태스크 실패/타임아웃 확인 | flex-payroll-backend |
 
 ## 근로기준법 용어 (Labor Law Terms)
 
@@ -238,7 +242,8 @@
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | 구글 캘린더에 휴가가 안 떠요 | v2_time_tracking_flex_calendar_event_map 확인 | flex-timetracking-backend |
-| 캘린더 연동이 안 돼요 | GoogleCalendarEventAdapter → FlexCalendarSyncEventConsumer 파이프라인 확인 | flex-timetracking-backend |
+| 캘린더 연동이 안 돼요 | FlexCalendarEventAdapter → FlexCalendarSyncEventConsumer 파이프라인 확인 | flex-timetracking-backend |
+| 구글 캘린더 미연동 일정 재연동 요청 | Metabase 대시보드(/dashboard/244) → raccoon Operation API 재동기화 | flex-timetracking-backend |
 
 ## 워크플로우 (Flow / Approval Document)
 
