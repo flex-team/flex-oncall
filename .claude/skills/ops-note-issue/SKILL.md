@@ -163,7 +163,7 @@ MCP CLI를 사용하여 Linear 이슈 정보를 수집한다. **반드시 `mcp-c
 - {제약 내용}[^n]
 
 ## 용어 발견
-{optional — 새로운 사용자 표현 → 시스템 용어 매핑을 발견했을 때만 작성. GLOSSARY에 이미 있는 매핑은 적지 않는다.}
+{optional — 새로운 사용자 표현 → 시스템 용어 매핑을 발견했을 때만 작성. domain-map.ttl g:*에 이미 있는 매핑은 적지 않는다.}
 | 사용자 표현 | 시스템 용어 | 비고 |
 |------------|------------|------|
 
@@ -304,7 +304,7 @@ Step 2에서 찾은 연관 이슈의 문서에도 현재 이슈로의 링크를 
 - 연관 이슈가 있으면 목록 보고
 - 업데이트 모드였으면 변경된 내용 요약
 - Gherkin 시나리오를 작성했으면 시나리오 내용을 함께 보고하고, 시나리오 테스트 추가를 안내
-- **산출물 갱신**: `ops:learn brain/notes/{ticket-id}.md` 를 실행하여 brain 산출물(GLOSSARY, COOKBOOK, domain-map.ttl 등)을 갱신한다
+- **산출물 갱신**: `ops:learn brain/notes/{ticket-id}.md` 를 실행하여 brain 산출물(COOKBOOK, domain-map.ttl 등)을 갱신한다
 - 조사가 필요하면 → `ops:investigate-issue {ticket-id}` 안내
 - 코드 수정이 필요하면 → `ops:fix-issue {ticket-id}` 안내
 - 완료된 이슈 데이터화 → `ops:close-note {ticket-id}` 안내
