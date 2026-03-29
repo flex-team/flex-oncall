@@ -222,8 +222,9 @@ Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 2. **분할 계획 수립**: "Step B: 에이전트 분할 기준" 테이블에 따라 에이전트 목록 작성
 3. **사용자에게 분할 계획 보고** 후 Phase 2 진행
 
-### Phase 2: 구간별 서브에이전트 병렬 디스패치
+### Phase 2: 구간별 서브에이전트 병렬 디스패치 — 🔵 sonnet
 
+> Agent tool 사용 시 `model: "sonnet"` 지정
 > **채널 단위가 아닌, 채널×분기(또는 월) 단위로 디스패치한다.**
 > 예: customer-issue 2022-Q3, customer-issue 2022-Q4, ... 각각 별도 에이전트
 
@@ -295,7 +296,9 @@ Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 ...
 ```
 
-### Phase 3: 결과 병합 + 중복 통합
+### Phase 3: 결과 병합 + 중복 통합 — 🟣 opus
+
+> Agent tool 사용 시 `model: "opus"` 지정 (또는 메인 에이전트에서 직접 수행)
 
 서브에이전트 결과를 모두 수집한 후:
 1. 같은 주제의 카드를 통합 (예: "주기연장 일귀속"이 customer-issue와 squad-tracking 양쪽에서 나왔으면 하나로 merge)
@@ -309,9 +312,17 @@ Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 - "보강이 필요한 영역이 있나요?"
 - "이대로 최종 프로필을 작성할까요?"
 
-### Phase 5: 최종 프로필 작성
+### Phase 5: 최종 프로필 작성 — 🟣 opus
+
+> Agent tool 사용 시 `model: "opus"` 지정
 
 `brain/profiles/{slug}.md` 파일을 생성한다.
+
+### 링크 검증 — 🔵 sonnet
+
+> Agent tool 사용 시 `model: "sonnet"` 지정
+
+Phase 5 완료 후 반드시 수행. 상세 규칙은 "핵심 원칙 > permalink 형식 검증" 참조.
 
 ---
 
