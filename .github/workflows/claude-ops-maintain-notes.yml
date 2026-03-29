@@ -1,0 +1,80 @@
+name: Claude Ops Maintain Notes
+
+on:
+  schedule:
+    # 매일 오전 9시 KST (UTC 0시)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  maintain:
+    runs-on: gha-ai-code-review
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Slack MCP config
+        shell: bash
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          cat > .mcp.json << MCPEOF
+          {
+            "mcpServers": {
+              "slack": {
+                "type": "http",
+                "url": "https://mcp.slack.com/mcp",
+                "headers": {
+                  "Authorization": "Bearer ${SLACK_TOKEN}"
+                }
+              }
+            }
+          }
+          MCPEOF
+
+      - name: Run Claude Ops Maintain Notes
+        uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        with:
+          email: "flex-bot+oncall@flex.team"
+          model: bedrock_claude_sonnet_4_6
+          plugins: "linear@claude-plugins-official"
+          prompt: |
+            /ops-maintain-notes 를 실행하세요.
+
+            CI 환경이므로:
+            - Linear MCP가 사용 가능합니다. 이슈 상태 조회에 활용하세요.
+            - operation-note 파일의 상태를 갱신하고, 완료된 이슈를 아카이브하세요.
+            - ops-learn으로 brain 산출물(GLOSSARY, COOKBOOK, domain-map.ttl)을 갱신하세요.
+            - ops-compact로 컴팩션을 실행하세요.
+            - 모든 변경사항을 커밋하고 push하세요. 커밋 메시지:
+              🗃️ maintain-notes(auto): {아카이브 N건} + brain 산출물 갱신 + 컴팩션
+            - 서브모듈 변경은 커밋하지 마세요.
+
+          additional-args: |
+            --allowed-tools "Bash(git *),Agent,Read,Write,Edit,Glob,Grep,Skill,mcp__linear__get_issue,mcp__linear__list_comments,mcp__linear__list_issues"
+
+      - name: Verify Claude execution
+        shell: bash
+        run: |
+          if [ -f /tmp/claude-stream.jsonl ]; then
+            LAST_RESULT=$(tail -1 /tmp/claude-stream.jsonl)
+            IS_ERROR=$(echo "$LAST_RESULT" | jq -r '.is_error // false')
+            if [ "$IS_ERROR" = "true" ]; then
+              ERROR_MSG=$(echo "$LAST_RESULT" | jq -r '.result // "Unknown error"')
+              echo "::error::Claude 실행 실패: ${ERROR_MSG}"
+              exit 1
+            fi
+          else
+            echo "::error::Claude 출력 파일이 없습니다 (/tmp/claude-stream.jsonl)"
+            exit 1
+          fi
