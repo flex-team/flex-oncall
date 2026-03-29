@@ -94,13 +94,6 @@ git submodule update --init --recursive
 git submodule update --remote --merge
 ```
 
-> [!TIP]
-> 자주 쓴다면 alias를 등록하면 편하다.
-> ```bash
-> git config alias.sup 'submodule update --remote --merge'
-> # 이후 git sup 으로 실행
-> ```
-
 ## 서브모듈 추가하기
 
 ```bash
