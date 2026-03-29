@@ -15,7 +15,6 @@
 | 도메인 맵 | `domain-map.ttl` | 키워드/동의어 -> 도메인 라우팅, 노트 참조 |
 | 쿡북 Tier-1 | `COOKBOOK.md` | 히트 실적 있는 진단 플로우 + 체크리스트 |
 | 쿡북 Tier-2 | `cookbook/{domain}.md` | SQL 템플릿, 과거 사례 상세 |
-| 용어집 | `GLOSSARY.md` | 사용자 표현 -> 시스템 용어 매핑 |
 | 이슈 노트 | `notes/{ticket-id}.md` | 진행 중 이슈 조사 기록 |
 | 아카이브 | `notes/archive/{ticket-id}.md` | 해결 완료 이슈 |
 | 라우팅 미스 | `routing-misses.md` | 도메인 매칭 실패/거부/불일치 로그 |
@@ -46,7 +45,6 @@ flowchart TD
         D -. "쓰기(히트)" .-> CB
         G -. "쓰기" .-> NT
         H -. "쓰기" .-> DM
-        H -. "쓰기" .-> GL["GLOSSARY.md"]
         H -. "쓰기" .-> CB
         I -. "쓰기" .-> DM
         I -. "쓰기" .-> CB
@@ -59,7 +57,7 @@ flowchart TD
 2. **ops-note-issue** -- 노트 생성 + `domain-map.ttl` 에 `n:{ticket-id}` 추가
 3. **ops-investigate-issue** -- `COOKBOOK.md` 플로우를 히트율 순으로 시도. 히트 시 카운트 +1
 4. **ops-close-note** -- 노트 농축(증상 표현/키워드 흡수) + archive 이동 + `ops-learn` 호출
-5. **ops-learn** -- `GLOSSARY`, `COOKBOOK`, `domain-map.ttl` 일괄 갱신
+5. **ops-learn** -- `COOKBOOK`, `domain-map.ttl` 일괄 갱신
 6. **ops-compact** -- 퇴출 기준에 따라 오래된 참조 제거 + COOKBOOK 계층 조정
 
 ---
@@ -126,7 +124,6 @@ flowchart TD
     CL -- "호출" --> LN["ops-learn"]
 
     LN -- "갱신" --> DM
-    LN -- "갱신" --> GL["GLOSSARY.md"]
     LN -- "갱신" --> CB
     LN -- "소비" --> RM
 

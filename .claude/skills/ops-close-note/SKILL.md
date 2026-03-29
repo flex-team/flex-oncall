@@ -9,7 +9,7 @@ argument-hint: <ticket-id> (예: CI-3861)
 
 ## Purpose
 완료된 이슈에 대해 **operation-note 동기화 + brain 산출물 갱신**을 한번에 처리한다.
-Linear 최신 정보로 note를 업데이트하고, GLOSSARY/COOKBOOK/domain-map.ttl 반영까지 자동 진행.
+Linear 최신 정보로 note를 업데이트하고, COOKBOOK/domain-map.ttl 반영까지 자동 진행.
 
 > 이슈 **접수** 시점에는 이 커맨드가 아닌 `note-issue` 를 사용한다.
 > 이 커맨드는 이슈가 **완료**된 후 데이터화할 때 사용한다.
@@ -56,7 +56,6 @@ Read: .claude/skills/ops-learn/SKILL.md
 입력: `brain/notes/{ticket-id}.md` (로컬 파일 소스로 전달)
 
 ops-learn이 자동으로 판단:
-- GLOSSARY: 새 용어 매핑 반영
 - COOKBOOK: 진단 가이드/SQL/원인 확정/스펙 판별 반영 (코드 수정 해결 시 스킵)
 - domain-map.ttl: 키워드/glossary 항목 갱신
 
@@ -113,7 +112,6 @@ Phase 1~3 결과를 통합하여 한번에 보고한다.
 - 시나리오: {Gherkin 작성했으면 내용 요약, 아니면 "해당 없음"}
 
 ### Phase 2: Brain 산출물
-- GLOSSARY: {갱신 | 변경 없음}
 - COOKBOOK: {반영 완료 | 반영할 내용 없음 | 코드 수정으로 해결 — 스킵}
 - domain-map.ttl: {갱신 | 변경 없음}
 

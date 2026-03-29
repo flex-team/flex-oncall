@@ -90,7 +90,7 @@ Read: .claude/skills/ops-learn/SKILL.md
 
 1. 각 완료 노트에 대해 `ops-learn brain/notes/{ticket-id}.md` 실행
    - ops-learn이 자동으로 쿡북 추가 대상 판별 (코드 수정 → 스킵, 운영/스펙 → 반영)
-   - GLOSSARY, COOKBOOK, domain-map.ttl 갱신
+   - COOKBOOK, domain-map.ttl 갱신
 2. **사용자 확인은 Step 7 리포트에서 일괄 처리** (개별 확인 생략)
 3. 반영 대상이 없으면 스킵
 
@@ -129,7 +129,7 @@ Read: .claude/skills/ops-compact/SKILL.md
 ```
 | 티켓 | 이슈 상태 | 노트 갱신 | 산출물 반영 | 아카이브 |
 |------|----------|----------|-----------|---------|
-| CI-XXXX | Done | ✅ 상태 업데이트 | ✅ GLOSSARY+COOKBOOK+TTL | ✅ |
+| CI-XXXX | Done | ✅ 상태 업데이트 | ✅ COOKBOOK+TTL | ✅ |
 | CI-YYYY | In Progress | ⏭️ 변경 없음 | — | ❌ |
 ```
 

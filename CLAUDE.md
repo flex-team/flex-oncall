@@ -11,7 +11,6 @@
 ## 도메인 라우팅
 
 - **도메인 맵**: `brain/domain-map.ttl` — 키워드/동의어 → 도메인 → repo/모듈 매핑 (이슈 라우팅의 단일 소스)
-- **용어집**: `brain/GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 변환
 - 서브모듈 목록·브랜치는 `.gitmodules` 에서 확인
 - 서브모듈 추가 시: `git submodule add -b <branch> git@github.com:flex-team/<repo>.git <dir>` → `CLAUDE.md` 서브모듈 맵도 갱신할 것
 - 이슈 인입 시 `ops-find-domain` 스킬이 domain-map.ttl을 자동 탐색
@@ -87,7 +86,6 @@
 - **진행 중 노트**: `brain/notes/{ticket-id}.md` — notes/ 루트에 위치한 active 이슈
 - **해결 완료 노트**: `brain/notes/archive/{ticket-id}.md` — domain-map.ttl로 찾아서 필요한 것만 읽기
 - **티켓 노트 작성 규칙**: `brain/CLAUDE.md`
-- **용어집**: `brain/GLOSSARY.md`
 - **서브모듈별 운영 노트**: 각 서브모듈의 `.claude/operation-notes/` 디렉토리도 참조
   - 예: `flex-timetracking-backend/.claude/operation-notes/`
   - 이슈의 도메인이 파악되면 해당 서브모듈의 운영 노트를 우선 확인할 것

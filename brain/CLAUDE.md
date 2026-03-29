@@ -12,7 +12,6 @@
 brain/
 ├── CLAUDE.md              # 이 파일
 ├── domain-map.ttl         # 중앙 도메인 지도 (Turtle/RDF)
-├── GLOSSARY.md            # 사용자 표현 → 시스템 용어
 ├── COOKBOOK.md             # Tier-1: 진단 체크리스트 + 조사 플로우 + 레퍼런스
 ├── cookbook/               # Tier-2: 도메인별 SQL 템플릿 + 과거 사례
 │   └── {domain-id}.md
@@ -25,17 +24,15 @@ brain/
 
 ## 문서 참조 우선순위
 
-1. **domain-map.ttl** — 도메인 특정 + 관련 문서 찾기
+1. **domain-map.ttl** — 도메인 특정 + 관련 문서 찾기 (용어집 `g:*` 블록 포함)
 2. **COOKBOOK.md** — 진단 플로우 (가장 먼저 시도)
-3. **GLOSSARY.md** — 사용자 표현 → 시스템 용어
-4. **notes/** — 과거 이슈 상세
+3. **notes/** — 과거 이슈 상세
 
 ## 이슈 대응 워크플로우
 
 ```
 이슈 인입 (Linear/Slack)
-  → domain-map.ttl에서 키워드로 도메인 특정
-  → GLOSSARY.md에서 사용자 표현 → 시스템 용어 변환
+  → domain-map.ttl에서 키워드 + 용어집(g:*)으로 도메인 특정 및 용어 변환
   → COOKBOOK.md에서 진단 플로우 확인 (히트율 순)
   → 필요한 서브모듈만 recursive update
   → 조사 수행 → 노트 기록
@@ -112,7 +109,7 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 
 - Linear 이슈 내용을 읽고 증상을 정리한다.
 - domain-map.ttl 키워드 매칭으로 도메인을 특정한다.
-- GLOSSARY.md에서 사용자 표현을 시스템 용어로 변환한다.
+- domain-map.ttl g:* 블록에서 사용자 표현을 시스템 용어로 변환한다.
 
 ### 2. 분석 기록
 
@@ -137,7 +134,6 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 - close-note 스킬로 노트를 마감한다.
   - verdict 확정
   - domain-map.ttl 갱신
-  - GLOSSARY.md 갱신 (새 용어 매핑 발견 시)
   - COOKBOOK.md 갱신 (재사용 가능한 진단 패턴 발견 시)
   - 노트를 archive로 이동
 
@@ -145,14 +141,14 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 
 ### ops 스킬 실행 시
 
-| 스킬 | domain-map.ttl | GLOSSARY.md | COOKBOOK.md | 노트 |
-|------|---------------|-------------|------------|------|
-| `note-issue` | 노트 항목 추가 | ops-learn 갱신 | ops-learn 갱신 | 생성/갱신 |
-| `investigate-issue` | 노트 항목 추가 | ops-learn 갱신 | ops-learn 갱신 | 생성/갱신 |
-| `close-note` | verdict 확정 | ops-learn 갱신 | ops-learn 갱신 | archive 이동 |
-| `fix-issue` | - | - | - | 갱신 |
-| `ops-learn` | 키워드/glossary 갱신 | 용어 매핑 갱신 | 진단 패턴 갱신 | - |
-| `maintain-notes` | ops-learn/재구축 | ops-learn 갱신 | ops-learn/재구축 | 일괄 정리 |
+| 스킬 | domain-map.ttl | COOKBOOK.md | 노트 |
+|------|---------------|------------|------|
+| `note-issue` | 노트 항목 추가 | ops-learn 갱신 | 생성/갱신 |
+| `investigate-issue` | 노트 항목 추가 | ops-learn 갱신 | 생성/갱신 |
+| `close-note` | verdict 확정 | ops-learn 갱신 | archive 이동 |
+| `fix-issue` | - | - | 갱신 |
+| `ops-learn` | 키워드/glossary 갱신 | 진단 패턴 갱신 | - |
+| `maintain-notes` | ops-learn/재구축 | ops-learn/재구축 | 일괄 정리 |
 
 ### domain-map.ttl 갱신 시점
 
