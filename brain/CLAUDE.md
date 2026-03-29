@@ -94,7 +94,7 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 1. **사용자 표현 흡수**: 노트 "증상"의 문의 표현 → domain-map.ttl `d:syn` (새로운 것만)
 2. **키워드 흡수**: 유효한 진단 키워드 → domain-map.ttl `d:kw` (도메인 고유 용어만)
 3. **COOKBOOK 보강**: 재사용 가능한 원인 패턴 → COOKBOOK 플로우 등록/보강
-4. **상태 설정**: domain-map.ttl의 `n:{ticket-id}` 에 `d:st "C"` 추가
+4. **상태 설정**: domain-map.ttl의 `n:{ticket-id}` 에 `d:st "C"` + `d:ca "YYYY-MM-DD"` 추가
 
 농축 완료 후 노트 정제:
 - 제거: Claude 활동 로그, 소거된 가설, DB 원시 데이터, 상세 코드 트레이스
