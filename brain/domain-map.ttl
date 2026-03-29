@@ -1917,3 +1917,342 @@ g:pay-10
   d:in :payroll ;
   d:q  "외국인 고용보험 공제가 빠졌어요" , "고용보험이 안 빠져요" ;
   d:a  "체류자격별 임의/필수/제외 판정 → employment_insurance_qualification_history 취득일 확인 — 임의가입은 취득일 필요" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (notification)
+# ============================================================
+
+g:noti-05
+  d:in :notification ;
+  d:q  "다운로드 완료 메일이 계속 와요" , "메일을 수백통 받았어요" ;
+  d:a  "file merge 무한 재시도 — Kafka consumer lag + v2_file_merge TODO 확인" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (time-tracking)
+# ============================================================
+
+g:tt-17
+  d:in :time-tracking ;
+  d:q  "휴일대체 취소가 안 돼요" , "대체 휴일을 찾을 수 없습니다" ;
+  d:a  "OpenSearch sync 지연으로 구 eventId 반환 — sync-os-work-schedule-advanced 재동기화" .
+
+g:tt-18
+  d:in :time-tracking ;
+  d:q  "출근 시간이 다르게 찍혀요" , "출근 기록 시간 불일치" ;
+  d:a  "FE actorNow stale + 서버 validation 미비 — access log에서 요청 시각 확인" .
+
+g:tt-19
+  d:in :time-tracking ;
+  d:q  "필수근로시간이 뭐예요?" ;
+  d:a  "requiredWorkingMinutes — 소정근로시간에 휴일대체·입퇴사·휴직 반영한 실제 근로 목표 시간" .
+
+g:tt-20
+  d:in :time-tracking ;
+  d:q  "계약근로시간이 뭐예요?" ;
+  d:a  "usualWorkingMinutes — 근로계약서상 일 근무시간. 소정근로시간 초과 가능하나 법정최대 초과 불가" .
+
+g:tt-21
+  d:in :time-tracking ;
+  d:q  "법정최대근로시간이 뭐예요?" ;
+  d:a  "maxStatutoryTotalWorkingMinutes — 법정근로(40H) + 법정최대연장(12H) = 주 52시간" .
+
+g:tt-22
+  d:in :time-tracking ;
+  d:q  "목표근로시간이 뭐예요?" ;
+  d:a  "1.0 용어로 2.0에서 폐기. requiredWorkingMinutes(필수근로시간)로 대체. UI에서는 아직 사용되기도 함" .
+
+g:tt-23
+  d:in :time-tracking ;
+  d:q  "초과근로가 뭐예요?" ;
+  d:a  "연장·야간·휴일 근로의 총칭. 시간외 근로라고도 불림" .
+
+g:tt-24
+  d:in :time-tracking ;
+  d:q  "연장근로 계산이 이상해요" ;
+  d:a  "일 단위(일 8시간 초과) + 주기 단위(주 40시간 초과) 이중 판단. 선택적 근무는 일 단위 연장 없음" .
+
+g:tt-25
+  d:in :time-tracking ;
+  d:q  "야간근로 가산이 이상해요" ;
+  d:a  "22시~06시 사이 근로, 0.5배 가산. 연장+야간 중복 시 1.0배" .
+
+g:tt-26
+  d:in :time-tracking ;
+  d:q  "휴일근로 가산이 이상해요" ;
+  d:a  "휴일 근로 0.5배 가산. 주기 연장과 중복 시 0.5배만(연장 가산 미적용). 일 단위 연장은 별도 적용" .
+
+g:tt-27
+  d:in :time-tracking ;
+  d:q  "초단시간 근로자 연차가 없어요" , "주휴가 없어요" ;
+  d:a  "주 15시간 미만 → 퇴직금·연차·주휴일/주휴수당 의무 없음 — 스펙" .
+
+g:tt-28
+  d:in :time-tracking ;
+  d:q  "휴일 대체가 안 돼요" ;
+  d:a  "주휴일 대체는 6일 이내, 근로자의날은 대체 불가. 사전 24시간 통보 필수" .
+
+g:tt-29
+  d:in :time-tracking ;
+  d:q  "연차 촉진 절차가 뭐예요?" ;
+  d:a  "3종류: 연차 촉진(소멸 6개월 전), 월차 1차(3개월 전), 월차 2차(1개월 전). 노무수령거부 의사표시 필요" .
+
+g:tt-30
+  d:in :time-tracking ;
+  d:q  "연차수당이 이상해요" ;
+  d:a  "연차휴가미사용수당. 소멸된 연차 금전 보상. 퇴직 시 입사일 기준 재정산 가능(취업규칙 단서 필요)" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (출퇴근 → time-tracking)
+# ============================================================
+
+g:tt-31
+  d:in :time-tracking ;
+  d:q  "출근 버튼이 안 돼요" , "퇴근 버튼이 안 돼요" ;
+  d:a  "work-clock start/stop API dry-run 응답 확인" .
+
+g:tt-32
+  d:in :time-tracking ;
+  d:q  "근무 위젯이 안 보여요" ;
+  d:a  "work-clock current-status API 확인" .
+
+g:tt-33
+  d:in :time-tracking ;
+  d:q  "출근 타각을 취소하고 싶어요" ;
+  d:a  "work-clock 개별 취소 UI 제공 (API도 존재)" .
+
+g:tt-34
+  d:in :time-tracking ;
+  d:q  "자동 퇴근이 안 됐어요" ;
+  d:a  "auto clock-out 설정 확인" .
+
+g:tt-35
+  d:in :time-tracking ;
+  d:q  "근무를 종료하지 못했어요" ;
+  d:a  "WORK_CLOCK_STOP_FAILURE_GO_CONFIRM 알림 — AUTO_WORK_STOP 실패 시 발송" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (근태 대시보드 → time-tracking)
+# ============================================================
+
+g:tt-36
+  d:in :time-tracking ;
+  d:q  "근태 대시보드가 안 맞아요" ;
+  d:a  "OpenSearch work-schedule document sync 확인" .
+
+g:tt-37
+  d:in :time-tracking ;
+  d:q  "휴가 사용 내역이 안 맞아요" ;
+  d:a  "OpenSearch time-off-use document sync 확인" .
+
+g:tt-38
+  d:in :time-tracking ;
+  d:q  "대시보드 동기화가 필요해요" ;
+  d:a  "POST /action/operation/v2/time-tracking/sync-es-work-schedule" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (연차 → time-tracking)
+# ============================================================
+
+g:tt-39
+  d:in :time-tracking ;
+  d:q  "잔여 연차가 이상해요" ;
+  d:a  "operation API annual-time-off bucket 확인" .
+
+g:tt-40
+  d:in :time-tracking ;
+  d:q  "연차 지급/사용 내역 다운로드" ;
+  d:a  "제품 6개월씩 다운로드 또는 Metabase" .
+
+g:tt-41
+  d:in :time-tracking ;
+  d:q  "연차 소멸일이 이상해요" ;
+  d:a  "bucket 유효기간 확인 (종료일 이른 것 우선 소진)" .
+
+g:tt-42
+  d:in :time-tracking ;
+  d:q  "휴가 내역에 사용일수가 0일이에요" ;
+  d:a  "휴일/휴직/휴일대체/주휴일/쉬는날 겹침 확인" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (맞춤휴가 → time-tracking)
+# ============================================================
+
+g:tt-43
+  d:in :time-tracking ;
+  d:q  "맞춤휴가 잔여일이 이상해요" ;
+  d:a  "v2_user_custom_time_off_assign 부여/회수/사용 확인" .
+
+g:tt-44
+  d:in :time-tracking ;
+  d:q  "맞춤휴가 합치고 싶어요" ;
+  d:a  "회수 후 재부여 권장. 합쳐쓰기는 assign 속성 동일 필요" .
+
+g:tt-45
+  d:in :time-tracking ;
+  d:q  "맞춤휴가 단위 변경하고 싶어요" ;
+  d:a  "회수 후 재부여 또는 assign 테이블 직접 변경" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (근무지 → time-tracking)
+# ============================================================
+
+g:tt-46
+  d:in :time-tracking ;
+  d:q  "GPS 밖에서 출근이 됐어요" ;
+  d:a  "workplace 테이블 GPS 설정 + 관리자 IP 제한 패스 확인" .
+
+g:tt-47
+  d:in :time-tracking ;
+  d:q  "근무지 IP가 통과해요" ;
+  d:a  "flex_auth.customer_ip_access_control_setting 확인" .
+
+g:tt-48
+  d:in :time-tracking ;
+  d:q  "출근 버튼이 안 눌려요 (위치 제한)" ;
+  d:a  "dry-run 로그 없이 current-status만 있으면 범위 바깥" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (휴일 → time-tracking)
+# ============================================================
+
+g:tt-49
+  d:in :time-tracking ;
+  d:q  "휴일이 안 보여요" ;
+  d:a  "v2_user_holiday_group_mapping + v2_customer_holiday 확인" .
+
+g:tt-50
+  d:in :time-tracking ;
+  d:q  "근로자의날 삭제해주세요" ;
+  d:a  "operation API로 제거 (PR #7421 참조)" .
+
+g:tt-51
+  d:in :time-tracking ;
+  d:q  "대체휴일이 적용 안 돼요" ;
+  d:a  "v2_customer_holiday support_alternative 설정 확인" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (캘린더 연동 → time-tracking)
+# ============================================================
+
+g:tt-52
+  d:in :time-tracking ;
+  d:q  "구글 캘린더에 휴가가 안 떠요" ;
+  d:a  "v2_time_tracking_flex_calendar_event_map 확인" .
+
+g:tt-53
+  d:in :time-tracking ;
+  d:q  "캘린더 연동이 안 돼요" ;
+  d:a  "FlexCalendarEventAdapter → FlexCalendarSyncEventConsumer 파이프라인 확인" .
+
+g:tt-54
+  d:in :time-tracking ;
+  d:q  "구글 캘린더 미연동 일정 재연동 요청" ;
+  d:a  "Metabase 대시보드(/dashboard/244) → raccoon Operation API 재동기화" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (Kafka/이벤트 → time-tracking)
+# ============================================================
+
+g:tt-55
+  d:in :time-tracking ;
+  d:q  "Kafka 컨슘 에러 발생" ;
+  d:a  "message_consume_log ce_id로 operation API 재발행" .
+
+g:tt-56
+  d:in :time-tracking ;
+  d:q  "사용자 변경 이벤트 실패" ;
+  d:a  "Workspace Operation API /action/operation/v2/workspace/users/produce 호출 (productType=USER)" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (shift)
+# ============================================================
+
+g:shift-03
+  d:in :shift ;
+  d:q  "엑셀 업로드했는데 일부 구성원 스케줄이 누락돼요" ;
+  d:a  "교대근무 엑셀에 일반 WorkForm 입력 시 isInvalidSchedule → draft 빈 배열 → publish 누락" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (integration)
+# ============================================================
+
+g:intg-05
+  d:in :integration ;
+  d:q  "캡스 연결이 안 돼요" , "방화벽 해제 방법" ;
+  d:a  "CAPS 연동 연결 실패 — PW 오입력 or 방화벽" .
+
+g:intg-06
+  d:in :integration ;
+  d:q  "flex IP 주소 알려주세요" ;
+  d:a  "IP 제공 불가 — 도메인 기반 예외처리 안내" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (account)
+# ============================================================
+
+g:acct-10
+  d:in :account ;
+  d:q  "요청 정보가 올바르지 않습니다" ;
+  d:a  "UPER_400_011 — UserPersonalValidatorImpl personalEmail RFC 5322 검증 에러" .
+
+g:acct-11
+  d:in :account ;
+  d:q  "주소 변경 시 오류" ;
+  d:a  "개인정보 번들 검증 실패 — personalEmail 등 다른 필드의 검증 에러로 주소 변경이 차단됨" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (payroll)
+# ============================================================
+
+g:pay-11
+  d:in :payroll ;
+  d:q  "분할납부금액이 합산돼요" , "74번 코드" ;
+  d:a  "HealthInsuranceSettlementReasonCode.74 — getYearEndTotalAmountByType 귀속연도 필터링 확인" .
+
+g:pay-12
+  d:in :payroll ;
+  d:q  "기납보험료가 이상해요" ;
+  d:a  "PaidSocialInsuranceCalculator — 사회보험 연말정산 기납보험료 합산 로직 확인" .
+
+g:pay-13
+  d:in :payroll ;
+  d:q  "원천징수영수증 일괄 다운로드 실패" ;
+  d:a  "async-bulk-download-withholding-receipts-by-filter 비동기 태스크 실패/타임아웃 확인" .
+
+g:pay-14
+  d:in :payroll ;
+  d:q  "체류자격 변경 후 고용보험 안 빠져요" ;
+  d:a  "user_personal.residence_qualification 변경 → 정산 payee에 반영 → 외국인 로직 적용" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (fins)
+# ============================================================
+
+g:fins-04
+  d:in :fins ;
+  d:q  "직접 추가한 증빙이 시간 정책 위반으로 나와요" ;
+  d:a  "수동 증빙(ETC spending) transactedTime=null → RANGE 평가 FAIL — 버그(EP팀 수정 예정)" .
+
+g:fins-05
+  d:in :fins ;
+  d:q  "시간 정책 위반인데 위반이 아닌 거 같아요" ;
+  d:a  "SpendingTimePolicyItem RANGE 평가에서 null → false(FAIL) 처리 확인" .
+
+# ============================================================
+# Glossary — GLOSSARY.md migration (insurance)
+# ============================================================
+
+g:ins-04
+  d:in :insurance ;
+  d:q  "청약이 뭐예요?" ;
+  d:a  "최초 보험 계약 체결. 이 시점 등록 구성원만 제품 확인 가능" .
+
+g:ins-05
+  d:in :insurance ;
+  d:q  "배서가 뭐예요?" ;
+  d:a  "보험 계약 변경 시 메리츠에 제출하는 변경 요청서" .
+
+g:ins-06
+  d:in :insurance ;
+  d:q  "중도 가입이 뭐예요?" ;
+  d:a  "보험계약기간 내 신규 피보험자 추가. 케이스별 제품 가능 여부 다름" .
