@@ -53,11 +53,44 @@ Body: { "categories": ["TIME_OFF", "WORK_RECORD"] }
 - category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진) — 대상에 맞게 선택
 - **반드시 고객에게 강제 승인 동의를 받은 후 실행**
 - 응답의 `succeededProcesses` / `failedProcesses`로 결과 확인
+- 출처: [삭제된 구성원 승인 처리 가이드 (Notion)](https://www.notion.so/flexnotion/04010959f43d486aaabe63a144a68339?source=copy_link#2a10592a4a9280dea1d1cb09d86948f1)
+
+> ⚠️ **조직(팀)이 승인라인에 있는 경우 이 API 사용 불가** — target_category만 받아서 해당 사용자가 포함된 모든 문서가 처리됨. 아래 "조직 승인라인 강제 승인" 절차를 따를 것 [CI-2762]
+
+**조직(팀)이 승인라인에 있고 팀원 전원 퇴사한 경우** → 문서별 개별 처리:
+
+"퇴직한 승인자 교체" UI 기능이 조직 승인라인을 지원하지 않음. 문서에 resolved된 퇴직자 userId를 특정하여 아래 두 API를 연속 실행한다.
+
+```sql
+-- 1. 문서번호 → task_key 조회
+SELECT task_key, code, writer_id
+FROM flex.workflow_task
+WHERE customer_id = ? AND code IN (/* 문서번호 목록 */);
+
+-- 2. approval DB 체인으로 퇴직자 userId 확인
+SELECT id FROM flex_approval.approval_process
+WHERE customer_id = ? AND target_uid = '{task_key}' AND target_category = 'APPROVAL_DOCUMENT';
+-- → approval_line → approval_line_actor → approval_line_actor_resolved_user 순으로 조인하여 user_id 확인
+```
+
+```
+-- 문서별로 아래 두 API 연속 실행
+① POST /action/operation/v2/approval/customers/{customerId}/users/{resignedUserId}/act-approval-process
+   Body: { "targetUid": "{task_key}", "targetCategory": "APPROVAL_DOCUMENT" }
+
+② POST /action/operation/v2/approval/customers/{customerId}/produce-approval-process-event
+   Body: { "targetUid": "{task_key}", "targetCategory": "APPROVAL_DOCUMENT" }
+```
+
+- Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
+- ①은 승인 행위 강제 실행, ②는 승인 완료 이벤트 발행 — 둘 다 실행해야 완전히 처리됨
+- 퇴직자 userId: `approval_line_actor_resolved_user` 테이블에서 확인 [CI-2762]
 
 ### 주의사항
 
 - `replacement-targets/migrate` API를 먼저 시도하면 삭제된 구성원은 퇴사 조회에 나오지 않아 교체 대상 미등록됨 → 곧바로 `bulk-approve-for-user`로 전환
 - 이 패턴은 반복적으로 발생하는 운영 요청임 (CI-3769, CI-2345, CI-1128 등)
+- 조직 승인라인 케이스도 반복 발생 — CI-2161, CI-2762, CI-3174, CI-4244 등
 
 ## 과거 사례
 
