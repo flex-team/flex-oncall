@@ -13,6 +13,7 @@
 - **도메인 맵**: `brain/domain-map.ttl` — 키워드/동의어 → 도메인 → repo/모듈 매핑 (이슈 라우팅의 단일 소스)
 - **용어집**: `brain/GLOSSARY.md` — 사용자/CS 표현 → 시스템 용어 변환
 - 서브모듈 목록·브랜치는 `.gitmodules` 에서 확인
+- 서브모듈 추가 시: `git submodule add -b <branch> git@github.com:flex-team/<repo>.git <dir>` → `CLAUDE.md` 서브모듈 맵도 갱신할 것
 - 이슈 인입 시 `ops-find-domain` 스킬이 domain-map.ttl을 자동 탐색
 
 ## 온콜 워크플로우

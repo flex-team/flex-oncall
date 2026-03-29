@@ -94,15 +94,6 @@ git submodule update --init --recursive
 git submodule update --remote --merge
 ```
 
-## 서브모듈 추가하기
-
-```bash
-git submodule add -b <branch> git@github.com:flex-team/<repo-name>.git <directory-name>
-# 예: git submodule add -b main git@github.com:flex-team/flex-timetracking-backend.git flex-timetracking-backend
-```
-
-서브모듈을 추가한 후 `CLAUDE.md`의 서브모듈 맵 테이블도 함께 업데이트할 것.
-
 ## 알람
 
 | 도메인 | 채널 | 설명 |
