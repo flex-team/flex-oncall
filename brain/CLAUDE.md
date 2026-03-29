@@ -168,7 +168,7 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 
 ## Claude 활동 로그
 
-활동 로그는 각 노트 최하단에 기록한다. 전체 활동 메트릭은 `.claude/METRICS.md` 에 위치한다.
+활동 로그는 각 노트 최하단에 기록한다. 전체 활동 메트릭은 `metrics/{user}/{date}.jsonl` 에 자동 수집되며, `ops-compact` 실행 시 on-demand 집계된다.
 
 ### 로그 형식
 

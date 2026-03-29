@@ -15,8 +15,6 @@ description: 메트릭스 기록 가이드
 | `brain/routing-misses.md` | Markdown | 반자동 (ops-find-domain 기록, ops-learn 소비) | 라우팅 miss/reject/correction |
 | `brain/COOKBOOK.md` 히트 카운트 | Markdown 인라인 | investigate-issue가 갱신 | 플로우별 히트 실적 |
 
-> ~~`.claude/METRICS.md`~~, ~~노트 활동 로그 테이블~~은 폐기됨. JSONL이 단일 소스이며, `ops-compact` 실행 시 on-demand 집계한다.
-
 ## 쿡북 히트 판정 (investigate-issue 전용)
 
 `investigate-issue` 실행 시 쿡북 참조 결과를 판정한다.

@@ -128,7 +128,6 @@ Phase 1~3 결과를 통합하여 한번에 보고한다.
 
 ### Phase 5: 메트릭스
 
-> 스킬 호출 로그는 PreToolUse hook이 JSONL에 자동 기록한다. 별도 METRICS.md 갱신 불필요.
 > 쿡북 히트 기록이 필요한 경우(investigate-issue 전용)만 COOKBOOK.md를 갱신한다.
 > ```
 > Read: .claude/skills/ops-common/metrics-guide.md

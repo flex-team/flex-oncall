@@ -144,7 +144,6 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 
 1. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` 하단 `## Claude 활동 로그` 테이블에 행 추가
    - subagent total_tokens/duration_ms 합산, 쿡북 참조 = `—`
-2. **`.claude/METRICS.md` 갱신**: 활동 로그(전체) + 스킬별 사용량 + 월별 요약 갱신
 
 ## Rules
 - **Phase 3 → Phase 4 사이에 반드시 사용자 승인**: 조사 결과를 보고하고 구현 방향 승인을 받아야 함

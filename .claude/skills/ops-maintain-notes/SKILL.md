@@ -139,7 +139,6 @@ Read: .claude/skills/ops-compact/SKILL.md
 
 ### Step 8: 메트릭스
 
-> 스킬 호출 로그는 PreToolUse hook이 JSONL에 자동 기록한다. 별도 METRICS.md 갱신 불필요.
 > ```
 > Read: .claude/skills/ops-common/metrics-guide.md
 > ```
