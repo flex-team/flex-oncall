@@ -71,6 +71,30 @@
    en/ko 템플릿 CTA URL이 다를 수 있음 (3건 알려진 불일치)
 ```
 
+**F4: 메일 중복 발신 — file merge 무한 재시도** · 히트: 1 · [CI-4236]
+> 트리거: "다운로드 완료 메일이 계속 와요" / "메일을 수백통 받았어요" / 알림 타입 `FLEX_FILE_STORAGE_DOWNLOAD_PREPARATION_COMPLETED`
+
+```
+① Kafka consumer group 상태 확인
+   prod Kafka UI → consumer group: prod-flex-file-storage-api-file-storage-merge-command-handler
+   topic: prod.command.flex.file-storage.merge.v1
+   ├─ PREPARING_REBALANCE + lag 증가 → 무한 리밸런스 확인 → ②
+   └─ STABLE + lag 0 → 다른 원인 (F1~F3 시도)
+   ↓
+② DB에서 동일 요청 반복 생성 확인
+   SELECT customer_id, status, merged_file_name, COUNT(*) FROM flex.v2_file_merge
+   WHERE customer_id = ? GROUP BY customer_id, status, merged_file_name
+   ├─ 동일 파일명 수백건 → render 타임아웃으로 인한 재시도 폭증 → ③
+   └─ 정상 건수 → consumer max.poll.interval.ms 초과 단순 케이스 → 설정 조정
+   ↓
+③ 즉시 대응
+   a. max.poll.interval.ms 증가 (10분+) → consumer 안정화
+   b. CPU 증설 (file-storage consumer 스로틀링 확인)
+   c. 잔여 TODO 건을 DONE으로 UPDATE → consumer skip 유도
+   ↓
+④ 근본 해결: renderer 타임아웃 개선 (EPBE-230 참조)
+```
+
 → 상세: [cookbook/notification.md](cookbook/notification.md)
 
 ---
@@ -92,7 +116,7 @@
 ### 근태/휴가 (Time Tracking)
 
 #### 진단 체크리스트
-문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요" / "퇴근 시간이 잘렸어요" / "퇴근이 정시로 찍혀요" / "휴직 기간에 휴가가 있어요" / "추천 휴게가 안 들어가요" / "연차 사용 내역이 사라졌어요" / "근태기록 리포트 컬럼이 이상해요" / "휴일대체 사후신청이 안 돼요" / "월별 잔여연차가 달라요" / "보상휴가 회수했는데 잠금이 안 풀려요"
+문의: "휴일대체 기간이 안 맞아요" / "보상휴가 부여 안 돼요" / "포괄 공제가 안 맞아요" / "휴일대체 탭에 날짜가 안 보여요" / "퇴사자 휴가 데이터 추출해주세요" / "퇴근 시간이 잘렸어요" / "퇴근이 정시로 찍혀요" / "휴직 기간에 휴가가 있어요" / "추천 휴게가 안 들어가요" / "연차 사용 내역이 사라졌어요" / "근태기록 리포트 컬럼이 이상해요" / "휴일대체 사후신청이 안 돼요" / "월별 잔여연차가 달라요" / "보상휴가 회수했는데 잠금이 안 풀려요" / "휴일대체 취소가 안 돼요"
 1. 휴일대체 탭 미표기 → 먼저 OpenSearch dev tools로 해당 유저+날짜 문서 존재 확인 [CI-3949]
    - **문서 자체가 없음** → 근무를 건드리지 않은 유저는 sync 이벤트 미발생으로 OS 문서 미생성. 수동 sync 실행: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` [CI-3949]
    - **문서는 있는데 `holidayProps`가 null** → 해당 날짜 **시점의** 활성 근무유형 확인 (현재 근무유형이 아님!). `v2_user_work_rule`에서 date_from/date_to 범위로 확인 → 해당 요일이 `WEEKLY_UNPAID_HOLIDAY`(휴무일)이면 스펙대로 제외. `WEEKLY_PAID_HOLIDAY`(주휴일)인데 null이면 버그 → 추가 조사 필요 [CI-3949]
@@ -124,6 +148,7 @@
    - **운영 대응**:
      ◦ 급한 경우: DB에서 `v2_user_work_rule` row 삭제 → ES sync
      ◦ 여유 있는 경우: Operation API `DELETE /api/v2/work-rule/users/{userId}/work-rules/{userWorkRuleId}` 반복 호출 (검증 유/무 분리된 operation API 존재, PR flex-timetracking-backend#7800)
+18. **휴일대체 취소 불가** ("대체 휴일을 찾을 수 없습니다") → 휴일대체 수정(CANCEL+재등록) 후 OpenSearch sync 지연으로 FE에 구 eventId가 전달되는 케이스. access log에서 `search/by-departments` 응답의 `alteredHoliday.eventId` 확인 → DB(`v2_time_tracking_user_alternative_holiday_event`)의 유효 이벤트 ID와 비교 → 불일치 시 `/sync-os-work-schedule-advanced`로 재동기화 [CI-4217]
 
 #### 조사 플로우
 
@@ -189,6 +214,28 @@
    ├─ 다음날 종일휴가 있음 → 휴가 시작 시간(00:00)으로 조정되는 스펙
    └─ 휴가 없음 → 다른 원인, F2(정시 고정) 또는 별도 조사
 ```
+
+**F4: 휴일대체 취소 불가 — OpenSearch sync 지연** · 히트: 1 · [CI-4217]
+> 트리거: "휴일대체 취소가 안 돼요" / "대체 휴일을 찾을 수 없습니다"
+
+```
+① access log: search/by-departments 응답에서 해당 유저의
+   alteredHoliday.trackingUserAlternativeHolidayEventId 확인
+   ↓
+② DB: v2_time_tracking_user_alternative_holiday_event에서
+   해당 유저의 유효 이벤트 ID 확인 (CANCEL되지 않은 최신 이벤트)
+   ├─ access log eventId == DB eventId → 다른 원인 조사
+   └─ 불일치 → ③으로 (OpenSearch sync 지연)
+   ↓
+③ operation API로 OpenSearch 재동기화
+   POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced
+   ↓
+④ 동기화 후 OpenSearch 문서의 holidayProps.alteredHoliday.eventId 정상 확인
+   ↓
+⑤ 고객 안내: 페이지 새로고침 후 취소 재시도
+```
+
+> 💡 원인: 휴일대체 수정(CANCEL+재등록) 시 `NON_NULL` + `doc()` partial update 조합으로 null 필드가 기존값 유지 → 구 eventId 잔존
 
 → 상세: [cookbook/time-tracking.md](cookbook/time-tracking.md)
 
@@ -1526,11 +1573,12 @@ Kibana 참고:
 ### 비용관리 (Expense Management / Fins)
 
 #### 진단 체크리스트
-문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청"
+문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요"
 1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
 2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
 3. 연동 완료 상태이면 → 어드민쉘 수동 동기화로 희망 기간 데이터 동기화 가능 [CI-4179]
 4. 카드 데이터 특정 기간 이전 동기화 실패 → 승인/매입 API별 조회 가능 기간이 상이. 범위 초과 시 담당 개발자에게 별도 코드 작업 요청 필요 [CI-4179]
+5. **수동 증빙 시간 정책 위반 표시** → 수동 추가 증빙(ETC spending)은 `transactedTime=null`로 전달되어 RANGE 평가에서 무조건 FAIL 처리됨 — **버그**(EP팀 수정 예정). 카드 증빙은 영향 없음(transactedTime 존재). 정책 생성 시점 이전 증빙에는 위반 미발생(활성 정책 없음) [CI-4229]
 
 #### 조사 플로우
 
@@ -1641,6 +1689,10 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-29 | CI-4217 | 근태/휴가: 휴일대체 취소 불가(OpenSearch sync 지연) — 체크리스트#18 + F4 플로우 + 과거 사례 추가. CANCEL+재등록 시 `NON_NULL` partial update로 구 eventId 잔존, 재동기화로 해결 |
+| 2026-03-29 | CI-4229 | 비용관리: 수동 증빙 시간 정책 위반 오표시 — 체크리스트#5 + 과거 사례 추가. `transactedTime=null` → RANGE FAIL 버그, EP팀 수정 예정 |
+| 2026-03-29 | CI-4094, CI-4209 | GLOSSARY: 출근 시간 불일치(`actorNow` stale), 교대근무 엑셀 스케줄 누락(WorkForm/WorkPlanTemplate 혼동) 용어 추가. code-fix이므로 COOKBOOK 스킵 |
+| 2026-03-29 | CI-4236 | 알림: 메일 중복 발신(file merge 무한 재시도) — F4 플로우 추가. render→impact→file 타임아웃 → Kafka consumer 리밸런스 → 동일 merge 요청 827건 폭증 패턴 |
 | 2026-03-27 | CI-4245 | 계정/구성원: 겸직 등록 진단 체크리스트 추가 — 같은 조직 겸직 불가 스펙 확인 |
 | 2026-03-27 | CI-4241 | 급여: 외국인 고용보험 공제 제외 진단 플로우(F-pay-1) 추가, 체크리스트 #11 추가 |
 | 2026-03-27 | CI-4239 | 근무 기록 삭제/복구: F1 히트 +1, 테스트 데이터 벌크 업로드 빈 값 workaround 분기 추가 |

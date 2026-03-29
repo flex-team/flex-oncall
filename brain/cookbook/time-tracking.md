@@ -60,5 +60,6 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 <!-- TODO: 시나리오 테스트 추가 권장 — 입사 1주년 전후 월별 연차 사용내역 vs 내휴가 잔여 검증 -->
 - **보상휴가 회수 후 잠금 미해제 — 고아 lock**: 단일 부여 경로에서 추출 0분인 날짜에도 lock 생성 (벌크 부여는 필터링됨). 미회수 assign의 lock이 잔존하여 근무 수정 차단 — **조사 중 (버그 추정)** [CI-4147]
 - **근무유형 적용 시 500 오류 — 매핑 없는 유저**: `validateBulk`의 `.first {}` 호출이 매핑 없는 유저에서 `NoSuchElementException` 발생. 원인: 근무유형 삭제 후 유저 맵핑 취소 시 비활성 근무유형이 잔존하여 유효 매핑 없는 상태. 데이터 보정(CANCEL INSERT)으로 즉시 대응, `.firstOrNull {}` 방어 처리 코드 수정 예정 — **버그** [CI-4180]
+- **휴일대체 취소 불가 — OpenSearch sync 지연**: 휴일대체 수정(CANCEL+재등록) 후 OpenSearch 문서에 구 eventId가 잔존하여 FE가 이미 CANCEL된 ID로 취소 요청 → 400 오류. `NON_NULL` + `doc()` partial update 조합이 원인. `/sync-os-work-schedule-advanced`로 재동기화하여 해결 — **버그 (OpenSearch sync)** [CI-4217]
 <!-- TODO: 시나리오 테스트 추가 권장 — 선택적 근무 추천 휴게 자동 입력 조건 검증 -->
 <!-- TODO: 시나리오 테스트 추가 권장 — 휴직 기간 휴가 등록 차단 + 휴가 기간 휴직 등록 허용 비대칭 검증 -->

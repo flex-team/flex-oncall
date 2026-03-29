@@ -13,6 +13,7 @@
 | 메일 못 받았어요 | SES Delivery 확인 (flex-prod-ses-feedback-*) | flex-pavement-backend |
 | 알림 클릭 시 이상한 곳으로 이동해요 | CTA locale 확인 (approve.refer vs approved.refer) | flex-pavement-backend |
 | 메타베이스에서 알림 내용이 안 보여요 | Core 알림 title_meta_map 빈값 — 스펙 | flex-pavement-backend |
+| 다운로드 완료 메일이 계속 와요 / 메일을 수백통 받았어요 | file merge 무한 재시도 — Kafka consumer lag + v2_file_merge TODO 확인 | flex-pavement-backend (file-storage) |
 
 ## 연차촉진 (Annual Time-Off Promotion)
 
@@ -30,6 +31,8 @@
 | 보상휴가 부여 안 돼요 | forAssign exceeded-work 부여가능 시간 확인 | flex-timetracking-backend |
 | 포괄 공제가 안 맞아요 | REGARDED_OVER Range 분할 월 중 변경 확인 | flex-timetracking-backend |
 | 휴일대체 탭에 날짜가 안 보여요 | OpenSearch holidayProps sync v2_user_work_rule 확인 | flex-timetracking-backend |
+| 휴일대체 취소가 안 돼요 / "대체 휴일을 찾을 수 없습니다" | OpenSearch sync 지연으로 구 eventId 반환 — `sync-os-work-schedule-advanced` 재동기화 | flex-timetracking-backend |
+| 출근 시간이 다르게 찍혀요 / 출근 기록 시간 불일치 | FE `actorNow` stale + 서버 validation 미비 — access log에서 요청 시각 확인 | flex-timetracking-backend |
 | 퇴근 시간이 잘렸어요 | 다음날 종일휴가 자정 조정 adjustWorkClockStopTime | flex-timetracking-backend |
 | 퇴근이 정시로 찍혀요 | work-clock.stop.preference=ON_TIME v2_time_tracking_user_config | flex-timetracking-backend |
 | 추천 휴게가 안 들어가요 | 선택적 근무 실시간 기록 시 추천 휴게 미입력 — 스펙 | flex-timetracking-backend |
@@ -51,6 +54,7 @@
 | 사용자 표현 | 시스템 용어 | 서브모듈 |
 |------------|------------|---------|
 | 교대근무 관리 화면에서 일부 구성원만 조회됩니다 | 근무 권한 + 휴가 권한 교집합 access-check | flex-timetracking-backend |
+| 엑셀 업로드했는데 일부 구성원 스케줄이 누락돼요 | 교대근무 엑셀에 일반 WorkForm(일근제 등) 입력 시 `isInvalidSchedule` → draft 빈 배열 → publish 누락 | flex-timetracking-backend |
 | 퇴근 자동 조정이 안 돼요 | baseAgreedDayWorkingMinutes 휴무일 연장근무 확인 | flex-timetracking-backend |
 
 ## 외부 연동 (Integration)
@@ -143,6 +147,8 @@
 | 세금계산서가 안 들어와요 | 국세청 스크래핑 수집 범위 확인 (최근 12개월) + 운영 도구 동기화 | flex-fins-backend |
 | 이전 카드 내역 연동해주세요 | 카드사 연동 상태 확인 → 운영 도구로 희망 기간 동기화 | flex-fins-backend |
 | 카드 부분 취소가 전체 취소로 나와요 | 카드사별 취소금액 필드 처리 확인 (하나카드 hotfix 이력) | flex-fins-backend |
+| 직접 추가한 증빙이 시간 정책 위반으로 나와요 | 수동 증빙(ETC spending) `transactedTime=null` → RANGE 평가 FAIL — 버그(EP팀 수정 예정) | flex-fins-backend |
+| 시간 정책 위반인데 위반이 아닌 거 같아요 | `SpendingTimePolicyItem` RANGE 평가에서 null → false(FAIL) 처리 확인 | flex-fins-backend |
 
 ## 급여 (Payroll)
 

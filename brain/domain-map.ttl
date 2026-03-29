@@ -14,10 +14,15 @@
   d:mod "notification-deliver" , "ses-feedback" , "notification-trigger" ;
   d:kw  "알림" , "notification" , "이메일" , "CTA" , "push" , "SES" ,
         "mail_send_history" , "notification_deliver" , "notification_type" ,
-        "title_meta_map" , "Core알림" ;
+        "title_meta_map" , "Core알림" ,
+        "v2_file_merge" , "FLEX_FILE_STORAGE_DOWNLOAD_PREPARATION_COMPLETED" ,
+        "command.flex.file-storage.merge" , "file-storage.file-merge" ,
+        "WORKFLOW_TASK_BULK_DOWNLOAD_FILE" ;
   d:syn "알림이 안 왔어요" , "메일 못 받았어요" ,
         "알림 클릭 시 이상한 곳으로 이동해요" ,
-        "메타베이스에서 알림 내용이 안 보여요" ;
+        "메타베이스에서 알림 내용이 안 보여요" ,
+        "다운로드 완료 메일이 계속 와요" ,
+        "메일을 수백통 받았어요" ;
   d:x   :time-tracking , :approval , :annual-promotion .
 
 :annual-promotion
@@ -49,6 +54,8 @@
         "초과근로" , "연장근로" , "야간근로" , "가산율" ,
         "단시간근로자" , "초단시간근로자" , "연소근로자" ,
         "보상휴가제" , "고정OT" , "탄력근무제" ,
+        "alteredHoliday" , "work-schedule-sync-to-es" ,
+        "lock_event" , "assign_times" , "actorNow" , "onTimeRecord" ,
         "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
@@ -62,7 +69,8 @@
         "근무유형 적용 시 오류가 나요" ,
         "대휴 기간 설정해주세요" ,
         "구글 캘린더 미연동 일정 재연동" ,
-        "휴일대체 취소가 안 돼요" ;
+        "휴일대체 취소가 안 돼요" , "보상휴가 회수했는데 수정이 안 돼요" ,
+        "출근 시간이 다르게 찍혀요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -75,10 +83,12 @@
         "agreedWorkingMinutes" , "requiredWorkingMinutes" ,
         "탄력적근무시간제" , "법정최대근로시간" , "주52시간" ,
         "bulk-upload" , "근무기록업로드" , "UserWorkScheduleBulkUpload" ,
-        "엑셀업로드타임아웃" ;
+        "엑셀업로드타임아웃" ,
+        "WorkPlanTemplate" , "isInvalidSchedule" ;
   d:syn "스케줄 게시가 안 돼요" , "정시 전 출근 불가가 안 먹혀요" ,
         "연장근무가 이상해요" ,
-        "근무 기록 업로드 시 오류가 나요" ;
+        "근무 기록 업로드 시 오류가 나요" ,
+        "엑셀 업로드했는데 일부 스케줄이 안 들어가요" ;
   d:x   :time-tracking , :shift , :payroll .
 
 :shift
@@ -87,9 +97,11 @@
   d:repo "flex-timetracking-backend" ;
   d:mod "shift-schedule" ;
   d:kw  "교대근무" , "휴무일" , "퇴근자동조정" , "초단시간근로자" ,
-        "baseAgreedDayWorkingMinutes" , "access-check" ;
+        "baseAgreedDayWorkingMinutes" , "access-check" ,
+        "filterIsInstance" , "DraftTimeOff" ;
   d:syn "교대근무 관리 화면에서 일부 구성원만 조회됩니다" ,
-        "퇴근 자동 조정이 안 돼요" ;
+        "퇴근 자동 조정이 안 돼요" ,
+        "교대근무 엑셀 업로드 시 연차가 안 들어가요" ;
   d:x   :time-tracking , :permission , :payroll .
 
 :integration
@@ -101,12 +113,14 @@
         "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ,
         "EventProvider" , "WORK_START" , "WORK_STOP" , "transmitter" ,
         "ODBC" , "odbc_connection_limit" , "CONNECTION LIMIT" ,
-        "테이블매핑" , "e_date" , "AUTO_WORK_STOP" ;
+        "테이블매핑" , "e_date" , "AUTO_WORK_STOP" ,
+        "isDraftEventRegistrationAllowed" , "checkWorkClockStatus" ;
   d:syn "세콤 연동이 풀렸어요" , "수동 전송했는데 반영 안 돼요" ,
         "세콤으로 퇴근했는데 정시로 찍혀요" ,
         "세콤으로 퇴근했는데 근무 종료 알림이 와요" ,
         "ODBC 연결이 안 돼요" ,
-        "수동 동기화 실패" ;
+        "수동 동기화 실패" ,
+        "출근이 여러번 찍혀요" ;
   d:x   :time-tracking , :account , :work-event-transmitter .
 
 :permission
@@ -150,7 +164,8 @@
         "집주소 변경 시 오류" ;
         "사번 정렬 시 무한 스크롤이 발생해요" ,
         "사번 정렬 시 겸직 인원이 중복으로 보여요" ,
-        "직책 2개 설정이 안 돼요" , "같은 조직에 겸직 등록이 안 돼요" ;
+        "직책 2개 설정이 안 돼요" , "같은 조직에 겸직 등록이 안 돼요" ,
+        "OTP 해제해주세요" ;
   d:x   :permission , :department .
 
 :department
@@ -302,11 +317,13 @@
         "공동인증서" , "crosscert" , "데이터수집" , "데이터동기화" ,
         "codef" , "비용정책" , "일괄변경" , "암호화" , "spending" ,
         "journalizing" , "merchant" , "stakeholder" ,
-        "세금계산서" , "국세청" , "스크래핑" , "홈택스" ;
+        "세금계산서" , "국세청" , "스크래핑" , "홈택스" ,
+        "transactedTime" , "시간정책" ;
   d:syn "카드 내역이 안 들어와요" , "법인카드 등록이 안 돼요" ,
         "비용 승인이 안 돼요" , "가맹점 정보가 안 맞아요" ,
         "경비 정산이 이상해요" ,
-        "세금계산서가 안 들어와요" , "이전 카드 내역 연동해주세요" ;
+        "세금계산서가 안 들어와요" , "이전 카드 내역 연동해주세요" ,
+        "시간 정책 위반이 아닌데 위반으로 보여요" ;
   d:x   :approval , :payroll .
 
 :payroll
@@ -328,7 +345,8 @@
         "employment_insurance_deduction_recipient" , "임의가입" ,
         "employment_insurance_qualification_history" ,
         "원천징수영수증" , "async-bulk-download" , "withholding-receipts" ,
-        "async-bulk-download-withholding-receipts-by-filter" ;
+        "async-bulk-download-withholding-receipts-by-filter" ,
+        "getYearEndTotalAmountByType" , "YEAR_END_REASON_CODES" , "74번코드" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
@@ -336,7 +354,8 @@
         "보육수당이 0원으로 잡혀요" , "휴직자에게 수당이 안 나와요" ,
         "급여정산 홈에서 퇴직자 수가 안 맞아요" ,
         "외국인 고용보험 공제가 빠졌어요" ,
-        "원천징수영수증 일괄 다운로드 실패" ;
+        "원천징수영수증 일괄 다운로드 실패" ,
+        "건강보험 연말정산 분할납부금이 이상해요" ;
   d:x   :time-tracking , :scheduling .
 
 :flow
@@ -408,8 +427,8 @@ n:CI-4240
 n:CI-4236
   d:in :notification ;
   d:x  :approval ;
-  d:v  "investigating" ;
-  d:s  "워크플로우 일괄 다운로드 완료 안내 메일 수백통 중복 발신" .
+  d:v  "bug" ;
+  d:s  "워크플로우 일괄 다운로드 완료 안내 메일 수백통 중복 발신 — render 타임아웃 → file merge 재시도 폭증" .
 
 n:CI-4228
   d:in :approval ;
@@ -452,32 +471,6 @@ n:CI-4227
   d:in :payroll ;
   d:v  "bug-fix" ;
   d:s  "23년11월 급여이관 후 명세서 지급금액 0원 — 2025-03 backfill 시 검증 로직 실패로 일부 귀속월 누락. PR #8691로 LegacyPaymentDataReader fallback + validation 스킵 추가" .
-
-n:CI-4229
-  d:in :fins ;
-  d:v  "investigating" ;
-  d:s  "수동 추가 증빙 시간 정책 위반 오표시 — 시간 없는 증빙을 00:00으로 판단, 정책 범위 내인데 위반으로 표시. EP 버그 인정, 배포 예정" .
-
-n:CI-4225
-  d:in :payroll ;
-  d:v  "spec" ;
-  d:s  "육아휴직자 보육수당 자동산정 0원 — DAILY_BASE 규칙 + paymentRatio=0 조합. allowanceOnLeaveRule을 FULL로 변경하면 해결" .
-
-n:CI-4209
-  d:in :scheduling ;
-  d:v  "investigating" ;
-  d:s  "엑셀 근무표 업로드 시 특정 구성원 3명 스케줄 오류 없이 누락 — 2개월 반복" .
-
-n:CI-4221
-  d:in :scheduling ;
-  d:v  "perf" ;
-  d:st "C" ;
-  d:s  "근무기록 업로드 타임아웃 — N+1 처리로 CF origin_read_timeout(180초) 초과, 분할 업로드 안내" .
-
-n:CI-4217
-  d:in :time-tracking ;
-  d:v  "investigating" ;
-  d:s  "휴일대체 취소 시 구 이벤트 ID 전송으로 404 오류 — FE 캐시/갱신 문제" .
 
 n:CI-4213
   d:in :account ;
@@ -567,11 +560,6 @@ n:CI-4146
   d:v  "investigating" ;
   d:s  "무료체험 구성원 등록 시 사용할 수 없는 이메일 표시" .
 
-n:CI-4147
-  d:in :time-tracking ;
-  d:v  "investigating" ;
-  d:s  "보상휴가 회수했으나 근무 수정이 안됨" .
-
 n:CI-4148
   d:in :time-tracking ;
   d:v  "bug" ;
@@ -606,11 +594,6 @@ n:CI-4157
   d:in :integration ;
   d:v  "spec" ;
   d:s  "세콤 출퇴근 연동 — 잔존 위젯 dry-run validation 실패 (스펙)" .
-
-n:CI-4165
-  d:in :integration ;
-  d:v  "investigating" ;
-  d:s  "SECOM 외부 출퇴근 이벤트 중복 등록으로 진행중 블럭 다건 발생" .
 
 n:FT-12290
   d:in :integration ;
@@ -683,11 +666,6 @@ n:CI-3970
   d:v  "investigating" ;
   d:s  "초과근무 보상주기 2개 이상일 때 승인 문서에 1개만 표현" .
 
-n:CI-3998
-  d:in :shift ;
-  d:v  "investigating" ;
-  d:s  "교대근무 엑셀 스케줄 업로드 시 연차 미반영" .
-
 n:CI-4025
   d:in :time-tracking ;
   d:v  "investigating" ;
@@ -702,11 +680,6 @@ n:CI-4073
   d:in :payroll ;
   d:v  "investigating" ;
   d:s  "중도정산 금액 수정 후 2025년 연말정산 금액이 0원으로 반영" .
-
-n:CI-4094
-  d:in :time-tracking ;
-  d:v  "investigating" ;
-  d:s  "구성원 실제 근무 시작 시간과 기록 시작 시간 상이" .
 
 n:CI-4096
   d:in :payroll ;
@@ -747,395 +720,510 @@ n:CI-4182
 # Notes — archive (brain/notes/archive/)
 # ============================================================
 
+n:CI-4229
+  d:in :fins ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:s  "수동 증빙 시간 정책 위반 표시 — transactedTime=null일 때 00:00 기본값으로 정책 판단, Not a Bug 판정" .
+
+n:CI-4225
+  d:in :payroll ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:s  "육아휴직자 보육수당 자동산정 0원 — DAILY_BASE 규칙 + paymentRatio=0 조합. allowanceOnLeaveRule을 FULL로 변경하면 해결" .
+
+n:CI-4209
+  d:in :scheduling ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "엑셀 업로드 일근제 스케줄 누락 — WorkPlanTemplate 매칭 실패, PR #12078 로그 추가 배포 완료" .
+
+n:CI-4221
+  d:in :scheduling ;
+  d:v  "perf" ;
+  d:st "C" ;
+  d:s  "근무기록 업로드 타임아웃 — N+1 처리로 CF origin_read_timeout(180초) 초과, 분할 업로드 안내" .
+
+n:CI-4217
+  d:in :time-tracking ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:s  "휴일대체 취소 불가 — OpenSearch 동기화 지연으로 구 이벤트 ID 반환, 근무 삭제 후 재시도로 해결" .
+
+n:CI-4147
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "보상휴가 회수 후 잠금 미해제 — 단일 부여 0분 항목 불필요 잠금 방지, PR #12033 수정 완료" .
+
+n:CI-4165
+  d:in :integration ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "SECOM 배치 동기화 중복 START — checkWorkClockStatus 시간 역전 버그, PR #12058 수정 완료" .
+
+n:CI-3998
+  d:in :shift ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "교대근무 엑셀 업로드 시 연차 미반영 — filterIsInstance null 혼동, PR #11878/#11874 수정 완료" .
+
+n:CI-4094
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:s  "출근 시간 기록 불일치 — actorNow stale 감지 로깅 추가, PR #2299 수정 완료" .
+
 n:CI-4201
   d:in :department ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "구성원이 없는 조직이 종료 처리되지 않음 — 예약발령 잔존 시 validator가 미래 position 감지하여 차단 (DEPA_400_017). 의도된 보수적 제약" ;
   d:x  :personnel-appointment , :account .
 
 n:CI-4188
   d:in :review ;
   d:v  "ops" ;
+  d:st "C" ;
   d:s  "후발 추가 reviewer UserForm 미초기화 — 메시지 큐 실패 추정, Operation API initialize-user-form으로 수동 해결" .
 
 n:CI-4174
   d:in :payroll ;
   d:v  "bug-fix" ;
+  d:st "C" ;
   d:s  "건강보험 제외 대상자 중도정산 시 전년도 사회보험 연말정산 금액 잘못 표시 — 확정해제 시 리버트 누락 + 2월 말 합산 픽스 연쇄, 핫픽스 배포" .
 
 n:CI-4179
   d:in :fins ;
   d:v  "operational" ;
+  d:st "C" ;
   d:s  "국세청 세금계산서 소급 동기화 + 신한카드 미연동 안내 — 운영 도구로 대응" .
 
 n:CI-4176
   d:in :account ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "최고관리자 OTP 설정으로 카드등록 로그인 불가" .
 
 n:CI-3777
   d:in :annual-promotion ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "연차촉진 히든 스펙으로 알림/화면 불일치" .
 
 n:CI-3809
   d:in :annual-promotion ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "월차 2차 완료 후 1차 알림 지속" .
 
 n:CI-3839
   d:in :scheduling ;
   d:v  "investigating" ;
+  d:st "C" ;
   d:s  "주 연장근무 발생 원인 확인" .
 
 n:CI-3849
   d:in :integration ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "세콤 연동 활성화 풀림 및 수동 전송 미반영" .
 
 n:CI-3858
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "보상휴가 부여 시 부여가능한 시간 없음" .
 
 n:CI-3861
   d:in :integration ;
   d:v  "investigating" ;
+  d:st "C" ;
   d:s  "세콤 수동 전송 미반영" .
 
 n:CI-3862
   d:in :scheduling ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "주휴일 배치 초과 허용인데 근무표 게시 제한" .
 
 n:CI-3866
   d:in :scheduling ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "스케줄 게시 후 정시 전 출근 불가 미작동" .
 
 n:CI-3868
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "포괄계약 시간만큼 공제 안 됨" .
 
 n:CI-3892
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "교대근무 스케줄에서 여러날 휴가 미표시" .
 
 n:CI-3897
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "휴일대체 지정 기간 변경 요청" .
 
-n:CI-4186
-  d:in :time-tracking ;
-  d:v  "spec" ;
-  d:s  "주휴일 휴일대체 지정 기간 ±30일 변경 요청 — CI-3897 동일 패턴" .
-
-n:CI-4199
-  d:in :time-tracking ;
-  d:v  "spec" ;
-  d:s  "주휴일 휴일대체 지정 기간 ±180일 변경 요청 — CI-3897/CI-4186 동일 패턴" .
+# retired: CI-4186 (R3 — CI-3897 동일 패턴)
+# retired: CI-4199 (R3 — CI-3897/CI-4186 동일 패턴)
 
 n:CI-3907
   d:in :annual-promotion ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "연촉 문서 작성 필요시기 경과 후 알림 지속" .
 
 n:CI-3910
   d:in :notification ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "승인자=참조자 중복 알림 제거" .
 
 n:CI-3914
   d:in :notification ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "이메일 CTA 이동 대상 차이" .
 
 n:CI-3932
   d:in :annual-promotion ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "정책 변경 후 PENDING_WRITE 잔존" .
 
 n:CI-3949
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "휴일대체 탭에 날짜 미표기" .
 
 n:CI-3951
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "퇴직자 승인자 교체 — 승인 대기 건 확인 불가" .
 
 n:CI-3976
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "퇴사자 휴가 사용일자 데이터 추출" .
 
 n:CI-3979
   d:in :integration ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "세콤 퇴근 타각 시 근무 기록 시간 조정" .
 
 n:CI-4103
   d:in :shift ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "교대근무 관리 화면 조회 권한 일부 누락" .
 
 n:CI-4107
   d:in :contract ;
   d:v  "investigating" ;
+  d:st "C" ;
   d:s  "전자계약 양식 세로 가운데 정렬 미동작" .
 
 n:CI-4118
   d:in :account ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "관리자 계정 이메일 변경 (퇴사자)" .
 
 n:CI-4119
   d:in :shift ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "교대근무 휴무일+스케줄 근무 시 퇴근 자동 조정 실패" .
 
 n:CI-4120
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "휴직/휴가 검증 비대칭" .
 
 n:CI-4121
   d:in :data-export ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "근무 기록 다운로드 실패 (타임아웃)" .
 
 n:CI-4230
   d:in :data-export ;
   d:v  "bug-fix" ;
+  d:st "C" ;
   d:s  "워크플로우 참조문서 증빙 엑셀에서 삭제된 문서 표시 — Bullseye 이중 접두사" .
 
 n:CI-4122
   d:in :notification ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "Core 알림 title_meta_map 빈값" .
 
 n:CI-4124
   d:in :account ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "일괄 이메일 변경" .
 
 n:CI-4203
   d:in :approval ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "승인 리마인드 알림 발송자 확인 — younghoon.jo가 아닌 jinhee.kim/jungil.um이 발송한 것으로 확인" .
 
-n:CI-4200
-  d:in :account ;
-  d:v  "spec" ;
-  d:s  "재직자 메일주소 일괄 변경 문의 — CI-4124와 동일 패턴, Operation API 안내로 해결" .
+# retired: CI-4200 (R3 — CI-4124 동일 패턴)
 
 n:CI-4125
   d:in :goal ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "목표 화면 조직도 순서 미반영" .
 
 n:CI-4129
   d:in :review ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "평가 공동편집자 아닌데 평가 메뉴 노출 — FE 목록 필터링 버그" .
 
 n:CI-4131
   d:in :payroll ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "올림 설정 스냅샷" .
 
 n:CI-4133
   d:in :goal ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "뉴목표 사용 중 동작 멈춤 (FE)" .
 
 n:external-work-clock-event-failure-20260304
   d:in :integration ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "외부 타각기 위젯 이벤트 처리 실패" .
 
 n:QNA-1842
   d:in :integration ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "출입연동 커넥션 수 설정" .
 
 n:QNA-1920
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "연차 사용 내역 사라짐 — 부여 시작일 이전 미표시" .
 
 n:QNA-1921
   d:in :payroll ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "근로소득 지급명세서 누락분 팩스 제출" .
 
 n:QNA-1922
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "선택적 근무 실시간 휴게 기록 시 추천 휴게 미입력" .
 
 n:QNA-1924
   d:in :review ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "목표 난이도에 따른 평가 결과 산정 — 평가 세분화로 가능" .
 
 n:QNA-1928
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "근태기록 리포트 컬럼 문의" .
 
-n:QNA-1933-archive
-  d:in :payroll ;
-  d:v  "spec" ;
-  d:s  "구독 해지 후 명세서 알림 발송 (archive copy)" .
+# retired: QNA-1933-archive (R3 — QNA-1933 중복 copy)
 
 n:TT-16783
   d:in :integration ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "다법인 workspace에서 SECOM customerKey 충돌" .
 
 n:CI-3568
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "지방소득세 신고서 생성 시 법정동코드 오류" .
 
 n:CI-3764
   d:in :fins ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "지출결의 문서 복제 시 커스텀 승인라벨이 기본값으로 초기화" .
 
 n:CI-3808
   d:in :yearend ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "연말정산 체크리스트 반영 후 최종 세액에서 제외됨" .
 
 n:CI-3842
   d:in :yearend ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "home 화면 접속 시 yearend settlements API 400 에러" .
 
 n:CI-3851
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "배우자 출산휴가 일수가 특정 구성원에게 10일로 표기" .
 
 n:CI-3880
   d:in :notification ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "휴게 기록 요청 알림 텍스트 오류 — 수신자 이름 누락" .
 
 n:CI-3896
   d:in :scheduling ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "근무지 스케줄 잘못 추가 후 삭제 불가" .
 
 n:CI-3915
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "참조 설정에 없는 구성원에게 워크플로우 알림 발송" .
 
 n:CI-3916
   d:in :yearend ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "연말정산에서 소기업소상공인공제부금 제외 안 됨" .
 
 n:CI-3938
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "중간정산 이력 시 퇴직사유가 중간정산으로 잘못 신고" .
 
 n:CI-3961
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "급여명세서에서 연말정산 소득세 표기 문구 미표시" .
 
 n:CI-3989
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "퇴직소득 지급명세서 신고파일 음수 금액 시 파일 생성 불가" .
 
 n:CI-4004
   d:in :annual-promotion ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "연차 촉진 대상 아닌 구성원이 메일 수신" .
 
 n:CI-4008
   d:in :approval ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "출장 근무 승인이 발생하지 않은 원인 확인 — 등록 경로 스펙" .
 
 n:CI-4009
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "휴가 사용 시간 범위 오류 후 휴가가 등록됨" .
 
 n:CI-4019
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "승인 완료 문서가 진행중 문서함에 표시" .
 
 n:CI-4030
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "정산 급여대장 다운로드 시 건강/장기요양보험료 빈셀 출력" .
 
 n:CI-4045
   d:in :account ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "직무 대량 삭제 후 저장 시 삭제한 직무가 복구됨" .
 
 n:CI-4052
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "모바일 앱 출퇴근 시 간헐적 네트워크 오류 — 환경 요인" .
 
 n:CI-4055
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "근무기록 다운로드 권한 오류 — 내부 보안 정책 가능성" .
 
 n:CI-4058
   d:in :flow ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "영문 버전 품의서 결재란 이름 검색 시 문서 전체 삭제" .
 
 n:CI-4071
   d:in :fins ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "카드 부분 취소가 전체 취소로 표시" .
 
 n:CI-4085
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "맞춤 휴가 일부 회수 시 전체 회수 발생" .
 
 n:CI-4090
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "휴가 승인 자동진행 미작동" .
 
 n:CI-4099
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "휴일대체 취소 불가 — 휴일근무 삭제 후 취소 버튼 미노출" .
 
 n:CI-4110
   d:in :time-tracking ;
   d:v  "spec" ;
+  d:st "C" ;
   d:s  "PC 근무 시작 시 시간 오류 — 환경 요인" .
 
 n:CI-4156
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "근무유형 변경 예약 취소 불가" .
 
 n:CI-4193
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "경력 변경 요청 댓글이 중복 노출되거나 사라짐 — FE가 sort=ASC&size=1로 요청하여 댓글 누락" ;
   d:x  :flow .
 
@@ -1148,6 +1236,7 @@ n:CI-4220
 n:CI-4222
   d:in :payroll ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "건강보험 연말정산 분할납부금액(74번)이 전년도 기납보험료에 잘못 합산 — getYearEndTotalAmountByType 귀속연도 미필터링" .
 
 # ============================================================
@@ -1703,6 +1792,7 @@ n:CI-4233
 n:CI-4232
   d:in :account ;
   d:v  "bug" ;
+  d:st "C" ;
   d:s  "구성원 메뉴 사번 정렬 시 무한 스크롤 — ValuesContinuation.print()에서 null→'null' 직렬화 버그. search_after 커서가 null 구간을 벗어나지 못함. 사번 null 구성원이 있는 모든 회사에서 재현" .
 
 n:CI-4235
