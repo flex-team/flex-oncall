@@ -95,6 +95,26 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 | "단답이라 의미없다" | 단답도 스레드를 읽어야 맥락을 알 수 있음. 메시지는 스킵해도 스레드는 읽어라 |
 | "MCP 호출이 너무 많다" | 사람을 대체하는 작업이다. 호출 수는 문제가 아님 |
 
+### Slack 검색 API 제약 — 20페이지 하드 리밋
+
+> **`slack_search_public_and_private`는 최대 20페이지(400건)까지만 반환한다.**
+> cursor가 20페이지 이후에도 존재하더라도 API가 빈 결과를 반환하기 시작한다.
+> 이 제한은 Slack API 자체의 한계이며, 에이전트나 MCP 설정으로 우회할 수 없다.
+
+#### 20페이지 제한 대응 전략
+
+1. **에이전트 할당 구간을 400건 미만으로 유지**: 볼륨 추정(Step A)에서 분기별 밀도를 파악한 후, 각 에이전트가 처리하는 구간의 총 메시지가 **350건 이하**가 되도록 분할한다 (20페이지 × 20건 = 400건에 여유 두기).
+2. **>20건 분기가 연속되면 월 단위로 분할**: 분기당 >20건이 연속 3분기 이상이면 월 단위로 쪼개야 한다.
+3. **에이전트 완료 보고에 페이지 제한 도달 여부 포함**: 완료 보고에 `20페이지 제한 도달: ✅/❌` 항목을 추가한다.
+4. **제한 도달 시 보충 에이전트 디스패치**: 20페이지 제한에 도달한 에이전트가 있으면, 해당 구간을 절반으로 나눠 보충 에이전트를 디스패치한다. 이 과정을 모든 에이전트가 제한 없이 완료할 때까지 반복한다.
+
+```
+예시: customer-issue 2022-04~2024-01 → 20페이지 제한 도달
+  → 보충 1: customer-issue 2022-04~2023-03
+  → 보충 2: customer-issue 2023-03~2024-01
+  → 각각이 또 제한 도달 시 다시 절반 분할
+```
+
 ### 대량 데이터 처리 전략 — 반드시 따를 것
 
 > **서브에이전트는 컨텍스트 한계가 있다. "한 에이전트가 채널 전체를 처리"하는 방식은 금지.**
@@ -123,12 +143,13 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 | 분기별 메시지 수 | 분할 단위 | 에이전트 수 |
 |:---:|:---:|:---:|
 | 0건 | 스킵 | 0 |
-| ≤20건 | 인접 분기와 병합 가능 | 병합 |
+| ≤20건 | 인접 분기와 병합 가능 (단, 병합 후 총합 350건 미만 유지) | 병합 |
 | 21~100건 | 분기(3개월) 1개 에이전트 | 1 |
 | >100건 | **월 단위** 분할 | 최대 3 |
 
-**핵심**: 하나의 에이전트에게 100건 초과 메시지를 맡기지 않는다.
-에이전트 1개당 처리량 상한: **메시지 100건 + 스레드 50개 이내**.
+**핵심**: 하나의 에이전트에게 **350건 초과 메시지를 맡기지 않는다** (20페이지 × 20건 = 400건 하드 리밋).
+에이전트 1개당 처리량 상한: **메시지 350건 + 스레드 100개 이내**.
+350건을 넘길 가능성이 있으면 반드시 구간을 더 잘게 나눈다.
 
 #### Step C: 2단계 에이전트 설계
 
@@ -140,6 +161,7 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
    ```
    ## 완료 보고
    - 검색 페이지: N페이지 (마지막 페이지 cursor 없음 확인: ✅/❌)
+   - 20페이지 제한 도달: ✅/❌ (20페이지에서 결과가 여전히 있었는지)
    - 총 메시지: N건
    - 고유 스레드: M건
    - 읽은 스레드: M건 (전수 읽기 완료: ✅/❌)
@@ -156,8 +178,9 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 **모든 에이전트가 완료된 후 반드시 수행. 검증 통과 전 Phase 3 진입 금지.**
 
 1. 각 에이전트의 완료 보고에서 "마지막 페이지 cursor 없음 확인: ✅" 확인
-2. "전수 읽기 완료: ✅" 확인
-3. ❌가 하나라도 있으면 → 해당 구간에 보충 에이전트 디스패치
+2. "20페이지 제한 도달: ❌" 확인 — ✅(도달)이면 해당 구간을 절반으로 나눠 보충 에이전트 디스패치
+3. "전수 읽기 완료: ✅" 확인
+4. ❌가 하나라도 있으면 → 해당 구간에 보충 에이전트 디스패치 (20페이지 제한 대응 전략의 "제한 도달 시 보충" 규칙 참조)
 4. 채널별 전체 합산:
    ```
    채널: customer-issue
@@ -176,9 +199,10 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 |-------|------|------|
 | Phase 1: ID 해석 | **haiku** | 단순 API 호출 + 파싱 |
 | Phase 1.5: 볼륨 추정 | **haiku** | 단순 검색 + cursor 유무 판별 |
-| Phase 2: 메시지 수집 + 카드 추출 | **sonnet** | 검색 → 스레드 읽기 → 지식 카드 판단·추출 |
+| Phase 2 Pass 1: thread_ts 수집 | **haiku** | concise 검색 + permalink 파싱만. 판단 불필요 |
+| Phase 2 Pass 2: 스레드 읽기 + 카드 추출 | **sonnet** | 맥락 이해 + 지식 카드 판단 필요 |
 | 검증 게이트 | 메인(opus) | 결과 대조 + 보충 판단 |
-| Phase 3: 결과 병합 | **opus** | 552개 카드 통합, 중복 제거, 도메인 분류 |
+| Phase 3: 결과 병합 | **sonnet** | 구조화된 카드 파일만 읽으므로 sonnet으로 충분 |
 | Phase 4-5: 프로필 작성 | **opus** | 문서 구조화, 의사결정 원칙 도출, 응대 패턴 정리 |
 | 링크 검증 + 수정 | **sonnet** | 패턴 매칭 + permalink 검색·교체 |
 
@@ -191,9 +215,10 @@ argument-hint: "<email> --channels <ch1,ch2,...> --after <YYYY-MM-DD> [--before 
 ```mermaid
 flowchart TD
     A["Phase 1: ID 해석<br/>🟢 haiku"] --> A2["Phase 1.5: 볼륨 추정<br/>🟢 haiku"]
-    A2 --> B["Phase 2: 수집 + 카드 추출<br/>🔵 sonnet"]
-    B --> V["검증 게이트<br/>🟣 opus (메인)"]
-    V --> C["Phase 3: 결과 병합<br/>🟣 opus"]
+    A2 --> B1["Phase 2 Pass 1: thread_ts 수집<br/>🟢 haiku<br/>concise 검색 → 파일 저장"]
+    B1 --> B2["Phase 2 Pass 2: 스레드 읽기 + 카드 추출<br/>🔵 sonnet<br/>thread 파일 읽기 → 카드 파일 저장"]
+    B2 --> V["검증 게이트<br/>🟣 opus (메인)<br/>registry.txt 기반 중복 방지"]
+    V --> C["Phase 3: 결과 병합<br/>🔵 sonnet<br/>카드 파일만 읽기"]
     C --> D["Phase 4: 초안 제시<br/>🟣 opus"]
     D --> E["Phase 5: 프로필 작성<br/>🟣 opus"]
     E --> L["링크 검증<br/>🔵 sonnet"]
@@ -222,28 +247,63 @@ Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 2. **분할 계획 수립**: "Step B: 에이전트 분할 기준" 테이블에 따라 에이전트 목록 작성
 3. **사용자에게 분할 계획 보고** 후 Phase 2 진행
 
-### Phase 2: 구간별 서브에이전트 병렬 디스패치 — 🔵 sonnet
+### Phase 2: 2-Pass 수집 아키텍처
+
+> **토큰 절감을 위해 검색(Pass 1)과 추출(Pass 2)을 분리한다.**
+> 검색은 `concise` 포맷 + haiku로 permalink만 수집하고, 스레드 읽기 + 카드 추출은 sonnet이 담당.
+
+#### 중간 파일 구조
+
+```
+/tmp/slack-profile-{slug}/
+├── threads/                         # Pass 1 결과
+│   ├── {channel}-{period}.txt       # thread_ts 목록 (한 줄에 하나)
+│   └── ...
+├── cards/                           # Pass 2 결과
+│   ├── {channel}-{period}.md        # 지식 카드 마크다운
+│   └── ...
+├── registry.txt                     # 읽은 thread_ts 전체 목록 (중복 방지)
+└── merged-cards.md                  # Phase 3 결과
+```
+
+#### Pass 1: thread_ts 수집 — 🟢 haiku
+
+> Agent tool 사용 시 `model: "haiku"` 지정
+> **채널×기간 구간별로 디스패치.** 350건 이하가 되도록 구간 분할.
+
+각 에이전트의 임무:
+1. `slack_search_public_and_private` (**concise**, include_context: false)
+   - query: `from:<@USER_ID> in:<#CHANNEL_ID> after:YYYY-MM-DD before:YYYY-MM-DD`
+   - **cursor가 없어질 때까지** 반복
+2. 각 메시지의 permalink에서 thread_ts 추출
+3. thread_ts 기준 deduplicate
+4. **reply_count 필터링**: reply_count=0이고 메시지가 단답(10자 미만)이면 스킵 대상으로 마킹
+5. 결과를 `/tmp/slack-profile-{slug}/threads/{channel}-{period}.txt`에 저장
+   - 형식: `{thread_ts}\t{reply_count}\t{skip여부}` (한 줄에 하나)
+6. 스킵 대상이 아닌 thread_ts를 `/tmp/slack-profile-{slug}/registry.txt`에 append
+
+**완료 보고**:
+```
+## Pass 1 완료 보고
+- 검색 페이지: N (cursor 소진: ✅/❌, 20페이지 제한 도달: ✅/❌)
+- 총 메시지: N건
+- 고유 스레드: M건 (스킵 대상: S건)
+- Pass 2 대상 스레드: M-S건
+```
+
+#### Pass 2: 스레드 읽기 + 카드 추출 — 🔵 sonnet
 
 > Agent tool 사용 시 `model: "sonnet"` 지정
-> **채널 단위가 아닌, 채널×분기(또는 월) 단위로 디스패치한다.**
-> 예: customer-issue 2022-Q3, customer-issue 2022-Q4, ... 각각 별도 에이전트
+> Pass 1 완료 후 디스패치. 에이전트 1개당 **스레드 50개 이내**.
 
-각 서브에이전트의 임무 (할당된 채널×기간 구간에 대해):
+각 에이전트의 임무:
+1. `/tmp/slack-profile-{slug}/threads/{channel}-{period}.txt` 읽기
+2. 스킵 대상이 아닌 thread_ts에 대해 `slack_read_thread` (concise) 실행
+3. **registry.txt 체크**: 이미 읽은 thread_ts는 스킵 (보충 에이전트용)
+4. 지식 카드 추출
+5. 결과를 `/tmp/slack-profile-{slug}/cards/{channel}-{period}.md`에 저장
+6. 읽은 thread_ts를 registry.txt에 append
 
-#### Step 2-1: 메시지 전수 수집 (detailed 포맷)
-- `slack_search_public_and_private` (detailed, include_context: false)
-- query: `from:<@USER_ID> in:<#CHANNEL_ID> after:YYYY-MM-DD before:YYYY-MM-DD`
-- **cursor가 없어질 때까지** 반복 — 할당 구간이 작으므로 반드시 완료 가능
-- 각 메시지의 permalink에서 `thread_ts=` 추출
-
-#### Step 2-2: 고유 스레드 deduplicate
-- thread_ts 기준 중복 제거
-
-#### Step 2-3: 모든 스레드 전수 읽기
-- `slack_read_thread` (concise) 로 각 고유 스레드 읽기
-- **할당 구간 내 모든 고유 스레드를 빠짐없이 읽는다**
-
-#### Step 2-4: 지식 카드 추출 + 완료 보고
 각 스레드를 읽은 후, 대상 인물의 발언에서 **지식 카드**를 추출한다.
 
 **지식 카드 추출 기준**:
@@ -296,15 +356,19 @@ Phase 1 완료 후, Phase 2 디스패치 전에 반드시 수행.
 ...
 ```
 
-### Phase 3: 결과 병합 + 중복 통합 — 🟣 opus
+### Phase 3: 결과 병합 + 중복 통합 — 🔵 sonnet
 
-> Agent tool 사용 시 `model: "opus"` 지정 (또는 메인 에이전트에서 직접 수행)
+> Agent tool 사용 시 `model: "sonnet"` 지정
+> **구조화된 카드 파일만 읽으므로 sonnet으로 충분.** 에이전트 출력 전체를 읽지 않는다.
 
-서브에이전트 결과를 모두 수집한 후:
-1. 같은 주제의 카드를 통합 (예: "주기연장 일귀속"이 customer-issue와 squad-tracking 양쪽에서 나왔으면 하나로 merge)
-2. 도메인 영역별로 그루핑
-3. 관점/의사결정 원칙을 별도 섹션으로 분리
-4. 응대 패턴을 별도 섹션으로 분리
+입력: `/tmp/slack-profile-{slug}/cards/*.md` (각 에이전트가 저장한 카드 파일)
+출력: `/tmp/slack-profile-{slug}/merged-cards.md`
+
+1. 모든 카드 파일 읽기 (원시 에이전트 출력이 아닌 구조화된 카드만)
+2. 같은 주제의 카드를 통합 (예: "주기연장 일귀속"이 customer-issue와 squad-tracking 양쪽에서 나왔으면 하나로 merge)
+3. 도메인 영역별로 그루핑
+4. 관점/의사결정 원칙을 별도 섹션으로 분리
+5. 응대 패턴을 별도 섹션으로 분리
 
 ### Phase 4: 초안 제시 + 사용자 확인
 
