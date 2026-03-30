@@ -4,3 +4,12 @@
 {"ts":"2026-03-29T22:32:17+0900","epoch":1774791137,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit","args":"","session":"4c147af6-33ab-4d68-ba27-b11b172dc922"}
 {"ts":"2026-03-29T22:32:47+0900","epoch":1774791167,"date":"2026-03-29","user":"yj.kim","skill":"git:git-push","args":"","session":"4c147af6-33ab-4d68-ba27-b11b172dc922"}
 {"ts":"2026-03-29T22:34:36+0900","epoch":1774791276,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit","args":"","session":"16a5c1bb-154f-4c77-bad4-cd3816a17c34"}
+{"ts":"2026-03-29T22:37:21+0900","epoch":1774791441,"date":"2026-03-29","user":"yj.kim","skill":"git:git-push","args":"","session":"16a5c1bb-154f-4c77-bad4-cd3816a17c34"}
+{"ts":"2026-03-29T22:42:36+0900","epoch":1774791756,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit-push","args":"","session":"65856331-155e-4c7a-b04b-9b13beaf095e"}
+{"ts":"2026-03-29T22:42:40+0900","epoch":1774791760,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit","args":"","session":"65856331-155e-4c7a-b04b-9b13beaf095e"}
+{"ts":"2026-03-29T22:43:01+0900","epoch":1774791781,"date":"2026-03-29","user":"yj.kim","skill":"git:git-push","args":"","session":"65856331-155e-4c7a-b04b-9b13beaf095e"}
+{"ts":"2026-03-29T22:51:08+0900","epoch":1774792268,"date":"2026-03-29","user":"yj.kim","skill":"superpowers:writing-plans","args":"GLOSSARY.md 제거: g:* 블록 마이그레이션 + 참조 제거","session":"10dee007-af68-4c79-989d-902083994193"}
+{"ts":"2026-03-29T22:57:45+0900","epoch":1774792665,"date":"2026-03-29","user":"yj.kim","skill":"superpowers:subagent-driven-development","args":"/tmp/glossary-removal/plan.md","session":"10dee007-af68-4c79-989d-902083994193"}
+{"ts":"2026-03-29T23:04:35+0900","epoch":1774793075,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit","args":"","session":"10dee007-af68-4c79-989d-902083994193"}
+{"ts":"2026-03-29T23:17:12+0900","epoch":1774793832,"date":"2026-03-29","user":"yj.kim","skill":"git:git-commit","args":"","session":"10dee007-af68-4c79-989d-902083994193"}
+{"ts":"2026-03-29T23:17:25+0900","epoch":1774793845,"date":"2026-03-29","user":"yj.kim","skill":"git:git-push","args":"","session":"10dee007-af68-4c79-989d-902083994193"}
