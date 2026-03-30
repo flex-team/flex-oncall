@@ -1,9 +1,9 @@
 # 김영준(Enhance) — Slack Knowledge Profile
 
-> 생성일: 2026-03-27 | 분석 범위: 2022-01-01 ~ 2025-01-01
-> 채널: #customer-issue (CRU35U9FC), #squad-tracking (CK7EUDG4S), #product-qna (C01G5AFKNFL)
-> 분석 스레드: ~120개 / 추출 카드: ~100개
-> 역할: Backend Engineer | EP BE2 (Time-Tracking)
+> 생성일: 2026-03-29 | 분석 범위: 2021-01-01 ~ 2026-04-01
+> 채널: #product-qna, #customer-issue, #squad-tracking, #squad-tracking-be, #pj-tracking-계획실근로, #pj-tracking-주기연장일귀속, #pj-tracking-교대근무-근무지-근무표, #pj-연장근무단위, #tf-휴일대체, #tf-tracking-reframing, #tf-보상휴가-급여-연동, #tf-미사용연차수당
+> 분석 스레드: ~680건 / 전체 메시지: ~4,900건 (squad-tracking 2022-07~2026-04 보충 추가)
+> 역할: Product Engineer | EP BE2 (Time-Tracking)
 
 ---
 
@@ -11,782 +11,1471 @@
 
 ### 전문 영역
 
-김영준(Enhance, yj.kim)은 flex Time-Tracking 백엔드 엔지니어로, 2022년부터 근무/휴가/승인/연동 도메인 전반의 서버 구현을 담당한다. 주요 전문 영역:
+김영준(Enhance, yj.kim)은 flex Time-Tracking 백엔드 엔지니어로, 2022년부터 근무/휴가/승인/연동 도메인 전반의 서버 구현을 담당한다.
 
-1. **알림(Notification) 시스템**: flex-pavement-backend 알림 타입 추가/동기화, notificationGroup 구조, raccoon 어드민 동기화 도구
-2. **세콤/캡스/텔레캅 연동**: 외부 단말기 타각 연동 구조, ODBC 드라이버, 다법인/다단말 처리
-3. **GPS/IP 근무지 제한**: 근무지 제한 검증 로직, 최고관리자 예외, 캡스+IP 병합 검증
-4. **휴가/승인 이벤트 구조**: `v2_user_time_off_event`, `v2_time_tracking_approval_event` 테이블 관계, 취소 승인 상태 관리
-5. **초과근무/연장**: 연장·야간·휴일 근무 계산, 3종/7종 전환, minutesToHours 소수점 처리
-6. **자동근무기록(위젯)**: 실시간 출퇴근 위젯, 자동퇴근(20시간), 세콤 타각 연동 구조
+1. **근무 스케줄 리프레이밍(v3 API)**: TT 날짜 컨벤션(local-date inclusive, timestamp exclusive), dry-run/wet-run 구조, validation 타입별 DTO 설계, 타임존 3축 개념, 승인 라인 서버 소유 전환
+2. **초과근무/연장근무단위**: 연장·야간·휴일 근무 계산, 3종/7종 전환, 주기연장일귀속(분배 로직), 연장근무 단위 보정 API, 마법봉(Magic Wand) API
+3. **알림(Notification) 시스템**: flex-pavement-backend 알림 타입 동기화, notificationGroup 구조, 앱 푸시 버전 분기, CTA link 분기 로직
+4. **세콤/캡스/텔레캅 연동**: 외부 단말기 타각 연동 구조, ODBC 드라이버, 역순 전달 처리, 중복 데이터 skip 로직
+5. **휴가/승인 이벤트 구조**: `v2_user_time_off_event`, `v2_time_tracking_approval_event` 테이블 관계, 2PC 패턴(start-approval-process / produce-event), 연차촉진 배치
+6. **계획실근무(work-clock)**: action 단위 API 설계, START/STOP 개념, 날짜 귀속(targetTime vs realTime), OVERLAP 에러 코드 4종 분리
+7. **보상휴가-급여 연동**: Internal API 설계, 법내연장야간 3종/7종 분리, 가산율 계산, BPO 검증 전략
+8. **교대근무/근무지/근무표**: 엑셀 스케줄 업로드, 근무지제한 Phase 1, 조직 선택기 empty 처리, 데이터 모델(조직:스케줄:근무조:근무지)
 
-**주요 협업 대상**: 안희종(PM), 이지선(TT FE), 전우람(FE), 시재희(BE), 서영준(BE)
+**주요 협업 대상**: 안희종(PM), 이지선(TT FE), 전우람(FE), 전우균(BE), 서영준(PM)
 
 ### 의사결정 원칙
 
-1. **스펙과 버그를 빠르게 구분**: customer-issue 인입 시 "이것은 스펙", "버그 확인됨" 판단을 명확히 하고 즉시 안내. 모호한 경우 access log → DB 확인 → 원인 특정 순서
+- **하위 호환성 우선 — API 강업 시점에 맞춰 제거**: 기존 클라이언트가 깨지지 않도록 API 변경 시 항상 하위 호환을 고려한다. nullable 필드는 매직넘버(-1) 대신 null로 저장하고 코드에서 처리한다 — 사례: "`gpsBasedCommuteRestrictionEnabled` 필드 제거는 API 강업과 함께 진행" [출처](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1704445730442549)
 
-2. **반복 운영 작업은 제품화 방향 제시**: 알림 동기화 수동 작업을 raccoon 어드민 동기화 버튼으로 개선, 운영 처리 대신 제품 기능으로 해결하는 방향 지속 제안
+- **서버가 재료를 주고, 클라가 조합**: API는 특정 UI에 종속되지 않도록 설계한다. 서버는 데이터(재료)를 제공하고, 클라이언트가 화면에 맞게 조합해서 사용한다 — 사례: "포괄승인 컨텐츠는 UI에 종속된 인터페이스 설계 지양" [출처](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1742789408347069)
 
-3. **외부 연동 스펙은 명확히 문서화**: 세콤/캡스 연동 구조, 방화벽 설정, 커넥션 수 등 고객사 문의가 반복되는 사항을 스레드에 명확히 정리하고 Notion 문서로 이관
+- **가설 전에 데이터부터 확인**: 이슈 조사 시 가설을 세우기 전에 DB/로그/access log를 먼저 확인한다. 실제 데이터로 현상을 재현한 후에 원인을 추론한다 — 사례: "세콘 퇴근시간 00:00 조정 분석: consumer 로그가 아닌 api 인덱스 확인 필요" [CI-3979](https://linear.app/flexteam/issue/CI-3979)
 
-4. **소수점/타입 이슈 주의**: `minutesToHours()` 소수점 버림, Long vs Integer deserialize 버그 등 숫자 처리에서 발생하는 미묘한 버그를 반복 경험
+- **BPO 검증 → 대고객 오픈 (단계적 롤아웃)**: 새 기능은 BPO(급여 대행사)에서 먼저 검증한 후 대고객 오픈한다. BPO가 자체 로직으로 검산하므로 이상 시 잡을 수 있다 — 사례: "보상휴가-급여연동 페이롤 플래그: BPO 계정 오픈 → 1달 검증 → 대고객 오픈" [출처](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1732783162875339)
+
+- **ERROR vs WARN — 차단 여부로 판단**: 로그 레벨과 validation 레벨 모두 "차단이 필요한가?"를 기준으로 구분한다 — 사례: "dry-run WARN vs ERROR: WARN은 게시 허용, ERROR만 차단" [CI-3862](https://linear.app/flexteam/issue/CI-3862)
+
+- **플래그 기반 점진적 오픈**: 기능 오픈은 피처 플래그로 제어하고, 소프트오픈/하드오픈 단계를 거친다. 플래그 동기화가 완료될 때까지 레거시 코드를 유지한다 — 사례: "연장근무단위 `tt_exceeded_work_unit` 플래그, 66개사 사용 후 아카이브"
 
 ### 응대 패턴
 
-1. **즉시 원인 파악**: customer-issue 메시지 인입 후 수 시간 내 원인 특정 → 픽스 또는 스펙 안내 패턴 반복
-2. **DB/어드민 도구 활용**: raccoon 어드민, SQL 직접 조회로 사용자별 알림 설정 확인, 운영 데이터 파악
-3. **재현 조건 구체화**: "세콤 연동 후 위젯 미허용 근무유형이면 타각이 draft로 저장" 등 구체적 재현 조건을 제시하여 CS팀이 자체 해결 가능하도록 안내
+1. **CS 문의 — "스펙인지 버그인지 먼저 판단"**
+   - 전형적 질문: "X가 안 돼요", "왜 이렇게 나와요?"
+   - 전형적 응답 흐름: 현상 확인 → DB/로그 데이터 조회 → 스펙이면 "이것은 스펙입니다" + 근거 설명 → 버그이면 "확인됨" + 해당 이슈 생성/핫픽스 배포
+
+2. **외부 시스템 문제 — "저희 쿼리가 아닙니다"**
+   - 전형적 질문: "세콘에서 쿼리 오류가 나요", "오라클 연동이 안 돼요"
+   - 전형적 응답 흐름: 에러 로그 확인 → 플렉스 측 API/데이터 정상 확인 → 외부 시스템 문제로 판단 시 "저희가 가이드하는 쿼리가 아닌 것으로 보입니다" 안내
+
+3. **동료 API 설계 문의 — "원칙 기반 답변"**
+   - 전형적 질문: "이 필드 제거해도 되나?", "dry-run에 이 값도 필요한가?"
+   - 전형적 응답 흐름: 하위 호환 영향 확인 → 클라이언트 사용 여부 확인 → 원칙(서버=재료, 클라=조합) 기반 판단 제시
+
+4. **데이터 확인 순서 — "DB → ES → 로그"**
+   - 알림: `notification_deliver` → SES 피드백 로그
+   - 휴가 조회 안 됨: ES 동기화 확인 → 수동 동기화 트리거
+   - 세콘 데이터: 메타베이스 쿼리로 확인 (question/3565)
 
 ---
 
-## 지식 카드
+## 도메인별 지식
 
-### 1. 알림 시스템 (Notification)
+### 알림/Notification (pavement)
 
----
-
-#### 알림 그룹과 알림 설정 동기화 메커니즘
+#### 알림 설정 동기화 — 신규 알림 추가 시 기존 설정 무시
 
 **스펙/규칙**
-- 알림 설정은 개별 알림 타입별로 저장되며, `flex_pavement.user_notification_type_setting` 테이블에 disabled한 채널만 저장
-- 사용자가 '근무/휴가' 그룹의 이메일 설정을 끄면, 해당 notificationGroup에 속하는 **모든 개별 알림**에 `disableChannel=EMAIL` 추가
-- **신규 알림 타입이 추가되면 이 DB에 값이 없어서 기본값(발송)으로 동작** → 기존에 이메일을 끈 사용자에게도 신규 알림이 발송됨
-- 동기화 방법: 신규 알림 추가 시 raccoon 어드민(`/notifications/home`)에서 동기화 버튼으로 기존 그룹 설정값을 기반으로 개별 알림 설정 동기화
-
-**변경 이력**
-- 2022-07: 참조자 알림(`FlexTimeTrackingWorkRecordStageInProgressReferMessageContext`) 신규 추가
-- 2022-07-21: raccoon 어드민에 동기화 버튼 추가
-- 2022-07: 알림 설정을 개별 타입이 아닌 그룹 설정으로 변경하는 방향 논의됨
+- `user_notification_type_setting` 테이블은 비활성화한 값만 저장
+- 신규 알림 타입 추가 시 해당 타입에 대한 레코드 없음 → 기본값(활성화)으로 발송
+- admin(`flex-raccoon.grapeisfruit.com/notifications/home`)에서 동기화 버튼 실행으로 해결
 
 **자주 오는 케이스**
-- "이메일 알림을 껐는데 새로운 알림이 온다" → 신규 알림 타입 추가 후 동기화 미실행. raccoon 어드민에서 동기화 실행
-- "알림 설정에 없는 그룹(PAVEMENT 그룹)의 알림을 끌 수 없다" → UI에서 설정 가능한 그룹: `TIME_TRACKING`, `WORKFLOW`, `DIGICON`, `YEAR_END_SETTLEMENT`, `REVIEW`. PAVEMENT 그룹은 웹 UI 설정 화면 없음
+- "알림 그룹 이메일 껐는데 새 알림 온다" → 신규 알림 타입 동기화 필요
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1658370289917169)
+**출처**: [스레드1](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1658370289917169), [스레드2](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1657691389529679)
 
----
-
-#### 할 일(PAVEMENT) 알림과 웹 알림 설정 UI 미지원
+#### 워크플로우/휴가 참조자 앱 알림 미발송
 
 **스펙/규칙**
-- 할 일(Todo) 관련 알림 3종: 생성(`FLEX_PAVEMENT_TODO_CREATED`), 완료, 반려
-- 할 일 알림의 notificationGroup은 `PAVEMENT`
-- 웹 알림 설정 UI에서 `PAVEMENT` 그룹은 설정 불가 (TIME_TRACKING, WORKFLOW, DIGICON, YEAR_END_SETTLEMENT, REVIEW만 지원)
-- 이메일 전체 비활성화해도 `FLEX_PAVEMENT_TODO_CREATED` 알림은 계속 발송됨
-- 해결 방향: 알림 그룹을 WORKFLOW로 변경하거나, 해당 사용자 DB에서 직접 제외
+- `FlexTimeTrackingTimeOffRegisteredMessageContext`의 메시지 채널이 슬랙만 설정되어 있었음
+- 워크플로우 참조 알림도 동일 이슈 (`FlexWorkflowTaskApproveMessageContext` 등)
+- 해결: 해당 메시지 컨텍스트 코드에 채널 직접 추가
 
-**자주 오는 케이스**
-- "이메일 알림을 껐는데 할 일 알림이 계속 온다" → PAVEMENT 그룹은 설정 불가한 구조적 제약
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1657691389529679)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1657099850036069)
-
----
-
-#### 신규 알림 추가 시 참조자 알림 분리 원칙
+#### 알림 발송 중복 — Consumer Pod 재시작
 
 **스펙/규칙**
-- 근무 승인 요청 알림: 승인권자 대상(`StageInProgressMessageContext`)과 참조자 대상(`StageInProgressReferMessageContext`) 분리
-- 참조자 알림에는 메일 채널 없이 제품 내 알림, 앱 푸시만 존재
-- 신규 알림 타입 추가 시 Notion 알림 목록 문서에 별도 항목으로 추가 필요
+- 출퇴근 알림이 동일 내용으로 2회 발송, 로그에는 1회만 기록
+- 원인 추정: Consumer pod 재시작 시 Kafka 메시지 중복 처리
+- 발송 로그 미기록 시 정확한 원인 확정 불가
 
-**변경 이력**
-- 2022-07: 근무 승인 참조자 알림(`FlexTimeTrackingWorkRecordStageInProgressReferMessageContext`) 신규 추가
-- 2022-07: 휴가 승인 참조자 알림(`FlexTimeTrackingTimeOffStageInProgressReferMessageContext`) 신규 추가
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1657590558082759), [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1658144017017879)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1658720620434729?thread_ts=1658370289.917169&cid=CRU35U9FC)
-
----
-
-#### 알림 템플릿 endedAt 타입 버그 (Long vs Integer deserialize)
+#### 포괄임금 승인 알림 Integer/Long 타입 혼동
 
 **스펙/규칙**
-- time-tracking-api → pavement-api 내부 통신 시 데이터가 Map에 들어가는데, 메시지 렌더링을 위해 deserialize 할 때 `0` 값이 `Long`이 아닌 `Integer`로 인식되는 버그
-- 증상: `SpelEvaluationException: Method toLocalizedDateTimeRange(java.lang.Long, java.lang.Integer) cannot be found`
-- 원인: 0을 fallback 값으로 넣었을 때 JSON deserialize 시 Integer로 읽힘
-- 해결: 알림 템플릿에 `endedAt != 0` 조건문 추가하거나, 타입을 명시적 `Instant`로 변경
+- Kafka 메시지에 Long으로 직렬화된 값이 역직렬화 시 Integer로 처리 → null
+- 해결: nullable 처리, Long 타입 통일
 
-**자주 오는 케이스**
-- 근무 승인 알림 발송 실패 로그(`FLEX_TIME_TRACKING_WORK_RECORDS_REQUEST_APPROVED`) → endedAt 없는 케이스(승인에서 시간 미명시)에서 발생
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1658144017017879)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1658370289917169)
-
----
-
-#### raccoon 어드민 알림 설정 확인 도구
+#### 앱 푸시 알림 버전별 분기
 
 **스펙/규칙**
-- 어드민 URL: `https://flex-raccoon.grapeisfruit.com/notifications/home`
-- 유저별 알림 설정 현황 확인 가능 (알림 설정 변경 이력 없으면 모두 활성화 상태)
-- VOC 인입 시 사용자의 알림 설정 확인 첫 번째 수단으로 활용
-- 신규 알림 추가 후 기존 설정과 동기화 버튼도 이 페이지에 위치
+- 수신 token의 앱 버전 확인 → 해당 버전 맞는 알림 템플릿 선택 발송
+- CTA link에 `iosMinVersion`, `andMinVersion`, `fallbackScheme` 3개 queryParam으로 버전 분기
+- `fallbackScheme` 없으면 업데이트 유도 바텀시트(`route/update`)
 
-**자주 오는 케이스**
-- "알림이 안 온다" → raccoon 어드민에서 해당 사용자 알림 설정 먼저 확인
-- "알림 설정 화면에 값이 없다" → 한 번도 알림 설정 변경 안 한 유저. 모두 활성화 상태
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1673838829070379)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1659942050775029)
-
----
-
-#### Slack 알림 flex_user_slack_user_mapping 의존성
+#### 휴가 확인하기 이메일 버튼 동작 분기
 
 **스펙/규칙**
-- 슬랙 알림은 `USER` 기준으로 발송
-- `flex_user_slack_user_mapping` 테이블에 해당 유저 값이 없으면 슬랙 연동이 안 되어 오류 발생
-- 고객사가 슬랙 연동을 했더라도 특정 유저만 연동 안 된 경우 있음
+- 휴가 등록 알림(참조): `[확인하기]` → 할 일(To-do)로 이동
+- 휴가 승인 알림(참조): `[확인하기]` → 홈피드로 이동
+- CTA 코드: `flex.time-tracking.time-off.request.approve.refer`
 
-**자주 오는 케이스**
-- "슬랙 알림이 안 온다" → 고객사 슬랙 연동 여부 확인 → `flex_user_slack_user_mapping` 테이블에서 해당 user 값 존재 여부 확인
-- customer는 등록됐는데 특정 사용자만 슬랙 알림 실패 → 해당 유저 슬랙 연동 미완료
+**출처**: [CI-3914](https://linear.app/flexteam/issue/CI-3914)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1667783626385599)
-
----
-
-#### requestTypeNames 빈 배열 버그 (워크플로우 알림)
+#### 알림 수신 여부 조사 패턴
 
 **스펙/규칙**
-- 워크플로우 task 관련 알림에서 `requestTypeNames` 필드가 빈 배열(`[]`)로 전달된 경우 알림 로딩 오류 발생 (500 에러)
-- 근무/휴가 이벤트와 연결되지 않은 workflow_task에서 발생
-- 처리: 해당 알림 notification_deliver 삭제 → 알림 목록 API 정상 동작
-
-**조회 SQL**:
 ```sql
-select nd.receiver_id, n.notification_type, n.db_created_at, n.id as notification_id,
-       n.message_data_map, json_extract(n.message_data_map, '$.taskKey')
-from notification as n, notification_deliver as nd
-where json_contains(n.message_data_map, json_array(), '$.requestTypeNames')
-  and json_length(n.message_data_map, '$.requestTypeNames') = 0
-  and n.id = nd.notification_id;
+select nd.*, n.notification_type
+from notification_deliver nd
+left join notification n on nd.notification_id = n.id
+where nd.receiver_id = {userId}
+and n.notification_type = '{type}'
+and n.db_created_at >= '{date}';
+```
+- `notification_deliver`에 데이터 없음 → 발송 자체 안 된 것
+- 데이터 있는데 미수신 → SES 피드백 로그 확인
+
+**출처**: [CI-3910](https://linear.app/flexteam/issue/CI-3910)
+
+#### 공지사항 알림 — 작성자 본인에게 미발송
+
+**스펙/규칙**
+- 공지사항 작성자에게는 알림이 발송되지 않음 (의도된 정책)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1664243000000000)
+
+#### 알림 메시지 한국어 조사 처리
+
+**스펙/규칙**
+- FE에는 `josa` 라이브러리 사용
+- BE에서도 조사 포함한 알림 메시지 전송 시 당근마켓 오픈소스 `betterkoreankotlin` (Analyzer.kt) 활용 가능
+- FE Josa.js 본체는 `jongseong` 라이브러리
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1667823051903769)
+
+#### 휴가 참조자 알림 — 승인 완료 시 "등록했어요" 오는 이유
+
+**스펙/규칙**
+- 승인 완료 시 참조자에게 "등록했어요" 알림이 가는 것은 버그가 아닌 임시 구현
+- **원인**: 뉴승인 이전에는 참조자 알림 없었음 → 뉴승인 이후 옵션 생기면서 추가. 당시 "승인 완료" 별도 참조 알림이 없어서 "휴가 사용 시 나가는 참조 알림"과 같이 발송
+- **해결 방향**: 참조자용 승인완료 알림(FT-11053) 별도 정의 및 추가
+  - 근무 승인 완료 참조자용 Notion: 753a4326bb26457a81d59c115a3a6f36
+  - 휴가 승인 완료 참조자용 Notion: 03137bf8513249ee81311de68bf11763
+  - 휴가 취소 승인 참조자용 Notion: d53bb483c5a2472f986f168923e099b3
+
+**자주 오는 케이스**
+- "휴가 승인 완료됐는데 참조자에게 '등록했어요' 알림이 왔다" → 임시 구현 결과. FT-11053으로 개선 예정
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1722833239852389)
+
+#### 근태승인 알림 — 그룹 메일 수신 케이스
+
+**스펙/규칙**
+- 본인이 알림을 꺼둔 상태에서 이메일이 오면 그룹 메일 수신 여부 먼저 확인
+- 메일 발송 로그가 없다면 그룹 메일로 받은 것인지 확인 필요
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1658144017017879)
+
+#### Slack 유저 연동 미등록 알림 오류
+
+**스펙/규칙**
+- 신규 입사자나 슬랙 재연동 미완료 유저에서 `user_not_found` 오류
+- 테이블: `flex_user_slack_user_mapping` 확인
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1667783626385599)
+
+#### 새로운 소식 로딩 오류 — requestTypeNames 빈 배열
+
+**스펙/규칙**
+- pavement-api에서 `requestTypeNames`가 빈 배열인 `notification_deliver` 레코드로 인해 API 500 오류 발생
+- 안드로이드 특정 앱 버전에서 비어있는 값이 들어오는 케이스
+- 진단 쿼리: `json_contains(n.message_data_map, json_array(), '$.requestTypeNames') and json_length(...) = 0`
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1669000000000000)
+
+---
+
+### 휴가/연차 (time-off)
+
+#### 연차촉진 UTC/KST 연도 경계 버그
+
+**스펙/규칙**
+- 연차촉진 배치: 매일 오전 8시(KST) 동작, DB에 UTC 저장
+- 1/1 08:00 KST = 12/31 23:00 UTC → 2026년 조회 시 전년도 UTC 건 누락
+- 오래된 버그 (특정 배포로 발생한 것 아님)
+
+**자주 오는 케이스**
+- "2026년 연차촉진 안 보임" → 2025년으로 조회하면 확인 가능
+
+**출처**: [CI-3809](https://linear.app/flexteam/issue/CI-3809), [CI-3907](https://linear.app/flexteam/issue/CI-3907)
+
+#### 연차촉진 관리자 작성 기간 필터
+
+**스펙/규칙**
+- 완료된 촉진이 있을 때 관리자 작성 기간 필터 적용 → 미표시
+- 2021년 의도된 스펙, 버그 아님
+- 코드: `AnnualTimeOffPromotionHistoryServiceImpl.kt#L80-L81`
+
+**출처**: [CI-3777](https://linear.app/flexteam/issue/CI-3777)
+
+#### 연차촉진 워크플로우 태스크 — 템플릿 이름 문제
+
+**스펙/규칙**
+- `TIME_OFF_BOOST` 태스크 작성 요청 시 v1에서 수정한 템플릿 이름이 그대로 발송 제목으로 사용
+- 확인 쿼리: `select * from customer_workflow_task_template where task_type='TIME_OFF_BOOST' and name != '스마트 연차 사용 계획'`
+
+**출처**: [FT-4129](https://linear.app/flexteam/issue/FT-4129)
+
+#### 연차촉진 boostHistory status 미업데이트
+
+**스펙/규칙**
+- 작성 완료 후 `boostHistory`의 `status`/`contextStatus`가 `PENDING_WRITE`/`SHOULD_MANAGER_WRITE`에서 업데이트 안 되는 케이스
+- 할일 쪽 도메인 업데이트 누락 시 발생
+- 이미 발생한 데이터는 재시도하면 정상 처리
+
+**변경 이력**
+- 2023-04-05: 버그픽스 배포
+
+**출처**: [FT-4165](https://linear.app/flexteam/issue/FT-4165)
+
+#### 대표이사 연차촉진 — 미지급 연차정책
+
+**스펙/규칙**
+- 등기임원 → 연차 지급 대상 아님 → 촉진 결과 없음
+- 정책 변경 이전에 생성된 이력만 존재
+
+**출처**: [CI-3932](https://linear.app/flexteam/issue/CI-3932)
+
+#### 휴가 개요 연차 잔여 -3일 표시 원인
+
+**스펙/규칙**
+- 현재 시점에서 당겨쓴 휴가 + 올해 받을 예정인 월차에서 미리 쓴 경우 → 부여량보다 사용량이 많아 음수 표시
+- 0.5일이 다음 연차 버킷에서 빌려쓸 때 생기는 구조적 어색함 (TT-7958 관련)
+- 월차의 미리쓰기가 휴가 개요에 들어가는 이유
+
+**자주 오는 케이스**
+- "연차 잔여가 -N일로 표시된다" → 당겨쓰기(월차 미리쓰기)로 인한 정상 동작. [TT-7958](https://linear.app/flexteam/issue/TT-7958) 참조
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1724930538783579)
+
+#### 맞춤휴가 n년차마다 지급 정책
+
+**스펙/규칙**
+- "n년차마다 지급" 정책은 없음
+- "n년차에 지급"하는 정책은 있음
+- "n년차부터 매년 반복지급"하는 정책도 있음
+- "n년차부터 매년 반복지급 but 입사일에" → **불가** (현재는 회계일로만 동작)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1727255617412049)
+
+#### 맞춤휴가 최소/최대 일수
+
+**스펙/규칙**
+- flex 제품 정책상 최대 1년 (1.0과 동일)
+- 조회: 메타베이스 `question/1309` (분 단위)
+- 366일 이상 필요 시 두 번에 나누어서 사용하도록 안내
+- 관련 코드: `TimeOffRegisterDayMaxSizeLimitVerifier`
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1677141672682839), [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1675700000000000)
+
+#### 반려 휴가 미표시 — UI 조회 범위 이슈
+
+**스펙/규칙**
+- 반려된 휴가가 "사용 기록"에서 미래 날짜면 안 보임
+- "반려기록 보기" 토글이 "사용 기록" 탭에 종속
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1681439317784179)
+
+#### 휴일에 등록된 휴가 차감 처리
+
+**스펙/규칙**
+- 옵션 "기간 내 휴일 포함 등록": 휴일에 등록된 휴가도 수량에서 차감
+- 휴가 버킷(지급량)은 차감되지 않음
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1706248492184899)
+
+#### 휴가 코드 삭제 시 등록된 휴가 취소
+
+**스펙/규칙**
+- 교대근무 관리에서 기사용 휴가 코드 삭제 → 등록된 휴가 모두 취소 (의도된 스펙)
+
+**출처**: [CI-4047](https://linear.app/flexteam/issue/CI-4047)
+
+#### 연차 조정 일괄 취소
+
+**스펙/규칙**
+- side peek `...` 아이콘에서 일괄 취소 기능 추가 (CI-3923 배포 완료)
+
+**출처**: [CI-3923](https://linear.app/flexteam/issue/CI-3923)
+
+#### 휴가 사용 내역 조회 기간 6개월 제한
+
+**스펙/규칙**
+- 날짜 피커가 최대 6개월 범위로 제한
+- 종료일을 먼저 이전 날짜로 설정 → 시작일 조정으로 과거 기간 조회 가능
+- IA 개선 작업 이후 UX 개선 예정
+
+**출처**: [FT-4109](https://linear.app/flexteam/issue/FT-4109)
+
+#### 휴가 사용 내역 `to` 값 버그
+
+**스펙/규칙**
+- 휴가 데이터 저장 시 `to` 값이 다음날 `00:00:00`으로 저장
+- 조회 시 `to` 파라미터가 `2021-12-31 00:00:00`으로 넘어가면 12/31 데이터 미조회
+- PR #4609 핫픽스로 해결
+
+**출처**: [FT-4196](https://linear.app/flexteam/issue/FT-4196)
+
+#### ES 동기화 누락으로 구성원 휴가 내역 미노출
+
+**스펙/규칙**
+- 신규 입사 등으로 유저가 ES에 등록되지 않은 경우 휴가 사용 내역에서 조회 불가
+- 운영 대응: 해당 유저 ES 동기화 처리 후 재조회
+
+**출처**: [FT-4284](https://linear.app/flexteam/issue/FT-4284)
+
+#### 맞춤휴가 정책 중복 생성 버그
+
+**스펙/규칙**
+- core `user-search` 온보딩 시 디폴트 맞춤휴가정책 중복 생성
+- 확인: `v2_customer_time_off_form`에서 `category='COMPENSATION'` group by customer_id having count > 1
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1735798101715889)
+
+#### 연차 회계연도 컬럼 ISO 8601 truncated format
+
+**스펙/규칙**
+- `--01-01` 형식 (ISO 8601 truncated date format)
+- DB에 더블쿼터가 같이 들어가는 경우 있음
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1675907951911009)
+
+#### 연차 operation API customer 범위 버그
+
+**스펙/규칙**
+- `/annual-time-off-adjust-assigns/by-until-date/{untilDate}` API가 유저 기준이 아닌 customer 기준으로 데이터 조회
+- 수정: PR #8437 — user 기준으로 필터링 추가
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1722000000000000)
+
+#### 보상휴가 데이터 조회 — Redash/Metabase 쿼리
+
+**스펙/규칙**
+- Redash query #507: 부여 내역 (사용 시각 기준)
+- Metabase question #1309: 잔여 시간 확인 (사용하려는 날짜로 조회)
+- 잔여 시간 = 부여 - 사용 이력으로 계산
+
+**출처**: [FT-4585](https://linear.app/flexteam/issue/FT-4585)
+
+---
+
+### 근무기록/출퇴근 (work-record/commute)
+
+#### 해외 근무자 타임존 이슈
+
+**스펙/규칙**
+- 귀속일 계산이 UTC 또는 서버 타임존 기준, 현지 타임존 미적용
+- 타임존이 한국이 아닌 경우 휴가 등록 시 날짜 불일치 발생 (182건 확인)
+- FE에서 클라이언트 타임존으로 YEAR-MONTH를 해석하면 1~12월이 다르게 보이는 문제 → KST 기준 고정 필요
+
+**의사결정 배경**
+- Jira DC-131 "시간 표현에 있어서의 다중 timezone 관련 정책 수립" 생성
+- 사용자가 할 수 있는 유일한 방법: 머신을 서울 타임존으로 바꿔두고 근무등록 (불편한 해결책)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1674090139935679), [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1673838829070379)
+
+#### 근무유형 적용일 1970-01-01 = 입사일
+
+**스펙/규칙**
+- `1970-01-01` = 입사일로 처리
+- 그룹 입사일 기준 근무 조회는 지원하지 않음
+
+**출처**: [CI-3773](https://linear.app/flexteam/issue/CI-3773), [CI-3902](https://linear.app/flexteam/issue/CI-3902)
+
+#### 자동 퇴근 처리 스펙
+
+**스펙/규칙**
+- 출근 기록 후 n시간 이후 자동 퇴근 처리 (n 옵션: 소정근로시간 이후, 해당 귀속일 자정, 타각 무효처리 기준 20시간, 회사 설정값, 유저 설정값 등 논의 중)
+- 자동 퇴근 시 근무지 제한 스펙과의 상호작용 미정의
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1717000000000000)
+
+#### IP 제한 + 자동퇴근 상호작용
+
+**스펙/규칙**
+- 자동퇴근 시 근무지 판단 안 함 → IP 제한 설정 있어도 자동퇴근 통과
+- 코드: `UserWorkClockStopByReserveRequestServiceImpl.kt#L142-L143`
+
+**출처**: [CI-3501](https://linear.app/flexteam/issue/CI-3501)
+
+#### 근무 기록 없을 때 이른출근 판단 불가
+
+**스펙/규칙**
+- 스케줄 게시 전 출근 타각 → 근무 없으므로 이른출근 판단 불가 → 출근 시간 그대로 입력
+
+**출처**: [CI-3767](https://linear.app/flexteam/issue/CI-3767), [CI-3866](https://linear.app/flexteam/issue/CI-3866)
+
+#### 반복근무 삭제 후 자동근무 미노출 — 0 vs null
+
+**스펙/규칙**
+- 반복근무 삭제 시 0 대신 null로 저장 → 자동근무 적용 조건 미충족
+- 처리: 해당 기록 직접 DB 삭제
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1677765199704479)
+
+#### 근무정책 삭제 후 근무 블록 비활성화
+
+**스펙/규칙**
+- Operation API 미지원 → DB 직접 삭제
+```sql
+DELETE FROM v2_user_work_record_event_block WHERE id = {id} AND user_id = {userId};
 ```
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1669769831159049)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1678094602766659)
 
----
-
-### 2. 세콤/캡스/텔레캅 연동
-
----
-
-#### 세콤 연동 시 실시간 위젯 근무유형 필수
-
-**스펙/규칙**: 세콤/캡스 타각은 근무유형에서 실시간 기록(위젯) 허용 시에만 출퇴근 기록으로 확정됨. 위젯 미허용 근무유형이면 타각이 draft 상태로 저장되며 근무 기록으로 이어지지 않음.
-
-**자주 오는 케이스**: 세콤 설치 후 타각이 기록에 반영 안 된다는 문의 → 근무유형 실시간 기록 허용 여부 확인.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1740114845182849)
-
----
-
-#### 세콤/캡스 외부 연동 구조
+#### 근무 조회 속도 개선 — 캐싱 전략
 
 **스펙/규칙**
-- 세콤이 관리하는 프로그램: **세콤매니저**(근태식당), **클라우드매니저** 두 가지
-- **세콤매니저**를 통해 flex 외부연동 지원 (MSSQL, 오라클, MySQL) — ODBC 프로토콜
-- 세콤매니저에서 MS-SQL 방식과 ODBC 방식 **동시 지원 불가** (세콤 측 확인 사항)
-- 세콤/캡스 연동 시 **근무지 제한 정책만 패스** (다른 제한들은 적용)
-- 세콤 클라우드 서버로는 외부연동 **불가** — 세콤매니저(로컬 프로그램)를 통해서만 가능
-- VM(버추얼 서버) 설치도 가능 — 외부 통신만 되면 무관
-- 단말기 최대 **4개** 동시 연동 가능
-- 80개 매장 연동 시 ODBC 드라이버를 각 매장에 설치하는 대신 서버 1대로 집중 연동이 베스트프랙티스
-- 커넥션 기본값: 캡스/세콤 2개, KT텔레캅 3개
+- `CustomerWorkRuleRepository.findByIdInAndActiveTrue` 단일 요청 451회 호출
+- requestScope 캐싱: 11.96s → 5.57s~8s
+- 향후 redisCacheManager 전역 캐시 검토
 
-**자주 오는 케이스**
-- "클라우드 서버에 세콤 설치해도 되나요?" → 안 된다고 안내
-- "세콤 설치 후 근무표에서 수정 불가로 만들고 싶다" → 기본 근무 정책에 제한 걸어 세콤으로만 등록하게끔 우회 가능
-- 대규모 매장 연동 시 아키텍처 문의 → 서버 집중 연동 권장
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1749086456522369), [TT-14144](https://linear.app/flexteam/issue/TT-14144)
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1709094877), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1716777789), [스레드3](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1722475853)
-
----
-
-#### 세콤 방화벽 설정
-
-**스펙/규칙**: 세콤 설정 시 `flex-secom.flex.team` 도메인 기반으로 방화벽 허용. 고정 IP 미보장이므로 IP가 아닌 도메인으로 허용해야 함. 프로토콜 타입 = TCP.
-
-**자주 오는 케이스**: 세콤 연동 후 통신 실패 → 방화벽 도메인 허용 여부 확인.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1773275932624219)
-
----
-
-#### 세콤/캡스 구독 해지 및 재연동 절차
+#### Dry-run만 하고 확정 안 한 경우 근태기록 손실
 
 **스펙/규칙**
-- 구독 해지 시: `connLimit=0`, `active=false` 처리
-- 해지 후 **7일** 뒤 계정 삭제
-- 재구독 시 기존 정보가 있으면 그대로 활성화
-- 관련 Notion 문서: https://www.notion.so/f3de1de14146494e917881210bdc4d94
+- 모바일 앱에서 퇴근 타각 시 dry-run만 하고 확정(work-end) API를 호출하지 않은 것
+- dry-run: `POST /action/v2/time-tracking/users/{userIdHash}/work-end/dry-run`
+- 실제 퇴근: `POST /api/v2/time-tracking/users/{userIdHash}/work-end`
+- 체크용 API를 별도로 분리해야 한다는 논의 (endpoint `/action/.../work-record-check`)
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1718068576), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1731997497)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1674000000000000)
 
----
-
-#### 캡스 + IP 제한 병합 검증 실패
-
-**스펙/규칙**: 출근을 웹으로, 퇴근을 캡스로 할 때, 이전에 IP 제한에 걸린 기록이 있으면 위젯 병합 시 해당 제한 기록도 포함되어 검증 실패 처리됨. 이는 현재 스펙 동작.
-
-**자주 오는 케이스**: "캡스 연동 후 퇴근 기록이 안 된다" → 이전 IP 제한 기록 여부 확인.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1753432328584289)
-
----
-
-#### 캡스 수동 동기화 동작 방식
+#### 근무 타각 이벤트 타입 확인
 
 **스펙/규칙**
-- 수동 동기화: 그 시점의 상태에 맞춰 실시간 근무(근무 시작 → 근무 종료) 동작 처리
-- 구성원이 이미 근무를 등록했거나 실시간 위젯이 진행 중이면 캡스 데이터가 전부 반영되지 않을 수 있음
-- PC가 꺼진 기간 동안 근무를 등록하고 싶다면 → **벌크 업로드** 방법 사용 권장
-- 세콤 단말기 아이디가 다른 기기에서 각각 출근 모드로 타각 시: **가장 처음 타각한 것**으로 반영
+- 앱에서 '13:00에 근무 끝내기' vs '지금 이 시간에 끝내기' 버튼 각각 다른 이벤트 타입 전송
+- 타각 타입 확인: Metabase question #1727 (파라미터: customerId, date_from, date_to, email)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1723012588)
+**출처**: [FT-4615](https://linear.app/flexteam/issue/FT-4615)
 
----
-
-#### KT텔레캅 event_datetime vs sync_datetime
+#### 동료 캘린더에서 기본 근무 미노출
 
 **스펙/규칙**
-- `event_datetime`: 실제 타각 시간
-- `sync_datetime`: flex 서버에 저장된 시간
-- PC 전원이 꺼진 상태에서 타각된 기록은 재기동 후 **14일 이내** 자동 동기화됨
-- 전원 off 상태에서 찍힌 기록은 서버 재기동 후 sync_datetime이 9시로 잡히는 텔레캅 측 버그 존재
+- 기본 정책은 캘린더에 안 보이는 것이 스펙 (모바일에선 노출 — 일관성 없음)
+- 동료 캘린더 설정에서 팀 내 공유 또는 전사 공유로 변경 필요
 
-**자주 오는 케이스**: "텔레캅 PC 껐다가 켰더니 기록이 이상하다" → sync_datetime 9시 고정 버그 가능성.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1685690138455219)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1755133043632519)
-
----
-
-#### 텔레캅 퇴근 기록 미생성 (미확정 상태)
-
-**스펙/규칙**: 텔레캅 연동 후 퇴근 기록만 안 찍히는 케이스 → 미확정 상태가 원인. 근무확정 건너뛰기 미설정 시 유저가 직접 확정하거나 확정 스킵을 설정해야 함.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1760519399131719)
-
----
-
-#### KT텔레캅 오픈 일정 (2024년 말 기준)
-
-**스펙/규칙**: 2024년 12월 기준 테스트 환경 세팅 중. 2025년 1월 오픈 예상. 프로세스: KT텔레캅 측 내부 테스트 → 버그픽스 → KT텔레캅 가이드 작성 → 오픈.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1733910973)
-
----
-
-#### 세콤/캡스 다법인 및 다단말 처리
+#### v2_customer_work_rule의 customer_id = -1 데이터
 
 **스펙/규칙**
-- 세콤/캡스는 다법인 지원 가능
-- 한 PC에서 최대 1개 flex 고객사만 연동 가능
-- 사번이 같은 겸직자는 세콤에 등록된 사번으로 매핑된 회사로 타각됨
-- 다른 공간이면 각 단말기에 각각 타각 가능
-- 같은 회사라면 본관/별관 캡스 각 1대씩 총 2대 연동 가능
-- 커넥션 수: admin-shell에서 직접 변경 가능
+- 2022-06월 초중순에 생성된 근무 유형들의 customer_id가 -1로 잘못 설정
+- PAC(PersistenceAccessControl)에서 validAccess로 처리되어 에러 발생
+- 수정 쿼리: `UPDATE v2_customer_work_rule cw SET customer_id = (SELECT cwr.customer_id FROM v2_customer_work_record_rule cwr WHERE cw.customer_work_record_rule_id = cwr.id) WHERE customer_id = -1`
 
-**자주 오는 케이스**: ODBC 커넥션 수 초과 오류 → 이미 연결된 상태에서 재확인 테스트 시 발생.
-
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1762840740588839), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1769162478506189), [스레드3](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1771494239963039)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1723000000000000)
 
 ---
 
-### 3. GPS/IP 근무지 제한
+### 계획실근무 (planned-actual-work / work-clock)
 
----
-
-#### GPS/IP 동시 제한 동작 방식
+#### 계획실근무와 실시간 출퇴근 기록의 분리 구조
 
 **스펙/규칙**
-- GPS 제한 + IP 제한을 **동시에 설정**한 경우, 둘 다 해당하지 않는 곳에서는 근무 등록 불가
-- 웹에서 IP/GPS 모두 제한 시 "근무지 내에서만 등록 가능" 메시지 표시 — 정상 스펙
-- 근무지 설정에 **해외 주소**도 별다른 제약 없이 동작 (근무지 좌표만으로 검증)
-- **권한자가 구성원 근무 등록할 때는 승인 발생하지 않음** (GPS 제한과 무관)
-- GPS 근무예약: 예약 시작 시점에 GPS 판단이 이미 완료됨 (미리 등록 개념)
-- **최고관리자는 GPS/IP 근무지 제한 예외** (제한을 받지 않음)
-- 근무정책 생성 제한 없음 / 근무지 최대 **150개** / IP 접근 허용 최대 **200개**
+- 계획실근무(인정근무, recognized work)는 관리자가 승인하는 "어떤 시간을 인정할 것인가"
+- 실시간 출퇴근 기록과 별도 레이어
+- `beforeDecidedWorkRecordBlocks`: 승인 콘텐츠에서 초과근무 시간대 표시용
 
-**자주 오는 케이스**
-- "근무지 밖에서도 관리자는 출근 처리 가능한가?" → 최고관리자는 예외
-- "근무지 밖 GPS 거리가 km가 아닌 m로 표시된다" → 미터(m) 기준이 정상 스펙
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1764041338381289)
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1706750070), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1768991135277039)
-
----
-
-#### 슬랙 출근 리마인드 검증 실패 조건
-
-**스펙/규칙**: 슬랙 출근 리마인드 알림 → 출근 버튼 클릭 → "근무 시작 시간을 확인해 주세요" 에러 발생 조건:
-- 출퇴근 시간 < 호출 시간
-- 출퇴근 시간 > (호출 시간 + 9시간 버퍼)
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1762755141530349)
-
----
-
-### 4. 위젯/자동근무기록
-
----
-
-#### 자동근무기록(위젯) 리셋 시점
+#### work-clock API: action 단위 설계
 
 **스펙/규칙**
-- 출근 후 **20시간** 뒤 자동 퇴근 처리 (리셋)
-- 이른출근방지 옵션이 설정된 경우 별도 기준 적용
-- 위젯으로 출근 → 퇴근 → 출근 연속 타각 시 각각 별도 기록으로 남겨짐 (하루 여러 번 출퇴근 기록 가능)
-- 자동퇴근 처리됐는지 직접 타각인지 웹 화면에서 **구분 불가** (시작/종료시각만 남음)
-- 자동근무기록은 근무유형에 의해 소정근로일에만 생성됨 → 주휴일을 평일로 대체해도 기존 일요일에는 자동 기록 미생성
+- `dryRunToReplaceWorkClockEvents` / `executeToReplaceWorkClockEvents`
+- `days` 배열 size=1 제약 (하루 단위 원자적 교체)
+- `EVENT_TIME_OUT_OF_RANGE`: 이벤트 시각이 날짜 범위 밖일 때
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1707293777), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1765775167279069), [스레드3](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1738826519935069)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1764075322790859)
 
----
-
-#### 출퇴근시각 vs 시작/종료시각 구분
-
-**스펙/규칙**: 두 데이터는 다른 소스에서 옴.
-- **출퇴근시각**: 실제 출퇴근 타각 기록
-- **시작/종료시각**: 관리자가 근무수정권한으로 직접 수정한 기록 (별도 승인 절차 없음)
-
-**자주 오는 케이스**: "출퇴근시각 없이 시작/종료시각만 있는 기록이 왜 있냐" → 관리자 직접 수정.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1773727508492049)
-
----
-
-#### 출근 타각 invalid 처리 방법
-
-**스펙/규칙**: 출근 타각을 invalid 처리하는 operation API **없음**. 직접 DB에서 work-clock event를 삭제해야 함.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1711675851)
-
----
-
-### 5. 근무 정책/스펙
-
----
-
-#### 근무 삭제 권한
+#### 위젯 START/STOP 개념
 
 **스펙/규칙**
-- 최고관리자라도 **근무 승인자가 아니면** 여러 날 근무 삭제 불가 — 스펙
-- 연장근무 반려되면 당일 근태기록이 모두 사라짐 — 스펙 (그 날에 대한 근무 등록 시 연장 근무로 판단된 것이 포함되었기 때문)
+- START/STOP ≠ 출근/퇴근 (특정 근무 단위 시작/종료)
+- 위젯 권한: granted-departments / granted-users 단위
 
-**자주 오는 케이스**: "연장근무가 반려됐는데 당일 근무 기록이 다 사라졌다" → 정상 스펙. 소정근로만큼 근무를 올리고 초과근로분을 다시 올리면 해결 가능.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1767165436846199)
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1706682260), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1724392771)
-
----
-
-#### 관리자 본인 근무 편집 시 승인 발생 여부
+#### 전날 귀속 — targetTime vs realTime
 
 **스펙/규칙**
-- 관리자가 **내 근무 화면**에서 자신의 근무를 등록하면 → 승인 발생하지 않음
-- 관리자가 **구성원 근무 화면**에서 본인 클릭 후 수정하면 → 승인 발생함
-- `관리자인가` 판단 기준이 내 근무/휴가를 등록하는지로 판단하기 때문에 발생하는 한계 (현재 API 구조상 분리 불가)
+- targetTime: 귀속 대상 날짜 기준 시각 (표시용)
+- realTime: 실제 이벤트 발생 시각
+- 00:00:00은 당일 귀속 (이전 코드에서 전날로 귀속하는 버그 있었음)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1729662733)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1772522353427029), [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1773106226140889)
 
----
-
-#### 출장 근무 등록 시 예약된 근무 우선 적용
+#### PAST_DAY_OVERLAP / FUTURE_DAY_OVERLAP 에러 코드
 
 **스펙/규칙**
-- 오후에 출장 스케줄이 예약되어 있을 경우, 오전에 출근 버튼 누르면 → **등록된 근무(출장)로 근무 시작이 먼저 적용**됨
-- 편의를 위한 스펙이지만 불편함을 주는 케이스도 있어 개선 논의됨 (미확정)
+- 4종류: `PAST_DAY_OVERLAP`, `FUTURE_DAY_OVERLAP`, `PAST_DAY_OPEN_PACK_OVERLAP`, `FUTURE_DAY_OPEN_PACK_OVERLAP`
+- 클라이언트가 에러 종류에 따라 다른 안내 메시지 표시 필요
 
-**자주 오는 케이스**: "오전에 출근 눌렀는데 왜 출장 근무로 시작됐나요?" → 의도된 스펙.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1773314797374619)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1718932192)
-
----
-
-#### 근무 정책 동일 이름 허용
+#### work-clock 이벤트 수신 흐름 전체 구조
 
 **스펙/규칙**
-- 현재 근무 정책은 동일한 이름 생성 가능 (중복 허용) — 이후 사후 추가된 제약
-- 근무 유형은 동일 이름 생성 불가 (이미 제약 있음)
-- 근무기록 엑셀 업로드에서는 동일한 근무 정책이 존재하면 오류 발생 → 담당자가 이름 변경하는 방식으로 처리
-- UI에서 신규 유입을 막고 점진적으로 정리 방향 채택
+1. 외부(위젯/단말/API) → 이벤트 수신
+2. `UserWorkRecordEventSource` 출처 태깅
+3. beforeRegister (사전 검증)
+4. 근무지제한 검증
+5. 기록 저장 + 상태 기록
+6. 계획실근무 승인 연계
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1678167203865539)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RSJM1S9K/p1773928337755169)
 
 ---
 
-#### 사번(employee ID) 정렬 방식
+### 초과근무/연장 (exceeded-work)
+
+#### 여러날 포괄근무 버그 — 주기 경계 초과 승인
 
 **스펙/규칙**
-- 사번은 숫자가 아닌 **문자열**로 저장됨 → 사전식(lexicographic) 정렬
-- 예: `1`, `10`, `100`, `2` 순으로 정렬됨
-- 사번 자동 증가/저장 기능 없음
-- 숫자 정렬을 원하면 고정 길이(예: `0001`) 또는 숫자 prefix 사용 권장
+- 선택적 근무에서 주기 승인 시 말일에 몰아주는 로직
+- 10월 근무 수정인데 11월 포괄초과승인 발생 → 근무 주기가 월 경계를 넘는 경우 정상 동작
 
-**자주 오는 케이스**: "사번 정렬이 숫자 크기 순이 아니다" → 사번은 문자열이므로 정상 동작.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1705563203300129)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1660010186741679)
-
----
-
-#### 해외 근로자 타임존 처리
+#### 선택적 근무 주말 근무 계산 방식
 
 **스펙/규칙**
-- 모든 타각 데이터는 UTC로 저장
-- 현재 **한국 타임존(KST)만 지원**
-- 출퇴근 시간/야간근무 체크 등 모두 한국시간 기준으로 해석
-- 엑셀 출력도 한국시간 기준 생성
-- 해외 근로자는 한국에서 반복일정 설정 후 사용 권장
+- 계산 방식: `FLEXIBLE_CALENDAR_DAY_BASED` — 일수 기반으로 계산
+- 주말에도 근무를 채울 수 있음
+- 관련 Notion: https://www.notion.so/flexnotion/a426141a41ac417b844a220d2001a562
 
-**의사결정 배경**: 해외 지원 요청 있으나 현재 미지원. 한국 기준 일관 처리가 현재 스펙.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1722577683845809)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1756346056182339)
-
----
-
-### 6. 초과근무/연장
-
----
-
-#### 근무시간 초과 표기 (연장+야간 합산)
-
-**스펙/규칙**: 근태 대시보드의 근무시간 초과 = 연장 + 야간 합산. PR #4778에서 `overNightWorkingMinutes` 추가됨. 동일 주기에 연장과 야간이 함께 있으면 "연장야간"으로 합쳐서 표시됨.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1756285599932569)
-
----
-
-#### minutesToHours() 소수점 버림 이슈
-
-**스펙/규칙**: 모든 연산은 분 단위로 수행하고 마지막에 시간 변환. `minutesToHours()` 함수가 소수점을 버림 처리함. 분단위 가산율 적용 시 소수점 버림 발생. TT 내 엑셀 관련 코드들이 이 함수를 사용함.
-
-**의사결정 배경**: 설계상 소수점 버림이 의도된 것인지 확인 필요한 상태.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1764838336276949)
-
----
-
-#### 3종/7종 전환 시 승인 처리
+#### 선택적 근무 연장 승인 버그 — 잔존 조건 로직
 
 **스펙/규칙**
-- 3종→7종 변경 시: 기존 승인이 3종 해석 기준 → 7종 해석 기준으로 일괄 수정됨
-- 7종→3종 변경 시: 구성원 근무에서 구분 반영 시점 = 변경 즉시
-- 법내연장 미사용 체크 시 반영 시점 = 해당 근무유형 적용 시점
+- 여러날 근무 등록 시 선택적 근무 승인 로직이 제거되었으나 반복근무 승인 체커에 조건 로직 잔존
+- 관련 클래스: `WorkScheduleOverWorkApprovalChecker`, `WorkScheduleRegardedOverWorkApprovalChecker`
+- 전체 오픈 플래그 켜다가 말았음 → prod에서 확인 필요
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1757559780488739)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1717000000000001)
 
----
-
-#### 3종 휴일 150% 보상휴가 계산 예시
-
-**스펙/규칙**: 보상휴가 부여 가능 시간 계산 예시:
-- 휴일 8시간 × 1.5 = 12시간
-- 휴일연장 2시간36분 × 0.5 = 1시간18분 (추가분만)
-- 총 13시간18분
-- 포괄계약의 연장으로 차감된 시간 제외
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1765950099005679)
-
----
-
-#### 보상휴가 초과근무시간 유형 정렬 순서
-
-**스펙/규칙**: 보상휴가 탭 초과근무시간 유형 정렬 순서 (별도 정렬 조건 없이 조회 순서대로였다가 핫픽스로 수정):
-1. 야간
-2. 연장(법정근로 내)
-3. 연장·야간(법정근로 내)
-4. 연장
-5. 휴일
-6. 연장·야간
-7. 연장·휴일
-8. 휴일·야간
-9. 연장·휴일·야간
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1722325394)
-
----
-
-#### 선택적 근무제 연장근무 승인 조건 변경 대응
-
-**스펙/규칙**: 연장근무 승인 조건 변경 후 고객사 불만 → **제품적 해결 방안 없음**. 법적 기준 변경에 따른 스펙이므로 되돌릴 수 없음. 근무 계획 작성 주기 단축 제안 (우회책).
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1714715817)
-
----
-
-#### 포괄계약 근로시간 주 단위 vs 월 단위
+#### 단시간근로자 휴무일 연장근무 판단 기준
 
 **스펙/규칙**
-- 급여는 월 1회 지급이므로 주 단위 입력해도 주→월 단위 변환 과정을 거침
-- 주→월 변환 시 소수점 이슈 발생 → 월 단위 권장 (강제 아님)
-- 포괄계약 고객사는 초과근무수당을 덜 주고 싶어하는 경우가 많으므로, 주 단위 계약을 월 단위로 바꾸면 초과근무가 발생하지 않을 수 있음
+- 기준: `(주 소정근로시간 / 5)` 초과 시 일 연장
+- 고용노동부 가이드: 8시간 기준
+- 코드: PR `flex-timetracking-backend/pull/7185`
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1735541714)
-
----
-
-### 7. 휴가/연차
+**출처**: [CI-4048](https://linear.app/flexteam/issue/CI-4048)
 
 ---
 
-#### 휴취승(휴가 취소 승인) 상태 관리
+### 연장근무단위 (exceeded-work-unit)
+
+#### 마법봉(Magic Wand) API
 
 **스펙/규칙**
-- 휴취승 플로우: 등록 승인 완료 → 취소 요청 → 취소 승인 대기 → 취소 승인 완료
-- 취소 승인 시 상태는 `APPROVAL_COMPLETED`가 아닌 `CANCEL_APPROVAL_COMPLETED`로 변해야 함
-- 참조 승인만 있는 경우 취소 요청 시 즉시 취소 처리되어 단건 조회 API에서 `CANCEL_APPROVAL_COMPLETE`로 응답해야 함
+- 타입별 제공: 추천휴게 마법봉 ≠ 연장근무 보정 마법봉
+- 일괄 마법봉 제거 (예측 불가능한 동작)
+- 법정 초과 마법봉은 클라 로직으로 구현
 
-**버그 이력**
-- 휴가 단건 조회 API(`time-off-uses/{TimeOffEventId}/root`)에서 취소 후 상태가 `TIME_OFF_CANCELED` 대신 `APPROVAL_COMPLETED`로 응답되는 버그 → PR #4135로 수정
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1710000000000000)
 
-**자주 오는 케이스**
-- 등록 승인 O, 취소 승인 X일 때 취소 후 단건 조회 시 상태 불일치
-- 본인이 승인권자일 때 상세보기에서 반려 버튼이 없는 현상 → 할일/알림 경유 시 노출되는 UI 차이
+#### 올림/내림 처리 정책
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1676517974584859), [스레드2](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1676274512350169)
+**스펙/규칙**
+- 마법봉: 항상 내림
+- 최소 입력 단위 미달: 무조건 내림
+- 최소 입력 시간 미달: 무조건 내림 (올림 없음)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1710000000000001)
+
+#### 보정 로직 순서
+
+**스펙/규칙**
+- 주기연장 → 일연장 순
+- 타임블록 내림차순
+- 편집 시도한 날짜에 대해서만 보정
+- 휴가와 휴게는 건드리지 않음
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1710000000000002)
+
+#### 위젯 stop → 확정 모달 퇴근 시각 조정
+
+**스펙/규칙**
+- 보정된 시각으로 확정 모달 진입
+- `get-adjusted-work-stop-time-candidates` API: `[{ adjusted, from, to }, ...]`
+- 최대 조회 범위: 20시간
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1710000000000003)
+
+#### 플래그 및 출시 결과
+
+**스펙/규칙**
+- 플래그: `tt_exceeded_work_unit`
+- 2025-08-14 기준: 66개사 사용, 156개 근무유형 적용
+- 신규 온보딩 초기값: 설정 없음
+
+**변경 이력**
+- 2025-08: 출시 후 2주, 66개사 사용 확인. 채널 아카이브
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1723600000000000)
 
 ---
 
-#### 휴가/승인 이벤트 테이블 구조
+### 승인/워크플로우 (approval/workflow)
+
+#### 휴가 DB 테이블 구조 및 승인 상태 흐름
 
 **스펙/규칙**
-- `v2_user_time_off_event`: 휴가 등록/취소 등 휴가 이벤트가 쌓이는 테이블 (append-only)
-- `v2_time_tracking_approval_event`: 휴가/근무 승인 이벤트 테이블
-  - `target_event_category = 'TIME_OFF'`, `target_event_id = v2_user_time_off_event.id` 조건으로 조회
-  - `event_type` 라이프사이클: `REGISTER` → `APPROVE` or `DECLINED` or `CANCEL`
-  - APPROVE 이벤트가 있으면 승인된 것으로 판단
-- v1 테이블(`flex.user_time_off_use`)은 확인 불필요 — v2만 확인하면 됨
-
-**승인권자 조회 방법**
-1. `v2_time_tracking_approval_event`의 `taskKey`, `customerId`로 `workflow_task` 검색
-2. `workflow_task.id`로 `workflow_task_stage` 검색 → `reviewer_targets` 필드가 승인권자
+- 휴가 등록 시 `v2_user_time_off_event`에 1건 INSERT
+- 승인 상태는 `v2_time_tracking_approval_event`에서 조회: `target_event_category = 'TIME_OFF'`, `target_event_id = v2_user_time_off_event.id`
+- 상태 전이: REGISTER → APPROVE → CANCEL / DECLINE (update가 아닌 누적 INSERT 방식)
+- 승인권자 조회: `time_tracking_approval_event.taskKey + customerId` → `workflow_task` → `workflow_task_stage.reviewer_targets`
 
 **출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1658395078774879)
 
----
-
-#### 연차 조정값과 근무유형 변경
-
-**스펙/규칙**: 연차 조정 시 근무유형의 1일 기준 시간이 달라지면 조정값이 재계산됨. 조정 발생 시점의 근무유형 기준 시간으로 고정되지 않고, 이후 근무유형 변경 시 의도와 다르게 동작하는 케이스 존재. 설계 한계.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1754993387793889)
-
----
-
-#### 조정 플러스/마이너스 의미
+#### 신승인 start-approval-process / produce-event 2PC 패턴
 
 **스펙/규칙**
-- 조정 마이너스: 잔여 연차가 있는데 돈으로 줄 것을 반영
-- 조정 플러스: 마이너스 연차 상태에서 0으로 맞추려고 플러스 처리
+1. `startWithoutEventProduce` → `/start-approval-process`
+2. `produceStartEvent` → `/start-approval-process/produce-event`
+- produce-event 실패 시 `/rollback-started` 호출 필수
+- 비정상 데이터 복구: `approval_process` + `approval_replacement_target` soft delete + TT 보상 처리
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1758095421930449)
+**자주 오는 케이스**
+- 퇴직자 승인자 교체 → 승인에서 200인데 TT에서 400 → `/produce-event`가 미호출
 
----
+**출처**: [CI-3951](https://linear.app/flexteam/issue/CI-3951)
 
-#### 교대근무 맞춤휴가 등록/취소 미지원
-
-**스펙/규칙**: 교대근무 관리에서 맞춤휴가 등록/취소 현재 미지원 (스펙). 툴팁에 "연차"라고 표시되는 별도 버그 존재 (TT-16578).
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1771464130890579)
-
----
-
-#### 근태 IP 로그 제공 가능 여부
+#### 워크플로우 ALREADY_WRITTEN_TASK — 연차촉진 문서 중복
 
 **스펙/규칙**
-- 근태 IP 로그를 별도 저장 **하지 않음**
-- 감사로그로 볼 수 있는 것은 **최대 90일** 한계
+- 첫 요청 타임아웃 실패 → 두 번째 요청 시 "이미 작성한 문서" 오류
+- 해결: 워크플로우에서 태스크 삭제 후 재처리
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1727337244)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1688432599250049)
 
----
-
-#### 제헌절 공휴일 0일 처리 버그
-
-**스펙/규칙**: 제헌절이 공휴일로 지정되어 해당일 휴가가 0일로 처리됨. 배포로 해결됨.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1770186806832619)
-
----
-
-#### 법정 관련 대응
+#### 워크플로우 자동승인 — 1차 조직장 누락
 
 **스펙/규칙**
-- **난임치료휴가 비밀누설 금지** (2025년 2월 23일 시행): 난임치료휴가를 신청한 근로자의 의사에 반하여 내용을 제3자에게 누설 금지. 대응: 근무 조회 권한만 주고 휴가 조회 권한 주지 않으면 휴가명 미노출 가능
-- **모성보호법 개정** (2025년 2월 변경 적용): 유/사산휴가 기준 일부 변경
-- **2025년 대체 휴일**: 2025년 5월 6일이 대체 휴일. 연말 대응 예정
+- 1차 조직장이 퇴직/휴직 → stakeholder resolve 시 아무도 내려오지 않음
+- 승인 정보 전부 삭제 후 유저가 직접 요청을 날린 상태
+- 진단: templateKey로 workflow task를 찾아 stakeholder 상태 확인
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1731390191), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1732869444), [스레드3](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1732843115)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1660000000000000)
 
----
-
-### 8. 승인
-
----
-
-#### 삭제된 구성원의 승인라인 처리
+#### 휴가취소 승인 이벤트 중복 적재 버그
 
 **스펙/규칙**
-- 현재 제품에서 삭제된 구성원의 승인라인 전환 방법 없음 (퇴직자 처리와 다름)
-- 삭제된 구성원이 승인라인에 있으면 승인 진행 불가
-- 퇴직자는 승인권자 교체 가능하지만, **삭제된 구성원은 불가**
-- 운영으로 직접 처리하거나 PE 검토 필요
+- 승인된 휴가 취소 시 `v2_time_tracking_approval_event`에 CANCEL 중복 적재
+- 확인: `group by target_event_id having count(1) >= 3`
 
-**변경 이력**: 유사 과거 사례 — CI-2367(퇴사 승인권자 교체 버그), CI-3769(삭제 구성원 잔여 승인건 강제 승인), CI-4228(삭제 구성원이 승인자로 있는 문서 강제 승인)
+**변경 이력**
+- 2023-02: `cancelRegisteredTimeOff` 로직 수정
 
-**자주 오는 케이스**: "승인이 진행 중인데 구성원을 삭제했더니 승인이 멈췄다" → 운영 개입 또는 PE 검토.
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1675752277684569)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1774501349115049)
-
----
-
-#### 일괄 승인 기능 미보유
-
-**스펙/규칙**: 현재 일괄 승인 기능 미보유. 대안:
-- 참조 승인만 걸어두기
-- 승인 없이 관리 방법 사용
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1769675099235299)
-
----
-
-#### 승구개 (승인 구독 개선) — 승인 조회 API 설계
+#### 휴가취소승인 복합 버그 (2023-02)
 
 **스펙/규칙**
-- 승인 조회 API 엔드포인트: `/work-record/approvals/{approvalIdHash}`
-- `decidedWorkRecordBlocks`: 사용자가 등록한 근무 블록을 계산해서 나온 블록들 (연장, 야간, 휴일 근무 등 포함)
-- `workingHours` 필드의 type: `WORK_FORM`, `TIME_OFF`, `REST`
-- 휴일/야간/연장근무가 발생하지 않으면 `emptyArray`로 응답
-- mock API: `/work-record/approvals/mock` (`/mock` postfix)
+- 취소 승인 후 상태가 "취소승인 완료"가 아닌 "승인 완료"로 변경 (FE optimistic update 문제)
+- 취소 승인 후 화면 클릭 안 됨 (FE deprecated 문서 판단 로직 누락)
+- 취소 승인 후 사용 내역에서 상태가 `APPROVAL_COMPLETED` → `TIME_OFF_CANCELED`여야 함
+- 참조 승인만 있는 휴가 취소 시 `CANCEL_APPROVAL_WAITING` → `CANCEL_APPROVAL_COMPLETE`여야 함 (참조승인 즉시 취소)
+- **핵심 원인**: `/time-off-uses/search` ES 조회 API에서 취소 후 상태 미업데이트 (WF와의 타이밍 이슈)
+- **수정**: PR flex-timetracking-backend#4135
 
-**의사결정 배경**: 최대 근무 승인 + 휴가 등록 승인 + 휴가 취소 승인이 동시 발생 가능하여 timeline/diff 데이터 표현 필요.
+**변경 이력**
+- 2023-02: 위 5종 버그 수정 배포
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1678083825664979)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1676274512350169)
 
----
-
-### 9. 연동 (슬랙/캘린더)
-
----
-
-#### 슬랙 연동 — flex에서 슬랙 상태 변경 기능
+#### 승인 컨텐츠 nullable 버그 (workMinutes 없던 구버전)
 
 **스펙/규칙**
-- flex에서 슬랙 상태를 변경하는 기능 **없음**
-- 슬랙 봇은 모든 휴가를 단일 '휴가'로 표현 — 휴가 유형별 이모지 변경 **불가**
-- 이유: 민감한 휴가(병가, 여성보건휴가 등)가 공개될 수 있어 의도적으로 휴가 유형 노출 제거
-- 슬랙 연동 담당: 현재 플랫폼 팀(@platform-eng)에 문의
+- `workMinutes` 필드가 없던 시절(v0 버전) 생성된 승인 문서에서 null 발생
+- 휴게시간 포함된 경우 end-start가 workMinutes가 아닐 수 있어 타입 체크 필요
+- 해결: end-start로 채워서 문서 볼 수 있게 처리
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1710134467), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1721195094)
+**자주 오는 케이스**
+- "과거 승인 문서가 열리지 않는다" → v0 버전 구 문서의 workMinutes null 문제 확인
 
----
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1712000000000000)
 
-#### 구글 캘린더 연동
-
-**스펙/규칙**
-- 구글 캘린더 연동 시 외근/출장/재택만 공유됨. **기본 근무 스케줄은 공유 불가** (rate limit 우려로 현재 미지원)
-- calendarId 확인 없이 연동하면 어느 회사든 한 캘린더로 모일 수 있음 — 연동 전 calendarId 확인 필수
-- 이벤트 기반으로 전환되면 기본 근무 공유 가능성 있음
-
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1709174207), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1760692174576899)
-
----
-
-#### .ics 파일 / Outlook/Teams 일정 공유
+#### 과거근무 수정 승인 — 삭제도 변경에 포함
 
 **스펙/규칙**
-- 현재 .ics 파일 제공 **없음**
-- 계획 있음: ics 파일 제공 POC 진행 중 (2024년 9월 기준)
-- 구글 캘린더 연동은 있으나 Teams 연동은 별도 계획 없음
-- 두레이: ics 지원
+- 삭제도 "변경"에 포함됨 (팀 전원 동의)
+- `WorkScheduleMultiDayPastRecordEditApprovalChecker`는 eventBlock만 봐서 비어있는 날로 수정 시 발생 안 함
+- 관련 티켓: [TTB-964](https://linear.app/flexteam/issue/TTB-964)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1726821774)
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1725846491684129)
 
----
-
-### 10. 개발/팀 프로세스
-
----
-
-#### Linear 워크플로우 설계 (squad-tracking)
-
-**스펙/규칙**: 최종 확정 상태 구조:
-- **Triage**: 팀 외부 인원의 요청 (Linear 기능 별도 활성화 필요)
-- **Backlog**: 미뤄진 이슈들 아이스박스/배팅 테이블
-- **Todo**: 새로 등록되는 이슈의 default 상태 (GTD의 Inbox)
-- **Ready**: WIP 제한 적용. 이번 사이클에 할 작업 대기열 (애자일의 Backlog)
-- **In Progress**: 현재 작업 중
-- **QA**: develop 브랜치 merge 완료됨을 의미 (qa 서버 배포를 의미하지 않음)
-- **Done**: 최종 완료
-- PR 머지 시 자동 QA 상태 전환 설정
-
-**의사결정 배경**: "릴리즈만 마일스톤을 사용하자", "마일스톤 자동화 사용하지 말자" 방침 확정.
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1669731538703679)
-
----
-
-#### E2E 테스트 자동화 — Playwright + Cucumber
+#### 휴일 근무 승인 — 휴무일(토요일) 적용 제외
 
 **스펙/규칙**
-- Selenium에서 Playwright로 전환 이유: HTML element를 잘 못 찾음, 속도 10배 차이, 녹화 기능
-- 조합: **Playwright + Cucumber** (PoC 완료)
-- E2E 테스트 관련 문서: [Notion](https://www.notion.so/flexnotion/E2E-739171beea5440a28fc27b4957914ee9)
-- 근무/휴가 관련 테스트는 시간 선택이 포함되어 작성하기 어려움 → 단계적으로 채워가는 방식
+- 근무 정책의 "휴일 불가" 설정은 토요일(휴무일)에 해당하지 않음
+- 휴일 근무 승인도 휴무일(토요일)에는 적용 안 됨 (둘 다 동일 스펙)
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1669194187445139)
+**자주 오는 케이스**
+- "토요일 근무하는데 승인이 안 요청된다" → 휴무일은 휴일 근무 승인 대상이 아님
 
----
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1712000000000001)
 
-#### API 설계 원칙 — 버전 관리 및 일반화
-
-**스펙/규칙**
-- BE에서 API 버저닝을 자유롭게 할 수 없는 구조 (`/v2/` prefix 제거 논의 있었음)
-- 기간별 근무시간 API: 기존 API에 `ALL` 타입 추가하는 방식으로 일반화
-- 하위 호환성 유지를 위해 FE가 할 수 없는 경우 서버 우선으로 처리
-
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1666847342974379)
-
----
-
-### 11. 기타 운영
-
----
-
-#### 프로필 사진 일괄 다운로드
+#### Dry-run 성공 후 실제 근무 등록 실패 → 고아 태스크 발생
 
 **스펙/규칙**
-- 제품 기능으로 일괄 다운로드 **없음**
-- 브라우저 스크립트로 수동 지원 가능
-- 우클릭 저장 불가는 스펙
+- dry-run으로 워크플로우 태스크/할일 생성 후 실제 근무 등록 실패(휴게 부족 등) → 고아 태스크 남음
+- raccoon에서 해당 `taskKey`를 플로우 측 할일 제거 처리
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1708418789)
+**출처**: [FT-4171](https://linear.app/flexteam/issue/FT-4171)
 
 ---
 
-#### 목표 조회 및 정렬 스펙
+### 세콤/캡스/외부연동 (external-integration)
+
+#### 세콘(SICON) 연동 패턴
 
 **스펙/규칙**
-- '내 목표'에서는 조직 목표 미노출
-- '전체 목표 > 어사이드'에서 tree 구조로 조직 목표 열람 가능 (조직장에게만 담당 목표로 노출)
-- 수동 정렬(드래그앤드롭): 전체 목표 정렬은 관리자/대표만 가능. 내 목표/구성원 목표는 누구나 정렬 가능. 정렬 값은 공유됨
+- 퇴근 → 출근 역순 전달 가능 → 퇴근미타각으로 노출
+- 재전송해도 중복 데이터로 skip
+- 비활성화 중 보낸 데이터는 소급 반영 안 됨
 
-**출처**: [스레드1](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1767860067105299), [스레드2](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1767860408345489)
+**해결 패턴**
+- 역순 전달: 관리자 수동 근무 기록
+- 특정 유저 동기화 안 됨: 세콘 사번 설정 오류 확인 필요
+
+**출처**: [CI-3793](https://linear.app/flexteam/issue/CI-3793), [CI-3700](https://linear.app/flexteam/issue/CI-3700), [CI-3861](https://linear.app/flexteam/issue/CI-3861)
+
+#### 세콥/캡스 타각 확인 화면 — dry-run 기반 구조
+
+**스펙/규칙**
+- 타각 확인(확정하려는) 화면은 dry-run 기반으로 렌더링
+- 확정 후 화면은 `current-status` API 기준 (별도 스냅샷 없음)
+- 어제 데이터를 확정하면 어제 시점의 "확정하기" 화면은 더이상 볼 수 없음
+- BE 설계: 확정'하려는' 화면만 제공 / PD 요구사항: 확정'하려는' + 확정'된' 화면 구분
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1712000000000002)
+
+#### 세콘 퇴근 시 퇴근시간 00:00 조정
+
+**스펙/규칙**
+- 해당 날 종일휴가가 있는 경우 → 00:00으로 조정
+- 코드: `WorkClockTimeAdjuster.kt#L127`
+- 조사 시 consumer 인덱스가 아닌 api 인덱스 확인
+
+**출처**: [CI-3979](https://linear.app/flexteam/issue/CI-3979)
+
+#### 세콘 쿼리 오류 — 저희 쿼리가 아닌 경우
+
+**스펙/규칙**
+- `syntax error at or near "DUPLICATE"` → 세콘 내부 쿼리 오류
+- 대응: "저희가 가이드하는 쿼리가 아닌 것으로 보입니다"
+
+**출처**: [CI-3953](https://linear.app/flexteam/issue/CI-3953)
+
+#### 세콤/캡스 연동 가이드
+
+**스펙/규칙**
+- 고객사 사전 작업: 세콤/캡스 시스템에 플렉스 사번 연동
+- flex 준비: 접속 계정 생성
+- 세콤/캡스는 근무지 제한 영향 없음 (슈퍼패스)
+- 세콤링크 = 설치형 세콤 프로그램의 외부전송DB 기능, 플렉스는 세콤매니저 ODBC만 지원
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1704962414234469)
+
+#### TELECOP 외부 연동 — 타입 불일치 버그
+
+**스펙/규칙**
+- `TelecopEventEntity`의 terminalId/employeeId: String 선언이지만 실제 데이터 Int
+- `v2_customer_external_provider`에 `work_clock_register_enabled` 플래그
+
+**출처**: [PR](https://github.com/flex-team/flex-work-event-transmitter-backend/pull/98)
+
+#### 슬랙 출퇴근과 IP 제한
+
+**스펙/규칙**
+- 슬랙은 사용자 IP를 전달하지 않음 → IP 제한 기능 구현 불가
+- 슬랙: 출퇴근 트리거 역할만 (근무지 제한과 분리)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1704354493881509)
 
 ---
 
-#### 조직명 변경 방법
+### 근무정책/설정 (work-rule/config)
 
-**스펙/규칙**: 조직명 변경: **조직도 → 조직 선택 → 오른쪽 클릭 → 고급 설정**에서 가능. 조직도에서 직접 변경 불가.
+#### 기본 근무 공유정책(usage_visibility) 기본값 변경 이력
 
-**출처**: [스레드](https://flex-cv82520.slack.com/archives/C01G5AFKNFL/p1722826795)
+**스펙/규칙**
+- `v2_customer_work_form`의 `usage_visibility` 필드 제어
+  - `NONE`: 공유 안함
+  - `WITHIN_TEAM`: 팀 내 공유
+  - `ALL`: 전사 공유
+- 2023-01-31 마이그레이션: 기본 근무(`primary=true`)의 `usage_visibility`를 전사 공유 → 공유 안함으로 일괄 변경
+- 변경 후 12개 고객사가 직접 설정 변경
+- 구글 캘린더 연동에도 영향 (기본근무는 구캘 공유 대상에서 제외)
+- 진단 쿼리: `select * from flex.v2_customer_work_form where primary = true and usage_visibility != 'NONE' order by db_updated_at desc`
+
+**자주 오는 케이스**
+- "기본 근무가 캘린더에 안 보인다" → `usage_visibility='NONE'` 확인 후 공유 설정 변경 안내
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1675155867812069)
+
+#### forceMinimumRestTime 초기값 버그 (2023-01)
+
+**스펙/규칙**
+- 신규 회사 생성 시 기본 근무에서 "최소 연속 휴식 강제화" 옵션이 DB에는 false로 저장되나 UI에는 켜진 것처럼 보이는 버그
+- 원인: FE fallback 값이 false(꺼짐)지만 저장 시 요청에 true로 전송 (UI 켜진=DB false 역전)
+- 초기 회사 생성 메서드: `CustomerWorkRecordRuleUpdateServiceImpl#resisterNewDefault` → false 저장이 문제
+- 수정: PR flex-timetracking-backend#3991
+
+**변경 이력**
+- 2023-01: 버그 수정
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1675066527721699)
+
+#### 코어타임 일별 변경 가능 여부
+
+**스펙/규칙**
+- 현재 제품에서는 불가 (일마다 다른 코어타임 미지원)
+- 구조적으로는 가능하도록 되어 있음
+- 니즈가 간간이 인입되나 매우 적은 양 → 대응 계획 없음
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1723081655349849)
+
+#### 근무 주기(WorkSchedulePeriod) 생성 기준
+
+**스펙/규칙**
+- 디폴트: 전체 기간(1970/1/1 ~ 9999/12/31)으로 설정, 근무유형 적용 기간에 따라 중간에 주기가 나뉨
+- 주기 중간에 근무 유형이 바뀔 수 있으므로 "같게 보일 뿐" (항상 같아야 하는 것 아님)
+- 1970부터 만들어 두는 이유: 입/퇴사, 휴직, 삭제 등 이벤트마다 근무유형기간 조절이 아닌 후처리로 동작
+- 관련 PR: https://github.com/flex-team/flex-timetracking-backend/pull/8750
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1726192435420839)
+
+#### 대시보드 타 customer 근무 유형 캐싱 버그
+
+**스펙/규칙**
+- 근무 유형 API 조회 시 `customerIdHash`를 `workspace-users/me` 응답에서 가져오는데, 이전에 내려온 다른 고객사의 값이 캐싱되어 타 고객사 근무 유형이 조회되는 버그
+- 진단: `workspace-users/me` 응답의 `currentUser.user.customerIdHash`가 올바른지 확인
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1723772794699099)
+
+#### 동일 이메일 재입사 유저 처리
+
+**스펙/규칙**
+- 퇴사 후 동일 이메일로 재입사 시 user가 새로 생기는 것이 올바른 처리 (입사일 변경으로 재입사 처리하면 안 됨)
+- 입사일 변경으로 처리 시: 변경된 입사일 기준으로 월차/연차/근무 모두 재계산되어 제품 내 일관성 깨짐
+- 퇴직 취소 처리된 케이스(특수)는 입사일 변경으로 재입사 처리됨
+- 진단 SQL: `select customer_id, id as user_id, email from user where email like '%{email}%'`
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1724810363275659)
+
+#### IP 제한 감사 로그
+
+**스펙/규칙**
+- 근무 위젯/스케줄 dry-run, wet-run 시 IP 제한으로 실패할 경우 감사 로그 추가
+- 위젯에만 먼저 추가 (내근무 등록은 미적용)
+- `AccessControlDeniedException` 에러 로그로 확인
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1712000000000003)
+
+#### 회사 휴일 테이블 구조
+
+**스펙/규칙**
+```sql
+v2_customer_holiday_group     -- 휴일 그룹
+v2_customer_holiday           -- 실제 휴일 날짜 (group_id 연결)
+v2_user_holiday_group_mapping -- 유저-그룹 매핑
+v2_time_tracking_user_alternative_holiday_event -- 개인 대체휴일
+```
+- 조회: 매핑 → 그룹 → 휴일 순서 JOIN
+- 한국 공휴일은 테이블에 저장 안 됨. 비활성화하는 경우 등에만 생성. 코드로 계산
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1675139131108269), [스레드](https://flex-cv82520.slack.com/archives/CRU35U9FC/p1674500000000000)
+
+#### 휴직 기간 근무기록 처리
+
+**스펙/규칙**
+- tracking-user에서 휴직 상태는 '현재' 기준만 가능 (기간 불가)
+- 현재 기준 → 모든 근무 기록을 하루 종일 휴가처럼 처리
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1688433816996049)
+
+#### GPS 근무 제한
+
+**스펙/규칙**
+- 권한자(최고관리자) 타인 근무 등록·수정 시 GPS 영향 안 받음
+- 본인 근무 시에는 받음
+- 근무예약은 등록 시점에 GPS 판단 완료, 예약 시간 도달 시 재확인 안 함
+
+**출처**: product-qna QNA-GPS
+
+#### 입사예정자 근무유형 이슈
+
+**스펙/규칙**
+- 입사예정자는 근무유형 설정 화면 미노출 → 삭제 가능 → DB `active=true` 복구 필요
+
+**출처**: product-qna QNA-1382
 
 ---
 
-## 행동 패턴 요약
+### 리프레이밍 (reframing)
 
-| 패턴 | 빈도 | 예시 |
-|------|------|------|
-| 스펙/버그 즉시 판단 후 안내 | 매우 높음 | "이것은 스펙입니다", "버그 확인됩니다, PR 올리겠습니다" |
-| raccoon 어드민으로 알림 설정 확인 | 높음 | 알림 VOC 발생 시 첫 번째 확인 단계 |
-| 세콤/캡스 연동 구조 설명 | 높음 | 위젯 미허용 근무유형, ODBC 방식, 방화벽 도메인 안내 |
-| DB 직접 조회로 원인 파악 | 높음 | `flex_user_slack_user_mapping`, `v2_user_time_off_event` 조회 |
-| 타입/소수점 이슈 주의 | 중간 | Long vs Integer, minutesToHours() 버림 |
-| 제품화 방향 제안 | 중간 | 운영 수동 처리 대신 raccoon 어드민 동기화 버튼 추가 |
+#### TT 날짜 컨벤션: local-date inclusive, timestamp exclusive
+
+**스펙/규칙**
+- local-date 파라미터: 양 끝 inclusive
+- timestamp 파라미터: 끝점 exclusive
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1717341464000000)
+
+#### 리프레이밍 API 버전 규칙: `/v3/`
+
+**스펙/규칙**
+- 신규 API 전부 `/v3/`로 시작
+- 하위 호환 필요 없는 새 인터페이스
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1711516049000000)
+
+#### dry-run/wet-run 응답 설계
+
+**스펙/규칙**
+- dry-run: `validationResults` 안에 근무/휴가 validation + verification 포함
+- wet-run: 등록된 근무 주기 기록 + 승인 ID 목록
+- lookup 응답: wet-run 결과와 동일
+- dry-run과 wet-run은 abstract class 기반 템플릿 메서드 패턴
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1718622461000000)
+
+#### validation 타입별 DTO 매핑
+
+**스펙/규칙**
+
+| validation 타입 | DTO |
+|---|---|
+| `LACK_OF_REST_MINUTES` | `LongValueWorkScheduleRegisterValidationDto` |
+| `EXCEEDED_MAX_STATUTORY_TOTAL_WORK_MINUTES` | `LongValueWorkScheduleRegisterValidationDto` |
+| `WORK_SCHEDULE_NOT_ALLOWED_WORKPLACE_IP` | `StringListWorkScheduleRegisterValidationDto` |
+| `WORK_SCHEDULE_TIME_BLOCK_INVALID_WORKDAY` | `WorkScheduleRecordWorkScheduleRegisterValidationDto` |
+| `EXCEEDED_USAGE_LIMIT` | `ExceededUsageLimitWorkScheduleRegisterValidationDto` |
+| `TIME_OFF_BALANCE_INSUFFICIENT` | `TimeOffAmountWorkScheduleRegisterValidationDto` |
+| `*` (default) | `DefaultWorkScheduleRegisterValidationDto` |
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1719499291000000)
+
+#### 타임존 3축 개념
+
+**스펙/규칙**
+1. 내가 보는 시간대 (UI 표시)
+2. 근무 계산 시간대
+3. 근무 기록 등록 시간대
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1701676276000000)
+
+#### 승인 라인 서버 제공 방향
+
+**스펙/규칙**
+- 기존: FE가 `approvalPolicyKey`로 직접 조회
+- 변경: 서버가 승인 라인 생성 → FE는 표시만
+- `approvalPolicyKeys` 대신 `approvalPolicies` 사용 (메모 필수 포함)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1721301010000000), [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1731040529844849)
+
+#### 서머리 API 필드 매핑
+
+**스펙/규칙**
+
+| 필드 | 계산 방식 |
+|---|---|
+| `totalTimeOffMinutes` | paid + unpaid |
+| `totalOverWorkingMinutes` | 여러 초과근무 타입 합산 |
+| `requiredLegalWorkingMinutes` | 합의근무 - 유급휴일 |
+| `totalActualWorkingMinutes` | 실제 근로 시간 |
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1719480031000000)
+
+#### '전체 시간' 개념 정의
+
+**스펙/규칙**
+- 전체 = 목표(기본+야간+휴가) + 비목표(초과 중 야간 제외 8가지)
+- 휴가 사용 시 최대 근무 버킷 증가 가능 (52h → 63h)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1721704433000000)
+
+#### 근무/휴가/휴게 중첩 검증 — 서버 이관
+
+**스펙/규칙**
+- 예전: `[근무][휴게][근무]` 블록 패턴 저장 가능
+- 현재(리프레이밍 이후): `[근무[휴게]][근무]` 형태. 휴게가 근무 안에 포함되어야 함
+- 이 검증 로직이 클라이언트단에만 있다가 리프레이밍부터 서버에 추가됨
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1729218619446319)
+
+#### v3 dry-run 후 v2 wet-run 혼용 버그
+
+**스펙/규칙**
+- v3에서 dry-run만 하다가 v2 API로 근무 입력하는 버그
+- `clientMappingId`가 같다는 것이 원인
+- TTB-1078로 스펙 변경 (중첩된 블록 병합 후 전송)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1729820844325629)
+
+#### 종일 휴가 타임존 처리
+
+**스펙/규칙**
+- 종일 휴가 블록 DTO의 `startTimestamp`, `endTimestampExclusive`는 종일 휴가일 때 `undefined`
+- 해결: `startTimestamp: { zoneId: string; timestamp?: number }` 형태로 zoneId만 전달 가능
+- `timezoneAtRegistration`은 optional이며 종일 휴가일 때 존재
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1736746589494719)
+
+#### `getUserWorkingPeriodByDateAt` API
+
+**스펙/규칙**
+- `/api/v2/work-rule/users/{userIdHash}/working-periods/by-date/{date}` (구 API, 호출 없음)
+- 새 API: `getUserWorkingPeriodByDateAt` — plain date + timezone 파라미터로 근무주기 조회
+- `registerWorkScheduleV3`의 `zoneId`: 근무 블록에는 사용 안 하고 휴가 블록 등록 시 사용
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1736746589494719)
+
+---
+
+### 보상휴가-급여연동 (compensatory-payroll)
+
+#### 초과근무 Internal API 설계
+
+**스펙/규칙**
+- Request: `timestampRange` + `exceededWorkCalculationPeriod`(nullable)
+- Response: `dailyResults` + `periodResults`
+  - `exceededWorkTimes`, `deductedExceededWorkTimesByComprehensiveContract`, `recognizedExceedWorkTimes`, `compensatoryTimeOffAssignTimes`
+
+**의사결정 배경**
+- 페이롤에서 초과근무 산정주기를 요청 파라미터로 받지 않기로 결정 (하위호환 유지)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1732783162875339)
+
+#### 3종 법내연장야간 분리 계산
+
+**스펙/규칙**
+- 법내연장야간 = 야간 + 법내연장으로 분리 계산 (가산율 다름)
+- 7종 → 3종 변경 시 TT에 `법내야간` 타입 신설
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1731991283015599)
+
+#### 가산율(additionalRate) null 처리
+
+**스펙/규칙**
+- persistence: null 가능, domain: null 불가
+- null이면 `DefaultCompensatoryExceededWorkTimeOverPayPercent` 참조
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1733386552851339)
+
+#### 보상휴가 초과부여 상태 체크 버그
+
+**스펙/규칙**
+- 부여 가능 여부 체크 시 서로 다른 기간 범위 비교 (버그)
+- 코드: `UserCompensatoryTimeOffAssignUpdateService.kt#L690-L712`
+- 해결: PR `flex-timetracking-backend/pull/11799`
+
+**출처**: [CI-3858](https://linear.app/flexteam/issue/CI-3858)
+
+#### 3종→7종 일괄 변경 (4845건)
+
+**변경 이력**
+- 2025-01-21: `TYPE_3+포함` → `TYPE_7+미포함` 일괄 변경, 12개사 제외
+- 핫픽스 후 2개사 추가 보정
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1737444707297019)
+
+#### 주기연장 연장야간 분해 버그
+
+**스펙/규칙**
+- 법내연장야간 → 주기연장-야간으로 분해 시 야간 시간 증발
+- 2025-01 PR #9553 수정
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1736732747099019)
+
+#### 휴일연장 포괄승인 타입 분리
+
+**스펙/규칙**
+- `ExceededWorkType` vs `ComprehensiveContractWorkType` 분리 (PR #10087)
+- 3종: 3개 내림, 7종: 7개 내림
+- 계약/초과/인정초과 모두 0이면 미노출
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1742789408347069)
+
+#### 휴일야간 누락 버그
+
+**스펙/규칙**
+- 가산율: 휴일×1.5, 휴일야간×1.5, 휴일연장×0.5, 휴일연장야간×0.5
+- 버그: 휴일야간×1.5 누락 → PR #10155 수정 (영향 8명)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1743399449866129)
+
+#### 보상휴가 지급 내역 다운로드 엑셀
+
+**스펙/규칙**
+- 근무유형 단위, 동일 주기면 한 줄
+- 가산율: 다운로드 시점 반영 (시계열 미관리)
+- 시간 단위: 소수점 둘째 자리
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1734312821697149)
+
+---
+
+### 휴일대체 (alternative-holiday)
+
+#### 대체 휴일 vs 휴일 대체 — 용어 정의
+
+**스펙/규칙**
+- **휴일 대체(holiday replacement)** (근로기준법 제55조제2항): substitute holiday — 법정 공휴일에 근무하고 다른 날 쉬는 것 (약정 기반). **TT 미지원**
+- **대체 공휴일(대체 휴일)** (관공서 공휴일에 관한 규정 제3조): observed holiday — 공휴일이 주말과 겹칠 때 월요일로 이동
+- **보상휴가(compensatory time off)**: 연장/야간/휴일 근무에 대한 보상으로 주는 휴가
+- **휴무일**: 일반적으로 '쉬는 날'이지만 '근로기준법상의 휴일'은 아님
+- TT 입장: 법정휴일/약정휴일 구분 불필요. 다 "근로기준법상 휴일"로 처리
+- alternative는 두 의미가 혼재하여 사용 지양
+- 구글 캘린더에서는 `Day off in lieu` 표현 사용
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1725000000000000), [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1722257124499499)
+
+#### date-attributes API의 dayOffs 버그
+
+**스펙/규칙**
+- 주휴일 대체 날은 포함되지만 쉬는날(공휴일) 대체 날은 미포함
+- 캘린더 초기 날짜가 아닌 클릭 시점 날짜 기준으로 조회
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07KV2K8KAN/p1730165138735279)
+
+#### 모바일 휴일대체 API 가이드
+
+**스펙/규칙**
+- 대체 휴일 신청 가능 여부: `date-attributes` dry-run만으로 충분
+- 전체 정보 필요 시: `original-holiday-info` 별도 호출
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07KV2K8KAN/p1731304764097569)
+
+#### 여러 날 등록 시 휴일대체 중복 (TT-11671)
+
+**스펙/규칙**
+- 여러 날 등록 시 휴일대체 이벤트 중복 저장 → 취소 여러 번 필요
+- 근본 원인: `TimeTrackingApprovalPostActionEventConsumer` 멱등 처리 누락
+- 해결: 모두 취소 후 새로 등록
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07KV2K8KAN/p1732847325790259), [TT-11671](https://linear.app/flexteam/issue/TT-11671)
+
+#### 휴일대체 플래그 및 테이블 구조
+
+**스펙/규칙**
+- 플래그: `tt_members_alternative_holiday` (모바일 별도 플래그 불필요)
+- 신청 테이블: `v2_time_tracking_user_alternative_holiday_request`
+- 이벤트 테이블: `v2_time_tracking_user_alternative_holiday_event` (`submission_type`: SELF/ADMIN)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C07KV2K8KAN/p1733377100353749)
+
+#### 휴일대체 기간 설정 변경 제약
+
+**스펙/규칙**
+- 공휴일 기간 단축: 어려움
+- 주휴일 기간 연장: 가능 (기존 6일 → 전후 2주)
+
+**출처**: [CI-3897](https://linear.app/flexteam/issue/CI-3897)
+
+---
+
+### 주기연장일귀속 (period-over-daily-attribution)
+
+#### 소프트오픈/하드오픈 전략
+
+**스펙/규칙**
+- 소프트오픈(11/24): 신규 고객만 자동 반영
+- 하드오픈(1/31): 전체 2109개 customer 일제 마이그레이션
+- 적용일: 02/01, 근무주기 월~일이면 하루만 주기 짤림 가능
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1762929324754999), [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1769391478938179)
+
+#### 마이그레이션 방법
+
+**스펙/규칙**
+- 소프트오픈: `distribute_period_over_to_day = true` 변경 (미니 한정)
+- 하드오픈: Operation API 호출 (`newApplyStartDate = 2026-02-01`)
+- 미니 구별: `customer.product_code = 'LEAF'`
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1763441273140379)
+
+#### 핵심 계산 케이스 — 주기연장 분배
+
+**스펙/규칙**
+- 특정 일의 기본근무보다 주기연장이 많아서 과거로 넘치는 케이스
+- 주기연장 분배 시 법내연장도 분배 대상으로 포함
+- 분배 순서: 뒤에서부터 배분, 항목별 순서 없음
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1763458912843759), [PR](https://github.com/flex-team/flex-timetracking-backend/pull/11384)
+
+#### DB 스키마: apply_start_date_for_distribute_period_over
+
+**스펙/규칙**
+- `v2_customer_work_rule` 테이블:
+  - `distribute_period_over_to_day`: Boolean
+  - `apply_start_date_for_distribute_period_over`: Date (null이면 전체 기간)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1769390875571679)
+
+#### Operation API — 적용시작일 변경
+
+**스펙/규칙**
+- `CustomerWorkRuleMigrationOperationController`
+- `customerWorkRuleIds: null` → 전체 변경
+- `customerWorkRuleIds: [1729,1730]` → 특정 유형만 변경
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09S8UXL5R7/p1764134271358859)
+
+---
+
+### 교대근무/근무지/근무표 (shift-work/workplace)
+
+#### 교대근무 엑셀 스케줄 업로드 시 연차 미반영
+
+**스펙/규칙**
+- 엑셀 업로드 시 다른 코드는 정상이나 연차만 미반영
+- 해결: PR `flex-timetracking-backend/pull/11874`
+
+**출처**: [CI-3998](https://linear.app/flexteam/issue/CI-3998)
+
+#### 교대근무 스케줄 게시 — 기존 휴가 있는 날 오류
+
+**스펙/규칙**
+- `v2_user_shift_schedule_draft`의 `time_off_deletion` 필드에 삭제 예정 휴가 포함
+- 해결: `time_off_deletion = '[]'` 업데이트
+
+**출처**: [CI-3997](https://linear.app/flexteam/issue/CI-3997)
+
+#### dry-run WARN vs ERROR — 게시 차단 여부
+
+**스펙/규칙**
+- ERROR: 게시 차단, WARN: 게시 허용
+- FE 파서 변경으로 WARN도 차단된 이력 (hotfix: `flex-frontend-apps-time-tracking/pull/2101`)
+
+**출처**: [CI-3862](https://linear.app/flexteam/issue/CI-3862)
+
+#### 근무지 제한 승인 templateKey 누락 (뉴승인 전환 후)
+
+**스펙/규칙**
+- 뉴승인으로 전환 후 근무지 제한 승인에 templateKey가 없다는 오류 발생
+- dev에서 먼저 발견 → prod 영향 여부 확인 필요
+- 승인 생성 시 `approvalProcess`에 templateKey가 포함되어야 함
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/CK7EUDG4S/p1712000000000004)
+
+#### 근무지제한 Phase 1 — 조직 선택기 empty 처리
+
+**스펙/규칙**
+- 서버에서 `null`을 받으면 무소속 구성원 포함 전체 구성원에 적용
+- 빈 배열(empty list)로 저장 (전체 조직 ID 리스트 저장하면 조직 변경 시 자동 반영 안 됨)
+- 필터(발라내는 것) vs 대상 선택(선택하는 것)은 다른 맥락
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RPL4P0D9/p1762764213234929)
+
+#### 교대근무 데이터 모델
+
+**스펙/규칙**
+```
+조직 : 근무스케줄 = 0~1 : 1
+근무지 : 근무스케줄 = 0~1 : N
+근무지 : 근무조   = 0~1 : N
+근무조 : 구성원   = 1 : N
+```
+- 근무지 0개인 스케줄/근무조: 모든 근무지에서 쓸 수 있어서 '공용'으로 표기
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RPL4P0D9/p1769601596042849)
+
+#### workplaceId 타입 불일치 이슈
+
+**스펙/규칙**
+- Core 쪽 API: `workplaceId`가 idHash 값
+- Tracking 쪽: 기존에 그냥 id(int toString)
+- FE에서 TT의 workplace 관련 API를 활용하도록 처리
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C09RPL4P0D9/p1769880015030400)
+
+---
+
+### API/아키텍처 (api/architecture)
+
+#### 모바일 BFF nullable 필드 500 에러
+
+**스펙/규칙**
+- BFF에서 non-null 선언 → TT가 null 반환 → 500
+- 입사 전 기간 조회 시 발생
+
+**출처**: [CI-4051](https://linear.app/flexteam/issue/CI-4051)
+
+#### TT 엑셀 다운로드 타임아웃
+
+**스펙/규칙**
+- 내부 API 호출 시 HTTP client 타임아웃 초과
+- 해결: 별도 retrofit 빈 + 타임아웃 연장 (PR #11985)
+
+**출처**: [CI-4055](https://linear.app/flexteam/issue/CI-4055)
+
+#### 휴가사용내역 ES 동기화 — produce/consume 타이밍
+
+**스펙/규칙**
+- 트랜잭션 커밋 전 produce → consumer가 stale 데이터 참조
+- 해결: transactional outbox 패턴 (`flexMessageRepository.insertAll`)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1675764455728029)
+
+#### API 서버 리소스 튜닝 (2024-08)
+
+**스펙/규칙**
+- 기존: replica 8, cpu 8, ram 5, db pool 60
+- 실험: replica 16, cpu 4, ram 5, db pool 30
+- 최종 적정값: replica 12, cpu 4, ram 5, db pool 40 (총 480 connections)
+- KEDA 스케일링: 최소 6대 → 최대 16대
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1723400000000000)
+
+#### Google Calendar 동기화 아키텍처
+
+**스펙/규칙**
+- `COMMAND_CALENDAR_SYNC` 이벤트 → 2개 컨슈머 병렬 처리
+  - `GoogleCalendarSyncEventConsumer`: 구글 배치 API → callback에서 `v2_external_calendar_event_map` 저장/삭제
+  - `FlexCalendarSyncEventConsumer`: `v2_time_tracking_flex_calendar_event_map` 테이블에 매핑 저장
+- history 테이블 추가 시 tracking 쪽도 함께 작업 필요
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1724000000000000)
+
+#### Virtual Thread 성능 테스트 (2024-09)
+
+**스펙/규칙**
+- dev 환경 TT API에서 VT 20/50/100 VUser 테스트
+- 결과: 메모리 사용 약간 감소, 스루풋 약간 감소 — 극적인 차이 없음
+- 2024-09-10 Prod TT API에 VT 적용
+- Notion: [Virtual Thread 성능 테스트](https://www.notion.so/flexnotion/Virtual-Thread-9672093cec854ec18df67df8fcec279c)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1725500000000000)
+
+#### WorkClockStatusChangedEvent SSE enrichment
+
+**스펙/규칙**
+- 이벤트: `team.flex.work-clock.status.changed.v1`
+- SSE에 current-status API 응답과 동일한 payload 담아서 발행 (별도 API 호출 불필요)
+- 메시지 역전 방지: 이벤트 `time` 필드에 서버 기준 시각 담아 클라이언트에서 오래된 이벤트 무시
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1726000000000000)
+
+#### Liquibase changelog lock 해제
+
+**스펙/규칙**
+- lock 걸렸을 때: 직접 `DATABASECHANGELOGLOCK` 테이블에서 lock 해제
+- `ALGORITHM=INPLACE, LOCK=NONE` 불가 시 → `varchar(256)` 이상으로 컬럼 사이즈 확보
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1718175148068109)
+
+#### MySQL 8 버전업 후 reserved word 충돌
+
+**스펙/규칙**
+- MySQL 8 업그레이드 후 `over`가 예약어 → SQL syntax error 발생
+- 수정: 필드명 변경 또는 backtick 처리
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1727000000000000)
+
+#### PAC(PersistenceAccessControl) 예외 처리 개선
+
+**스펙/규칙**
+- PAC 에러 발생 시 `validAccess`로 처리되어 에러 없이 통과되는 케이스 존재
+- R(Read)만 에러 로그 찍고 CUD는 적용 시점부터 바로 차단하는 방향으로 개선
+- 2024-08-08 PAC 재적용 완료
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1723200000000000)
+
+#### Redis → RDB 이관 (2025)
+
+**스펙/규칙**
+- Redis 데이터를 RDB로 이관 작업 진행 중 (2025-06)
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1750035039130539)
+
+---
+
+### 기타 (misc)
+
+#### 근무/휴가 ERD 색상 가이드
+
+**스펙/규칙**
+- 휴가: 초록색, 근무: 노랑색, 승인: 분홍색
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1675080142414959)
+
+#### Mockito nullable 인자 처리
+
+**스펙/규칙**
+- Kotlin + Mockito: nullable 파라미터에는 `anyOrNull()` 사용
+
+**출처**: [스레드](https://flex-cv82520.slack.com/archives/C038DUJJ5ND/p1676022185912129)
+
+#### 보상휴가 초과근무 유형 정렬 순서
+
+**스펙/규칙**
+- 야간 → 연장(법정 내) → 연장·야간(법정 내) → 연장 → 휴일 → 연장·야간 → 연장·휴일 → 휴일·야간 → 연장·휴일·야간
+
+**출처**: product-qna QNA-676
+
+#### 캡스 수동 동기화
+
+**스펙/규칙**
+- 동기화 시점 상태 기준으로 실시간 근무(시작→종료) 처리
+- 이미 등록 또는 위젯 진행 중이면 미반영
+- 하루치 10분 내 처리
+
+**출처**: product-qna QNA-688
+
+#### Slack-휴가 유형 연동
+
+**스펙/규칙**
+- 휴가 유형 구분 없이 '휴가'로만 표시 (민감한 휴가 유형 보호)
+
+**출처**: product-qna
+
+---
+
+## 의견 충돌 이력
+
+### 승인 라인 데이터 소유권 (FE vs 서버)
+
+- **맥락**: 기존에 FE가 `approvalPolicyKey`로 승인 라인을 직접 조회하여 렌더링하던 구조
+- **김영준 입장**: FE에서 승인 스킵 위험이 있으므로 서버가 승인 라인을 소유해야 한다
+- **상대 입장**: FE 자율성 유지 주장
+- **결론**: 서버 소유로 변경. FE는 표시만 담당
+- **출처**: [스레드](https://flex-cv82520.slack.com/archives/C05PQ22NQS1/p1721301010000000)
+
+### 포괄승인 UI 인터페이스 설계
+
+- **맥락**: 서버에서 승인 컨텐츠 전달 시 UI 구조를 서버가 인지해야 하는 상황
+- **김영준 입장**: 서버는 UI 종속 인터페이스를 지양하고, 도메인 구조에 맞는 인터페이스를 제공해야 한다
+- **상대 입장**: 클라이언트가 도메인 로직을 갖기 꺼림
+- **결론**: 도메인 구조에 맞는 인터페이스 제공 방향으로 합의
+- **출처**: [스레드](https://flex-cv82520.slack.com/archives/C07NB6AU1M5/p1742789408347069)
+
+### 일괄 마법봉 제거
+
+- **맥락**: 연장근무 단위 조정 시 일괄 마법봉(타입 구분 없는 조정) 기능 존재
+- **김영준 입장**: 일괄 마법봉은 예측 불가능한 동작이므로 제거해야 한다. 타입별 독립 제공이 맞다
+- **상대 입장**: 편의성 측면에서 일괄 조정이 유용할 수 있다
+- **결론**: 일괄 마법봉 제거. 타입별 독립 제공으로 변경
+- **출처**: [스레드](https://flex-cv82520.slack.com/archives/C08SEPBTF2M/p1710000000000000)
+
+### 휴일대체 API 통합 vs 분리
+
+- **맥락**: `date-attributes`와 `original-holiday-info`를 항상 조합해서 사용
+- **김영준 입장**: 서버는 재료를 주고 클라가 조합하는 원칙에 따라 현행 분리 유지
+- **상대 입장**: 항상 두 API를 함께 호출해야 하므로 통합이 편리
+- **결론**: 현행 유지하되 향후 통합 검토. "당장 이번에 해야 하는 것은 아님"
+- **출처**: [스레드](https://flex-cv82520.slack.com/archives/C07KV2K8KAN/p1731304764097569)
