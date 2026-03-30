@@ -1,0 +1,19 @@
+name: Brain Graph
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build self-contained graph
+        run: node brain/build-graph.js brain/graph-standalone.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brain-graph
+          path: brain/graph-standalone.html
+          retention-days: 30
