@@ -1924,6 +1924,11 @@ n:CI-4241
   d:v  "spec" ;
   d:s  "외국인(F-4) 고용보험 미공제 — 체류자격 UNKNOWN→F4 변경 + 자격관리 취득일 미등록 → EXCLUDED 처리. 임의가입 스펙" .
 
+n:CI-4252
+  d:in :time-tracking ;
+  d:s  "glluga JAPAN 기본 휴일 정책에서 근로자의 날(LABOR_DAY) 삭제 요청 — Operation API로 당일 처리" ;
+  d:verdict "operation" .
+
 g:pay-10
   d:in :payroll ;
   d:q  "외국인 고용보험 공제가 빠졌어요" , "고용보험이 안 빠져요" ;
