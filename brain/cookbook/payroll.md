@@ -2,6 +2,45 @@
 
 > COOKBOOK.md Tier-1에서 참조되는 상세 SQL 템플릿과 과거 사례 모음
 
+## 도메인 컨텍스트
+
+### 이 도메인이 하는 일
+
+급여 정산(월급, 상여, 퇴직금), 원천징수, 사회보험 관리, 급여명세서 발행을 담당한다. 소득세법, 국민건강보험법, 고용보험법 등 법령에 직접 종속되며, 정산 로직의 대부분이 법적 요건을 구현한 것이다.
+
+### 핵심 개념
+
+- **정산(`settlement`)**: 급여 계산의 단위. 생성 시점에 올림 설정, 부양가족 수 등을 **스냅샷**으로 저장한다. 이후 설정이 변경되어도 기존 정산은 영향받지 않는다.
+- **정산 대상자(`payee`)**: 정산에 포함된 구성원별 스냅샷. `dependent_families_count`(부양가족 수), `residence_qualification`(체류자격), `employment_status`(재직/휴직) 등 소득세 계산에 필요한 정보를 정산 생성 시점에 복사.
+- **지급항목(`allowance_global`)**: 회사별로 정의하는 급여 구성 항목. 템플릿(`allowance_template`)과 실제 매핑(`customizable_allowance`)이 분리되어 있다.
+- **중도정산**: 퇴직예정자 대상 정산. `RetireeYearEndSettlementSocialInsuranceRecipient`에 보험료를 1회 계산·저장하며, 이후 자동 재계산하지 않는다.
+
+### 주요 흐름
+
+1. **정산 생성**: 정산 템플릿 기반 → payee 스냅샷 생성(PAYEES 단계) → 각 단계별 계산 순차 진행
+2. **정산 재처리**: 자물쇠 해제 → PAYEES 단계부터 재실행 → payee 스냅샷 **최신화** (부양가족 변경 반영)
+3. **사회보험 연말정산**: 2월 말 합산 픽스. 확정/확정해제 시 사회보험 금액 동기화 필요.
+
+### 비즈니스 규칙
+
+- **스냅샷 원칙**: 정산은 생성 시점의 설정을 고정한다. 올림 자릿수, 부양가족 수, 체류자격 모두 스냅샷. "설정을 바꿨는데 왜 반영이 안 되나요?"라는 문의의 대부분은 이 원칙 때문.
+- **외국인 고용보험**: 체류자격(F-4 등)에 따라 임의가입/당연가입이 나뉜다. 임의가입 대상자는 `employment_insurance_qualification_history`에 취득일이 등록되어 있어야 공제된다. 미등록 시 EXCLUDED 처리.
+- **휴직자 지급항목**: `allowance_on_leave_rule`이 `DAILY_BASE`(기본값)이면 `paymentRatio`와 곱해진다. 육아휴직(`paymentRatio=0`)이면 0원. `FULL`로 변경하면 전액 지급.
+- **구독 해지와 명세서**: 급여정산 구독 해지 후에도 명세서 알림은 발송된다. 급여 탭 접근만 차단되어 열람 불가.
+
+### 자주 혼동되는 것들
+
+- **"올림 설정 변경했는데 안 바뀌었어요"**: 현재 설정(`payroll_legal_payment_setting`)과 정산 스냅샷(`work_income_over_work_payment_calculation_basis`)이 다를 수 있다. 기존 정산은 이전 설정을 유지한다.
+- **중도정산 보험료 vs 일반 정산 보험료**: 중도정산은 recipient 생성 시점에 1회 계산·저장. 이관 데이터 추가 후에도 자동 재계산 안 됨. 보험료 리셋(DELETE /premium → recalculate) 필요.
+- **확정해제 리버트 범위**: 2026-03-20 핫픽스 이전에는 확정해제 시 사회보험 연말정산 금액이 리버트되지 않았다. 핫픽스 이전 데이터는 수동 워크어라운드 필요.
+
+### 구현 특이사항
+
+- **지급항목 이벤트 이중 발행**: v3.128.0 리팩토링(PR #8655)에서 `AllowanceGlobalCreatedEvent` 발행 경로가 활성화되어 리스너가 전체 템플릿에 매핑 자동 생성. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성 → 고아 레코드. 핫픽스 PR #8686.
+- **사회보험 연말정산 합산 로직**: `PaidSocialInsuranceCalculator.getYearEndTotalAmountByType()`이 귀속연도 필터 없이 전체 합산하는 이슈가 있었다(CI-4222).
+
+---
+
 ## 데이터 접근
 
 ```sql
