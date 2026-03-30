@@ -559,6 +559,13 @@
 4. 엑셀 일괄등록: 서버 측 validation에서 "겸조직이 동일 조직" 오류로 차단
 5. 프로필 UI: 저장은 허용되지만 재조회 시 겸직 정보 미노출 (동작 불일치 — UX 개선 여지)
 
+#### 진단 체크리스트 (정보 일괄 변경 엑셀 미리보기)
+문의: "기본 정보 변경 엑셀 미리보기에서 구성원이 중복으로 나와요" / "미리보기에서 알 수 없음이 표시돼요"
+1. access log에서 해당 customer의 `POST /action/v2/bulk-changes/candidates/search-by-filter` 호출 횟수 확인 [CI-4226]
+2. 2회 호출되었고 1차 요청의 `employeeNumbers`에 이메일 형식(`@` 포함) 값이 들어있으면 → 프론트엔드 엑셀 파싱 버그 (사번 컬럼을 이메일로 잘못 파싱)
+3. 1차(이메일 파싱, 0건) + 2차(사번 파싱, N건) 결과가 합쳐져 중복 표시 / 이메일 기반 엔트리는 "알 수 없음" 표시
+4. 백엔드 이슈 아님 — FE 팀에 버그 전달 (validate API 호출은 0건이므로 미리보기 단계에서만 발생)
+
 ---
 
 ### 승인 (Approval)
@@ -881,6 +888,12 @@
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
 2. 빈 배열이면 `created_at`을 일괄 생성 레코드와 비교하여 후발 추가 여부 확인 [CI-4188]
 3. 후발 추가 확인 시 → raccoon Operation API `initialize-user-form` 호출하여 수동 초기화 [CI-4188]
+
+문의: "평가 항목 작성 요청 했는데 할일이 안 왔어요" / "평가 준비 > 평가 항목에서 대상자가 없어요"
+1. `reviewee_evaluation_item` 테이블에서 해당 `evaluation_id`로 조회 — 0건이면 항목 생성 단계에서 필터링된 것 [CI-4238]
+2. 0건이면 → `evaluation_reviewee`의 `evaluate_step_and_factors`에 COMPETENCY factor가 있는지, `competency_group_mappings`가 `[]`인지 확인
+3. `evaluation.use_competency_item = 0` + COMPETENCY factor 존재 + `competency_group_mappings = []` 세 조건 모두 해당 시 → 이 버그에 해당 (PR#5199로 수정됨) [CI-4238]
+4. 버그 해당 시 조치: ① 항목 요청 초기화 → ② 대상자 전원 제외 → ③ 대상자 재추가 → ④ 항목 요청 재실행
 
 #### 조사 플로우
 
@@ -1689,6 +1702,8 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-30 | CI-4238 | 평가: 역량 항목 미사용 시 할일 미발송 — 진단 체크리스트 추가. `useCompetencyItem=false` + COMPETENCY factor + `competencyGroupMappings=[]` → createAll 필터 버그. PR#5199 수정됨 |
+| 2026-03-30 | CI-4226 | 계정/구성원: 정보 일괄 변경 엑셀 미리보기 중복 로우 — 진단 체크리스트 추가. 프론트엔드가 이메일 컬럼을 사번으로 잘못 파싱, 두 번 검색 결과 합산 |
 | 2026-03-29 | CI-4217 | 근태/휴가: 휴일대체 취소 불가(OpenSearch sync 지연) — 체크리스트#18 + F4 플로우 + 과거 사례 추가. CANCEL+재등록 시 `NON_NULL` partial update로 구 eventId 잔존, 재동기화로 해결 |
 | 2026-03-29 | CI-4229 | 비용관리: 수동 증빙 시간 정책 위반 오표시 — 체크리스트#5 + 과거 사례 추가. `transactedTime=null` → RANGE FAIL 버그, EP팀 수정 예정 |
 | 2026-03-29 | CI-4094, CI-4209 | GLOSSARY: 출근 시간 불일치(`actorNow` stale), 교대근무 엑셀 스케줄 누락(WorkForm/WorkPlanTemplate 혼동) 용어 추가. code-fix이므로 COOKBOOK 스킵 |

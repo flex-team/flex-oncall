@@ -4,6 +4,10 @@
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
 |------|------|------|-----------|------|
+| 2026-03-30 | CI-4226 | compact | d:syn+2 | account: 엑셀 미리보기 중복 표현 흡수. code-fix이지만 COOKBOOK 진단 체크리스트 추가 |
+| 2026-03-30 | CI-4238 | compact | — (기존 g:review-08/09 커버) | review: reviewee_evaluation_item 버그. COOKBOOK 체크리스트 추가 |
+| 2026-03-30 | CI-4239 | compact | d:syn+1 | time-tracking: 테스트 근무기록 삭제 표현 흡수 |
+| 2026-03-30 | CI-4245 | compact | — (g:acct-09 갱신) | account: 겸직 스펙 확정. g:acct-09 내용 업데이트 |
 | 2026-03-29 | CI-4229 | compact | d:syn+1 d:kw+2 | fins: transactedTime/시간정책 |
 | 2026-03-29 | CI-4225 | compact | — (기존 g:pay-08 커버) | payroll: DAILY_BASE+paymentRatio |
 | 2026-03-29 | CI-4209 | compact | d:syn+1 d:kw+2 | scheduling: WorkPlanTemplate/isInvalidSchedule |
