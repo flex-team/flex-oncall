@@ -17,12 +17,16 @@
         "title_meta_map" , "Core알림" ,
         "v2_file_merge" , "FLEX_FILE_STORAGE_DOWNLOAD_PREPARATION_COMPLETED" ,
         "command.flex.file-storage.merge" , "file-storage.file-merge" ,
-        "WORKFLOW_TASK_BULK_DOWNLOAD_FILE" ;
+        "WORKFLOW_TASK_BULK_DOWNLOAD_FILE" ,
+        "suppress" , "suppressList" , "MX record" , "Bounce" , "Delivery" ,
+        "opensearch-mgmt-dashboard" , "ses-feedback" ;
   d:syn "알림이 안 왔어요" , "메일 못 받았어요" ,
         "알림 클릭 시 이상한 곳으로 이동해요" ,
         "메타베이스에서 알림 내용이 안 보여요" ,
         "다운로드 완료 메일이 계속 와요" ,
-        "메일을 수백통 받았어요" ;
+        "메일을 수백통 받았어요" ,
+        "초대메일이 안 와요" , "이메일이 안 와요" ,
+        "초대 이메일 재발송해도 못 받아요" ;
   d:x   :time-tracking , :approval , :annual-promotion .
 
 :annual-promotion
@@ -56,7 +60,9 @@
         "보상휴가제" , "고정OT" , "탄력근무제" ,
         "alteredHoliday" , "work-schedule-sync-to-es" ,
         "lock_event" , "assign_times" , "actorNow" , "onTimeRecord" ,
-        "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ;
+        "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ,
+        "v2_external_calendar_connection" , "v2_oauth_user_token" ,
+        "insufficientPermissions" , "FlexCalendarSyncEventConsumer" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
         "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
@@ -71,7 +77,8 @@
         "구글 캘린더 미연동 일정 재연동" ,
         "휴일대체 취소가 안 돼요" , "보상휴가 회수했는데 수정이 안 돼요" ,
         "출근 시간이 다르게 찍혀요" ,
-        "테스트 근무기록 삭제해주세요" ;
+        "테스트 근무기록 삭제해주세요" ,
+        "퇴사자 캘린더 연동 끊어주세요" , "구글 캘린더 연동이 안 돼요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -154,7 +161,10 @@
         "ValuesContinuation" , "search_after" , "continuation token" ,
         "ContinuationExtensions" , "사번정렬" , "무한스크롤" ,
         "V2OsSearchUserRepository" ,
-        "겸직" , "직책" , "겸조직" , "겸직책" ;
+        "겸직" , "직책" , "겸조직" , "겸직책" ,
+        "TOTP" , "2차인증" , "OTP잠김" , "겸직주법인전환" , "겸직해지" ,
+        "workspace_customer_mapping" , "account_user_mapping" ,
+        "authentication_method" , "verification/identifier" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -168,7 +178,10 @@
         "직책 2개 설정이 안 돼요" , "같은 조직에 겸직 등록이 안 돼요" ,
         "OTP 해제해주세요" ,
         "기본 정보 변경 엑셀 미리보기에서 중복 로우가 생성돼요" ,
-        "엑셀 미리보기에서 알 수 없음이 표시돼요" ;
+        "엑셀 미리보기에서 알 수 없음이 표시돼요" ,
+        "2차인증이 막혔어요" , "OTP가 잠겼어요" ,
+        "대표회사 바꿔주세요" , "겸직 주법인 전환해주세요" ,
+        "겸직 해지가 안 돼요" , "비밀번호 초기화해주세요" ;
   d:x   :permission , :department .
 
 :department
@@ -221,14 +234,18 @@
         "승인라인" , "위젯종료승인" , "sync-with-approval" , "approval_process" ,
         "리마인드" , "remind/pending-approval" ,
         "경력변경" , "학력변경" , "UserDataApproval" , "activities" , "댓글중복" ,
-        "ThreadTopicType.USER_DATA" ;
+        "ThreadTopicType.USER_DATA" ,
+        "요승설" , "match-step" , "ApprovalPolicy" , "승인정책복구" ,
+        "approval_replacement_target" , "replacement-targets" ;
   d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
         "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
         "승인 설정/라인 확인해주세요" ,
         "위젯 종료 시 승인이 안 돼요" ,
         "승인 완료인데 진행중으로 보여요" ,
         "경력 변경 요청 댓글이 사라져요" ,
-        "승인 댓글이 중복으로 보여요" ;
+        "승인 댓글이 중복으로 보여요" ,
+        "요승설이 뭐가 적용됐나요" , "어떤 승인 정책이 매칭됐나요" ,
+        "승인 정책 복구해주세요" ;
   d:x   :notification , :time-tracking , :flow .
 
 :data-export

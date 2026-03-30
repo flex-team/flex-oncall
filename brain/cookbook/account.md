@@ -5,6 +5,26 @@
 ## 데이터 접근
 
 ```sql
+-- 겸직 그룹/주법인 상태 조회
+-- Metabase dashboard/212?고객사_id= 로 확인 가능
+-- 겸직 user_id 조회: Metabase question/3332-user-id?email=
+
+-- 대표회사 변경 (workspace_customer_mapping)
+-- 주법인으로 설정할 행: is_primary = 1
+-- 기존 주법인 행: is_primary = 0
+-- (두 쿼리를 트랜잭션 내에서 실행)
+UPDATE flex.workspace_customer_mapping SET is_primary = 1 WHERE id = ?;
+UPDATE flex.workspace_customer_mapping SET is_primary = 0 WHERE id = ?;
+
+-- 삭제된 구성원 복원 확인 (Snapshot에서 복원 대상 조회)
+SET @member_id = ?;
+SELECT * FROM flex.member WHERE id = @member_id;
+SELECT * FROM flex_auth.account WHERE member_id = @member_id;
+SET @account_id = ?;
+SELECT * FROM flex_auth.account_user_mapping WHERE account_id = @account_id;
+SELECT * FROM flex_auth.authentication_method WHERE account_id = @account_id;
+-- 복원 대상 테이블: member(UPDATE), account/account_user_mapping/authentication_method(INSERT)
+
 -- 대상 구성원 조회 (이메일 변경 전 확인)
 SELECT id, customer_id, email, primary_user_id, deleted_date
 FROM user

@@ -25,6 +25,12 @@
 
 > ⚠️ `mail_send_history` 테이블은 BEI-151(2026-02-20)로 기록 중단됨. 메일 발송 여부는 admin-shell 이메일 발송 로그 또는 SES 이벤트 OpenSearch로 확인해야 한다.
 
+문의: "초대메일이 안 와요" / "초대 이메일 재발송해도 안 받아요"
+1. admin-shell 이메일 발송 로그 또는 SES 이벤트 OpenSearch(`flex-prod-ses-feedback-*`)에서 대상 이메일의 이벤트 확인
+2. **Bounce 이벤트** 확인 → 유효하지 않은 이메일로 발송 시 즉시 suppress list 등록
+3. suppress list에 등록된 이메일은 직접 제거 불가 → CS팀을 통해 수동 초대메일 발송 유도
+4. **Send만 찍히고 Delivery 없음** → 수신 메일 서버 문제. [MX record 확인](https://mxtoolbox.com/)으로 수신 서버 존재 여부 검증
+
 #### 조사 플로우
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
@@ -470,6 +476,11 @@
 5. 체험 종료일 직접 변경은 불가 — 0원 구독 또는 청구 시작일 조정으로 대응 [CI-4169]
 
 문의: "OTP 때문에 로그인이 안 돼요" / "최고관리자가 OTP를 켜고 퇴사했어요"
+1. OTP 설정 상태 확인: `SELECT required FROM flex_auth.customer_credential_t_otp_setting WHERE customer_id = ?`
+2. **OTP 잠김 케이스**: 24시간 이내 누적 10번 OTP 입력 실패 시 잠김 → 관리자가 해당 구성원의 OTP 재설정 필요 (구성원 직접 재설정 불가)
+3. **최고관리자 OTP 잠김**: Operation API 없음. 유일한 우회법은 회사의 2차인증 설정을 끄는 것 → 증적 필수 (CS팀 경유 서면/메시지 확인)
+4. SSO 설정 있으면 → SSO 로그인으로 우회 가능 (OTP 확인 없음)
+5. OTP 설정 해제 필요 시 → F2: OTP 2차인증 해제 플로우 참조 [CI-4176]
 
 문의: "요청 정보가 올바르지 않습니다" / "주소 변경 시 오류"
 1. access log에서 traceId로 에러 코드 확인 [CI-4213]
@@ -561,6 +572,13 @@
 4. 엑셀 일괄등록: 서버 측 validation에서 "겸조직이 동일 조직" 오류로 차단
 5. 프로필 UI: 저장은 허용되지만 재조회 시 겸직 정보 미노출 (동작 불일치 — UX 개선 여지)
 
+#### 진단 체크리스트 (겸직 주법인 변경)
+문의: "대표회사 바꿔주세요" / "겸직 주법인 전환해주세요"
+1. 전환 조건 확인 — **양쪽 유저 모두** 퇴직 예정이 아니어야 하고 온보딩 완료 상태여야 함
+2. 변경 방법: Operation API `PATCH /api/operation/v2/core/users/primaryUser`
+3. 주법인 전환 후 이메일/인증은 새 주법인 기준으로 변경됨 — 고객에게 안내 필요
+4. 겸직 해지 불가 케이스 확인: (1) 대표회사 비소속, (2) 계열사 비소속, (3) 해지 대상이 계열사 마지막 최고관리자
+
 #### 진단 체크리스트 (정보 일괄 변경 엑셀 미리보기)
 문의: "기본 정보 변경 엑셀 미리보기에서 구성원이 중복으로 나와요" / "미리보기에서 알 수 없음이 표시돼요"
 1. access log에서 해당 customer의 `POST /action/v2/bulk-changes/candidates/search-by-filter` 호출 횟수 확인 [CI-4226]
@@ -591,6 +609,17 @@
 1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
 2. 위젯 종료 시 기본 근무일은 승인 미발생이 정상 동작 (스펙)
 3. 주휴일인데 휴일 근무 승인 발생 → 주휴일 설정 일시와 휴일 근무 등록 일시 간 시간차 확인
+
+문의: "요승설이 뭐가 적용됐나요" / "어떤 승인 정책이 매칭됐는지 알고 싶어요"
+1. 요승설 매칭 결과는 **DB에 저장되지 않음** — 서버 로그에만 남음
+2. 문서 요청 시간대 access log에서 `/match-step` traceId 확인
+3. traceId로 앱 로그 필터 → `[ApprovalPolicy] 요승설 매칭 category {category} policy key {key}` 로그 확인
+4. 승인 정책(`customer_workflow_task_template`) 조회 시 `policy_key`로 매핑 가능
+
+문의: "승인 정책 복구해주세요" / "삭제한 요승설 되돌려주세요"
+1. **기본 기조는 복구하지 않음** — 삭제된 정책은 되돌리지 않는다
+2. 메타베이스에서 삭제된 정책 조회 후 엑셀로 전달 (CC팀 접근 권한 없음)
+3. [요청자별 승인 현황 Metabase](https://metabase.dp.grapeisfruit.com/dashboard/218?email=) / [승인자별 승인 현황](https://metabase.dp.grapeisfruit.com/dashboard/224?email=)
 
 #### Operation API
 - Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
@@ -1436,7 +1465,18 @@ WHERE id IN (?);
    엔드포인트: /proxy/calendar/api/operation/v2/calendar/customers/{customerId}/google-calendar-events/sync-created-member-schedule-group-calendar-by-ids
    Metabase 쿼리 7387로 eventIds 추출 → batch 5건 + 2초 delay
    ⚠️ 24년 10월 이전 데이터는 중복 생성 우려로 비권장
+   ⚠️ **Rate limit 주의**: 한 번에 300건 이상 호출 시 Google Calendar API rate limit 발생
+   ⚠️ 50건 이상 시 raccoon audit log URL 길이 초과 오류 가능 — batch 5~20건 + 2초 delay 권장
 ```
+
+문의: "퇴사자 캘린더 연동 끊어주세요" / "퇴직한 구성원 구글 캘린더 연동 해제"
+1. `v2_external_calendar_connection` 에서 해당 유저 연동 정보 확인
+2. 연동된 `v2_oauth_user_token` 도 함께 삭제 필요 (토큰만 삭제하면 연동 항목이 남음)
+3. 퇴사자 기준으로 두 테이블 모두 DELETE 처리
+
+문의: "구글 캘린더 연동 시 권한 오류가 나요" / "insufficientPermissions 오류"
+1. 유저가 캘린더 쓰기권한 없는 토큰으로 연동한 경우
+2. 기존 연동 해제 후 **쓰기 권한 포함**하여 재연동 가이드
 
 → 상세: [cookbook/calendar.md](cookbook/calendar.md)
 
@@ -1710,10 +1750,35 @@ ORDER BY last_modified_date DESC;
 
 ---
 
+### 빌링 (Billing)
+
+> 출처: [Notion 이슈 대응 공통 가이드](https://www.notion.so/flexnotion/04010959f43d486aaabe63a144a68339)
+
+#### 진단 체크리스트
+문의: "기능이 안 보여요" / "이 기능을 사용하려면 어떻게 해야 하나요"
+1. raccoon > 빌링에서 고객사 구독 상태 확인
+2. 특정 기능이 안 보일 때 체크리스트:
+   - 해당 피처에 연관된 플랜 존재 여부
+   - 피처 그룹 및 플랜 매핑 확인
+   - customer feature로만 제공 가능한 피처인지 확인 (customer feature 설정 유무)
+   - flagsmith 등으로 제어되는 기능인지 확인
+
+문의: "서비스 이용이 안 돼요" / "결제했는데 기능이 잠겨있어요"
+1. **구독 만료** → 구독 추가 (기본 구독 반드시 포함) + 일할 결제 필요 시 수동청구
+2. **카드 미등록** → raccoon billing `force-open`으로 임시 진입 허용 → 고객에게 카드 등록 안내 → 미결제분 수동 청구
+3. **미결제 차단** → raccoon에서 임시차단해제
+
+문의: "영수증 발급해주세요" / "크레딧 결제 영수증 주세요"
+1. PG 카드 결제 영수증은 기본 제공
+2. **크레딧 결제 전자 영수증은 미지원** — 고객에게 안내
+
+---
+
 ## 변경 이력
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-30 | Notion | 빌링 섹션 신규 추가. 알림 suppress list 케이스 추가. 계정 OTP 잠김(10번 제한) + 겸직 주법인 변경 진단 추가. 승인 요승설 확인/정책 복구 기조 추가. 캘린더 rate limit 경고 + 퇴사자 연동 해제 + insufficientPermissions 케이스 추가 |
 | 2026-03-30 | CI-4238 | 평가: 역량 항목 미사용 시 할일 미발송 — 진단 체크리스트 추가. `useCompetencyItem=false` + COMPETENCY factor + `competencyGroupMappings=[]` → createAll 필터 버그. PR#5199 수정됨 |
 | 2026-03-30 | CI-4226 | 계정/구성원: 정보 일괄 변경 엑셀 미리보기 중복 로우 — 진단 체크리스트 추가. 프론트엔드가 이메일 컬럼을 사번으로 잘못 파싱, 두 번 검색 결과 합산 |
 | 2026-03-29 | CI-4217 | 근태/휴가: 휴일대체 취소 불가(OpenSearch sync 지연) — 체크리스트#18 + F4 플로우 + 과거 사례 추가. CANCEL+재등록 시 `NON_NULL` partial update로 구 eventId 잔존, 재동기화로 해결 |
