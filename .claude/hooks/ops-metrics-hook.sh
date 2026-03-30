@@ -26,8 +26,11 @@ jq -nc \
   --argjson steps <N> \
   --argjson wrong_hypotheses <N> \
   --arg stale_found "<내용|null>" \
+  --arg cookbook_verdict "<hit|ref|miss>" \
+  --argjson cookbook_flows_consulted '["F1","F3"]' \
+  --arg cookbook_hit_flow "<플로우ID|null>" \
   --arg session "<세션ID>" \
-  '{ts:$ts, type:"investigation", user:$user, model:$model, env:$env, ticket:$ticket, domain:$domain, context_loaded:$context_loaded, steps:$steps, wrong_hypotheses:$wrong_hypotheses, stale_found:(if $stale_found == "null" then null else $stale_found end), session:$session}' \
+  '{ts:$ts, type:"investigation", user:$user, model:$model, env:$env, ticket:$ticket, domain:$domain, context_loaded:$context_loaded, steps:$steps, wrong_hypotheses:$wrong_hypotheses, stale_found:(if $stale_found == "null" then null else $stale_found end), cookbook_verdict:$cookbook_verdict, cookbook_flows_consulted:$cookbook_flows_consulted, cookbook_hit_flow:(if $cookbook_hit_flow == "null" then null else $cookbook_hit_flow end), session:$session}' \
   >> "$REPO_ROOT/metrics/$USER/$(date +%Y-%m-%d).jsonl"
 ```
 

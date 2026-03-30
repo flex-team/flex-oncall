@@ -54,7 +54,7 @@ description: 메트릭스 기록 가이드
 - **트리거**: ops-investigate-issue 스킬의 조사 완료 시
 - **스키마**:
   ```json
-  {"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"session":"..."}
+  {"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"cookbook_verdict":"hit","cookbook_flows_consulted":["F1","F3"],"cookbook_hit_flow":"F3","session":"..."}
   ```
 - **필드 설명**:
 
@@ -66,6 +66,9 @@ description: 메트릭스 기록 가이드
 | `steps` | 가설 검증 사이클 반복 횟수 | 가설 검증 루프 종료 시 |
 | `wrong_hypotheses` | 소거된 가설 수 | 가설 검증 루프 종료 시 |
 | `stale_found` | 부패 발견 내용 (없으면 `null`) | 코드-TTL 대조 시 |
+| `cookbook_verdict` | 쿡북 히트 판정 (`hit`/`ref`/`miss`) | 쿡북 히트/미스 확정 시 |
+| `cookbook_flows_consulted` | 참조한 플로우 ID 배열 | 쿡북 참조 시 |
+| `cookbook_hit_flow` | 히트 플로우 ID (없으면 `null`) | 히트/미스 확정 시 |
 
 ### freshness (수동 기록 필수)
 

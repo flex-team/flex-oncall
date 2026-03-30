@@ -766,7 +766,7 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 조사 완료 시 investigation 메트릭 이벤트를 `metrics/{user}/{date}.jsonl` 에 기록한다.
 
 ```jsonl
-{"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"session":"..."}
+{"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"cookbook_verdict":"hit","cookbook_flows_consulted":["F1","F3"],"cookbook_hit_flow":"F3","session":"..."}
 ```
 
 | 필드 | 설명 | 수집 시점 |
@@ -777,6 +777,9 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 | `steps` | 가설 검증 사이클 반복 횟수 | Step 5 루프 종료 시 |
 | `wrong_hypotheses` | 소거된 가설 수 (`❌ 소거` 상태의 가설 개수) | Step 5 루프 종료 시 |
 | `stale_found` | 조사 중 발견한 부패 내용 (없으면 `null`) | Step 8-2 코드-TTL 대조 시 |
+| `cookbook_verdict` | 쿡북 히트 판정 결과 (`hit`/`ref`/`miss`) | Step 9-2a 쿡북 히트/미스 확정 시 |
+| `cookbook_flows_consulted` | 조사 중 참조한 플로우 ID 배열 (예: `["F1","F3"]`) | Agent B 쿡북 참조 시 |
+| `cookbook_hit_flow` | 원인 발견에 기여한 플로우 ID. miss/ref면 `null` | Step 9-2a 확정 시 |
 
 공통 필드(`ts`, `user`, `model`, `env`, `session`) 수집 규칙:
 - `ts`: KST 타임스탬프
