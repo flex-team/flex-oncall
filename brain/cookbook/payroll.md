@@ -41,6 +41,14 @@
 
 ---
 
+## 지식 베이스
+
+도메인 상세 지식(계산 로직, 법령 근거, 케이스별 스펙)은 payroll 백엔드 knowledge-base를 참조한다.
+
+- `flex-payroll-backend/docs/knowledge-base/INDEX.md`
+
+---
+
 ## 데이터 접근
 
 ```sql
@@ -121,4 +129,5 @@ ORDER BY year;
 - **이관 회사 중도정산 보험료 불일치**: 중도정산 recipient의 보험료는 `RetireeYearEndSettlementSocialInsuranceRecipientFactory.createRecipient()`에서 생성 시점 보수총액 기반 1회 계산·저장. 이관 데이터 추가 후 자동 재계산 트리거 없음. 워크어라운드: 보험료 리셋(DELETE /premium → recalculate). 리셋 API: `RetireeYearEndSettlementSocialInsuranceUpdateApplicationService:268-286`. 이관 회사 전용 이슈 — 일반 회사에서는 해당 없음 — **버그(워크어라운드)** [CI-4212]
 - **육아휴직자 보육수당 자동산정 0원**: `allowance_on_leave_rule=DAILY_BASE`(기본값) + `paymentRatio=0`(육아휴직) → `금액 × 0 = 0원`. 지급항목의 휴직월 지급 방법을 `FULL`로 변경하면 해결. 고객사 관리자가 UI에서 직접 변경 가능 — **스펙** [CI-4225]
 - **외국인(F-4) 고용보험 미공제 — 체류자격 변경 + 자격관리 미등록**: 체류자격 UNKNOWN→F4 변경 후 정산 시 외국인 로직 적용. F-4는 임의가입 대상으로 employment_insurance_qualification_history에 취득일이 필요하나 0건 → EXCLUDED. 사회보험 자격관리에서 취득일 등록 안내 — **스펙** [CI-4241]
+- **원천세 신고 생성 시 과거 연도 선택 불가 — FE 컴포넌트 재사용 버그**: 지방소득세 모달의 귀속연월 picker(`FormField_귀속지급_연월.tsx`)가 "작년 1월"부터만 허용. 원천세 모달에서 재사용 시 도입 이전 연도(2020~2024) 귀속 신고 불가. BE에는 연도 제한 없음 — **FE 버그(수정 대기)** [CI-4247]
 - **정산 중 지급항목 추가 시 이벤트 이중 발행으로 고아 레코드 생성**: v3.128.0 리팩토링(PR #8655)에서 `allowanceGlobalCommandPort` → `customerAllowanceUseCase` 변경 시 `AllowanceGlobalCreatedEvent` 발행 경로 활성화. 리스너가 전체 템플릿에 매핑 자동 생성 → 이후 명시적 매핑 시 중복 오류. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성. 121개 고객 488건 고아 레코드. 핫픽스 PR #8686 — **버그(핫픽스 완료, 데이터 패치 대기)** [CI-4216]

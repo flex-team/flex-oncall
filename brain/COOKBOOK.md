@@ -263,16 +263,17 @@
 
 ### 근무 기록 업로드 오류 (F-sched-upload)
 
-> 트리거: "근무 기록 업로드 오류", "업로드 시 에러", "벌크 업로드 실패"
-> 히트: 1 (CI-4221)
+> 트리거: "근무 기록 업로드 오류", "업로드 시 에러", "벌크 업로드 실패", "업로드 후 근무정보 안 보임"
+> 히트: 1 (CI-4221) / 참조: 1 (CI-4251)
 
-1. access log에서 `bulk-upload` 요청의 `responseStatus` + `elapsedTime` 확인
-   - 400 (dry-run) → 엑셀 데이터 검증 실패. 반환 엑셀의 오류 표시 확인 안내
+1. **신규 회사 여부 확인** — 신규 가입 회사면 구성원별 조직설정 완료 여부 먼저 확인. 조직설정 미설정 시 업로드 성공해도 UI에 미표시 [CI-4251]
+2. access log에서 `bulk-upload` 요청의 `responseStatus` + `elapsedTime` 확인
+   - 400 (dry-run) → 엑셀 데이터 검증 실패. 반환 엑셀의 오류 표시 확인 안내. `.xls` 포맷이면 `.xlsx`로 변환 안내 [CI-4251]
    - 200 + elapsedTime > **180초** → CloudFront origin_read_timeout 초과로 유저에게 504 표시. 서버는 정상 처리 완료. 파일 분할 안내
    - 200 + elapsedTime 60~180초 → CF 통과하지만 느림. 파일 분할 권장
    - 500 → 서버 에러. traceId로 app log 추적
-2. 대량 데이터(구성원 × 날짜 많음)면 분할 업로드 안내
-3. 근본 원인: N+1 순차 처리 패턴. 후속 개선은 비동기 전환 검토 중 [CI-4221]
+3. 대량 데이터(구성원 × 날짜 많음)면 분할 업로드 안내
+4. 근본 원인: N+1 순차 처리 패턴. 후속 개선은 비동기 전환 검토 중 [CI-4221]
 
 ---
 
@@ -809,11 +810,12 @@
 ### 전자계약 (Contract/Digicon)
 
 #### 진단 체크리스트
-문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요"
+문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요"
 1. 서명 완료(SUCCEED) 계약서 삭제/취소 요청 → **삭제 불가(스펙)**. `DigiconProgressStatus.cancelable()` = `this === IN_PROGRESS`만 허용. 올바른 내용으로 새 계약서 재발송 안내 [CI-4152]
 2. 서식(template) 삭제자 추적 → access log에서 `DELETE /api/v2/digicon/templates` 검색 → traceId로 호출 체인 추적 → permission-api 호출에서 userId 확인 → view_user 테이블로 이메일 매핑. 감사로그에 서식 삭제 미기록 [CI-4168]
 3. 양식 개수 제한 여부 → 제한 없음 [CI-4168]
 4. 삭제된 서식 복구 → Operation API: `POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates` [CI-4168]
+5. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
 
 #### 조사 플로우
 
@@ -841,6 +843,27 @@
 ```
 
 → 상세: [cookbook/contract.md](cookbook/contract.md)
+
+**F2: 전자계약 일괄 다운로드 링크 미생성** · 히트: 0 · [CI-4248]
+> 트리거: "일괄 다운로드 링크가 안 나와요" / "대량 다운로드 실패"
+
+```
+① Access log: API 호출 확인
+   OpenSearch be-access → POST /api/operation/v2/digicon/bulk-download-pdf
+   → 호출 없으면 admin-shell 조작 문제
+   ↓
+② App log: PDF 업로드 완료 확인
+   traceId로 "[DIGICON UPLOAD] upload done" 검색
+   → digiconSize 확인 (0이면 대상 계약서 없음)
+   ↓
+③ App log: 파일 병합 결과 확인
+   fileMergeId로 "[File Merge]" 검색
+   ├─ ERROR "S3 파일 다운로드 예외" → 임시 파일 만료 (merge 큐 지연)
+   │   → 파일 서비스 장애 확인 + 재시도
+   └─ 로그 없음 → merge 큐가 아직 처리 안 함 / 파일 서비스 장애
+```
+
+> 핵심: 임시 파일 TTL=600초(10분). merge 큐가 밀리면 항상 실패하는 구조.
 
 ---
 
@@ -1778,6 +1801,8 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-30 | CI-4248 | 전자계약: 일괄 다운로드 링크 미생성 — 진단 체크리스트 #5 추가, F2 플로우 추가 (merge 큐 지연 → 임시 파일 만료 패턴), domain-map.ttl 키워드(대량 다운로드/bulk-download/fileMergeId) + 사용자 표현 추가 |
+| 2026-03-30 | CI-4247 | 급여: 원천세 신고 과거 연도 선택 불가 — Tier-2 과거 사례 추가, domain-map.ttl 키워드(원천세/지방소득세/신고서/귀속연월) + 사용자 표현 추가. code-fix이므로 진단 플로우 스킵 |
 | 2026-03-30 | Notion | 빌링 섹션 신규 추가. 알림 suppress list 케이스 추가. 계정 OTP 잠김(10번 제한) + 겸직 주법인 변경 진단 추가. 승인 요승설 확인/정책 복구 기조 추가. 캘린더 rate limit 경고 + 퇴사자 연동 해제 + insufficientPermissions 케이스 추가 |
 | 2026-03-30 | CI-4238 | 평가: 역량 항목 미사용 시 할일 미발송 — 진단 체크리스트 추가. `useCompetencyItem=false` + COMPETENCY factor + `competencyGroupMappings=[]` → createAll 필터 버그. PR#5199 수정됨 |
 | 2026-03-30 | CI-4226 | 계정/구성원: 정보 일괄 변경 엑셀 미리보기 중복 로우 — 진단 체크리스트 추가. 프론트엔드가 이메일 컬럼을 사번으로 잘못 파싱, 두 번 검색 결과 합산 |

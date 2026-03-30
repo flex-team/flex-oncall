@@ -307,9 +307,11 @@
   d:repo "flex-digicon-backend" ;
   d:mod "digicon" , "candidate" , "integration" , "kafka-consumer" , "kafka-producer" ;
   d:kw  "전자계약" , "계약서" , "서명" , "digicon" , "SUCCEED" , "IN_PROGRESS" , "IN_REVIEW" ,
-        "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ;
+        "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ,
+        "대량 다운로드" , "bulk-download" , "fileMergeId" ;
   d:syn "전자계약 서식이 안 보여요" , "계약서 발송이 안 돼요" ,
-        "서명 완료된 계약서 삭제 가능한가요" ;
+        "서명 완료된 계약서 삭제 가능한가요" ,
+        "전자계약 일괄 다운로드 링크가 안 나와요" ;
   d:x   :account .
 
 :insurance
@@ -366,7 +368,8 @@
         "employment_insurance_qualification_history" ,
         "원천징수영수증" , "async-bulk-download" , "withholding-receipts" ,
         "async-bulk-download-withholding-receipts-by-filter" ,
-        "getYearEndTotalAmountByType" , "YEAR_END_REASON_CODES" , "74번코드" ;
+        "getYearEndTotalAmountByType" , "YEAR_END_REASON_CODES" , "74번코드" ,
+        "원천세" , "지방소득세" , "withholding_status_report" , "귀속연월" , "신고서" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
@@ -375,7 +378,8 @@
         "급여정산 홈에서 퇴직자 수가 안 맞아요" ,
         "외국인 고용보험 공제가 빠졌어요" ,
         "원천징수영수증 일괄 다운로드 실패" ,
-        "건강보험 연말정산 분할납부금이 이상해요" ;
+        "건강보험 연말정산 분할납부금이 이상해요" ,
+        "원천세 신고서 작성 시 연도 선택이 안 돼요" ;
   d:x   :time-tracking , :scheduling .
 
 :flow
@@ -994,6 +998,18 @@ n:CI-4107
   d:st "C" ;
   d:ca "2026-03-29" ;
   d:s  "전자계약 양식 세로 가운데 정렬 미동작" .
+
+n:CI-4248
+  d:in :contract ;
+  d:v  "investigating" ;
+  d:s  "전자계약 일괄 다운로드 링크 생성 실패 — 파일 merge 큐 지연으로 임시 파일 만료, CI-4236 여파" .
+
+n:CI-4251
+  d:in :scheduling ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-03-30" ;
+  d:s  "근무기록 엑셀 벌크 업로드 후 근무정보 미표시 — 조직설정 미설정이 원인 (스펙)" .
 
 n:CI-4118
   d:in :account ;
@@ -1921,6 +1937,11 @@ n:CI-4245
   d:st "C" ;
   d:ca "2026-03-30" ;
   d:s  "같은 조직 겸직 등록 불가 — 직책은 조직 결합 정보이므로 동일 조직 겸직은 스펙상 불가. 엑셀은 validation 차단, 프로필 UI는 저장 허용 후 조회 시 미노출" .
+
+n:CI-4247
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "원천세 신고 생성 시 2020년도 선택 불가 — FE 지방소득세 모달 연도 제한 로직 재사용. 도입 이전 연도 귀속 신고 시나리오" .
 
 n:CI-4238
   d:in :review ;
