@@ -112,6 +112,7 @@ primary + related 도메인에서 다음 정보를 수집한다:
 | 서브모듈 목록 | `d:repo` | 필요한 repo (중복 제거) |
 | 모듈 경로 | `d:mod` | 코드 내 모듈 위치 |
 | 쿡북 섹션 | `d:cb` | COOKBOOK.md 참조 섹션 이름 |
+| 도메인 컨텍스트 | 파일 존재 여부 | `cookbook/{domain-id}.md#도메인-컨텍스트` (있으면 포함) |
 | 용어집 히트 | 매칭된 `g:*` | 사용자 표현 → 시스템 용어 |
 | 관련 노트 | 매칭된 `n:*` | 과거 이슈 (ID + 요약 + verdict) |
 
@@ -128,6 +129,7 @@ primary:
     repos: [flex-timetracking-backend]
     modules: [external-work-clock]
     cookbook: "외부 연동 (Integration)"
+    context: "cookbook/integration.md#도메인-컨텍스트"  # 존재하면 포함
 
 related:
   - domain: :time-tracking

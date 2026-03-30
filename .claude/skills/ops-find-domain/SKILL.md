@@ -51,6 +51,7 @@ Agent(
 - **repo**: {서브모듈 목록, 쉼표 구분}
 - **module**: {모듈 목록, 쉼표 구분}
 - **cookbook**: "{COOKBOOK 섹션 이름}"
+- **context**: `cookbook/{domain-id}.md#도메인-컨텍스트` (존재하면)
 - **score breakdown**: {d:kw=N, g:q=N, phrase=N, ...}
 
 ### Related
