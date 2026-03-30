@@ -81,11 +81,43 @@ brain 산출물의 지식 라이프사이클을 관리한다:
 - Tier-2 파일: {N}개
 ```
 
-### Step 6: 커밋
+### Step 6: 신선도 검증
 
-compact-log.md + domain-map.ttl + COOKBOOK 변경을 하나의 커밋으로:
+cookbook 산출물이 현재 코드와 여전히 일치하는지 검증한다.
+
+#### 6-1. 스펙 유효성 검증 (핵심)
+
+1. `brain/cookbook/*.md` "과거 사례" 섹션에서 `verdict="스펙"` 항목을 추출한다
+2. 각 항목의 관련 이슈 ID → `brain/domain-map.ttl` 에서 소속 도메인 특정 → `d:repo` 로 서브모듈 식별
+3. 서브모듈에서 관련 코드 파일의 최근 변경 이력(`git log --since="{스펙 기록일}" -- {파일}`)을 확인
+4. 스펙 기록 이후 관련 코드에 변경이 있으면 → **"리뷰 필요"** 플래그 부여
+5. **판정은 자동으로 하지 않는다** — 사람이 freshness-report.md에서 확인
+
+#### 6-2. API 존재 검증
+
+1. `brain/cookbook/*.md` 에서 Operation API 엔드포인트(`/api/`, `/action/`, `/operation/` 등) 추출
+2. 서브모듈 코드에서 해당 엔드포인트를 grep
+3. 미존재 → 부패(stale) 기록
+
+#### 6-3. 메트릭 기록 + 리포트 생성
+
+1. freshness 이벤트를 `metrics/{user}/{date}.jsonl` 에 기록:
+   ```jsonl
+   {"ts":"...","type":"freshness","user":"...","model":"...","env":"local|ci","domain":"payroll","spec_items":8,"spec_review_needed":1,"api_refs":5,"api_stale":0,"detail":"CI-4131 올림 설정 스펙 — 관련 코드 변경 감지","session":"..."}
+   ```
+   - 공통 필드(`ts`, `user`, `model`, `env`, `session`)는 `metrics-guide.md` 수집 규칙을 따른다
+   - `model`: 현재 세션의 Claude 모델 (예: `claude-opus-4-6`, `bedrock_claude_sonnet_4_6`)
+   - `env`: `$GITHUB_ACTIONS` 존재 시 `ci`, 아니면 `local`
+2. `brain/freshness-report.md` 를 갱신:
+   - 도메인별 스펙 항목 수 / 리뷰 필요 수 / API 참조 수 / 부패 수
+   - 리뷰 필요 항목의 상세 (이슈 ID, 스펙 내용 요약, 변경 감지된 파일)
+   - API 부패 항목의 상세 (엔드포인트, 참조 위치)
+
+### Step 7: 커밋
+
+compact-log.md + domain-map.ttl + COOKBOOK + freshness-report.md 변경을 하나의 커밋으로:
 ```
-🗜️ brain compact: 농축 {N}건, 퇴출 {N}건, 계층 조정 {N}건
+🗜️ brain compact: 농축 {N}건, 퇴출 {N}건, 계층 조정 {N}건, 신선도 검증 {N}건
 ```
 
 ## Rules
@@ -94,3 +126,5 @@ compact-log.md + domain-map.ttl + COOKBOOK 변경을 하나의 커밋으로:
 - active 노트(notes/ 루트)는 건드리지 않는다
 - 서브모듈 변경은 커밋하지 않는다
 - R2 기준의 90일은 `d:ca` 날짜 기준. `d:ca` 가 없으면 퇴출 대상에서 제외
+- 신선도 검증(Step 6)에서 "리뷰 필요" 플래그는 자동 판정하지 않는다 — 사람이 freshness-report.md에서 확인
+- freshness 메트릭의 공통 필드(`ts`, `user`, `model`, `env`, `session`) 수집 규칙은 `metrics-guide.md` 를 따른다

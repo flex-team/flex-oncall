@@ -768,6 +768,40 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 2. **노트 활동 로그**: `{notes-dir}/{ticket-id}.md` 하단 `## Claude 활동 로그` 테이블에 행 추가
    - subagent total_tokens/duration_ms 합산, 쿡북 참조 컬럼에 히트/참조/미스 결과 기록
 
+### Step 11: investigation 메트릭 기록
+
+조사 완료 시 investigation 메트릭 이벤트를 `metrics/{user}/{date}.jsonl` 에 기록한다.
+
+```jsonl
+{"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"session":"..."}
+```
+
+| 필드 | 설명 | 수집 시점 |
+|------|------|----------|
+| `ticket` | 조사한 티켓 ID | Argument Resolution 시 |
+| `domain` | 라우팅된 도메인 ID | Step 1-5 도메인 라우팅 완료 시 |
+| `context_loaded` | 도메인 컨텍스트(cookbook 도메인 컨텍스트 섹션)가 로딩됐는지 | Agent B 쿡북 참조 시 |
+| `steps` | 가설 검증 사이클 반복 횟수 | Step 5 루프 종료 시 |
+| `wrong_hypotheses` | 소거된 가설 수 (`❌ 소거` 상태의 가설 개수) | Step 5 루프 종료 시 |
+| `stale_found` | 조사 중 발견한 부패 내용 (없으면 `null`) | Step 8-2 코드-TTL 대조 시 |
+
+공통 필드(`ts`, `user`, `model`, `env`, `session`) 수집 규칙:
+- `ts`: KST 타임스탬프
+- `user`: 환경변수 `$USER` 또는 `git config user.name`
+- `model`: 현재 세션의 Claude 모델
+- `env`: `$GITHUB_ACTIONS` 존재 시 `ci`, 아니면 `local`
+- `session`: Claude Code 세션 ID
+
+### Step 11-1: stale 시그널 기록
+
+조사 중 쿡북 플로우를 따랐으나 참조 아티팩트(SQL, API 엔드포인트, 코드 경로 등)가 변경/삭제되어 유효하지 않은 경우, `brain/routing-misses.md` 에 `stale` 타입으로 기록한다.
+
+```
+| {YYYY-MM-DD} | stale | {변경/삭제된 아티팩트 내용} | {올바른 값 또는 "삭제됨"} | {조사 이슈 ID} |
+```
+
+이 기록은 `ops-compact` Step 6 신선도 검증의 입력으로 활용된다.
+
 ## Rules
 - **외부 시스템 변경/조회 시 사전 확인 필수**: 아래 작업을 수행하기 전에 **반드시 사용자에게 먼저 확인**을 받는다. 자동으로 실행하지 않는다.
   - **Linear 코멘트 추가**: 조사 결과나 중간 보고를 Linear 이슈에 코멘트로 남기려는 경우

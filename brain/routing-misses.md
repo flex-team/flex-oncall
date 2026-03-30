@@ -10,6 +10,7 @@
 | `miss` | 매칭된 도메인 없음 | ops-find-domain |
 | `reject` | 매칭됐으나 사용자가 거부 | ops-find-domain |
 | `correction` | 코드 확인 결과 TTL/쿡북 정보가 실제와 불일치 | ops-investigate-issue |
+| `stale` | cookbook 플로우를 따랐으나 참조 아티팩트가 변경/삭제됨 | ops-investigate-issue, ops-compact |
 
 ## 로그
 

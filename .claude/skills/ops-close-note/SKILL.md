@@ -131,9 +131,30 @@ Phase 1~3 결과를 통합하여 한번에 보고한다.
 > Read: .claude/skills/ops-common/metrics-guide.md
 > ```
 
+### Phase 6: investigation 메트릭 기록
+
+이슈 클로즈 시 investigation 메트릭 이벤트를 `metrics/{user}/{date}.jsonl` 에 기록한다.
+이전에 `ops-investigate-issue` 에서 이미 기록한 경우, 동일 ticket에 대해 중복 기록하지 않는다 (같은 날짜의 JSONL에서 동일 ticket의 investigation 이벤트가 있는지 확인).
+
+```jsonl
+{"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"session":"..."}
+```
+
+| 필드 | 설명 | 수집 방법 |
+|------|------|----------|
+| `ticket` | 클로즈하는 티켓 ID | Phase 1에서 결정 |
+| `domain` | 도메인 ID | operation-note 또는 domain-map.ttl에서 추출 |
+| `context_loaded` | 도메인 컨텍스트 로딩 여부 | operation-note의 쿡북 참조 기록에서 판단 |
+| `steps` | 조사 스텝 수 | operation-note 가설 테이블의 총 행 수 |
+| `wrong_hypotheses` | 소거된 가설 수 | operation-note 가설 테이블에서 `❌ 소거` 상태 개수 |
+| `stale_found` | 조사 중 발견된 부패 | operation-note 또는 routing-misses.md에서 해당 ticket의 correction/stale 기록 확인 |
+
+공통 필드(`ts`, `user`, `model`, `env`, `session`)는 `metrics-guide.md` 수집 규칙을 따른다.
+
 ## Rules
 - Phase 1의 모든 규칙은 `note-issue.md` 를 따른다
 - Phase 2의 모든 규칙은 `ops-learn` 스킬을 따른다
 - Phase 1과 Phase 2 사이에 별도 사용자 확인 없이 자동 진행한다
 - **서브모듈 변경은 커밋하지 않는다**
 - **QNA 팀 이슈 예외**: QNA 이슈(`QNA-` 접두사)는 Linear 상태가 관리되지 않는다. 이슈 완료 여부는 코멘트 맥락(답변 완료 여부, 후속 액션 유무)으로 판단한다.
+- investigation 메트릭은 동일 ticket에 대해 하루 1건만 기록한다 (중복 방지)
