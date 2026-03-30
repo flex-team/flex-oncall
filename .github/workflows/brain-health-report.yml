@@ -1,0 +1,50 @@
+name: Brain Health Report
+
+on:
+  schedule:
+    # 매주 월요일 오전 9시 KST (UTC 일요일 24시 = 월요일 0시)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: gha-ai-code-review
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
+          fetch-depth: 1
+
+      - name: Run Brain Health Analysis
+        uses: flex-team/flex-github-actions/.github/actions/flex-claude-headless@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
+        with:
+          email: "flex-bot+oncall@flex.team"
+          model: bedrock_claude_sonnet_4_6
+          prompt: |
+            /ops-brain-health 를 실행하세요.
+            metrics/ 디렉토리의 모든 JSONL 파일을 분석하여
+            brain-health-report.html 파일을 프로젝트 루트에 생성하세요.
+          additional-args: |
+            --allowed-tools "Bash(cat *),Bash(wc *),Bash(ls *),Bash(jq *),Agent,Read,Write,Glob,Grep,Skill"
+
+      - name: Verify report exists
+        run: |
+          if [ ! -f brain-health-report.html ]; then
+            echo "::error::brain-health-report.html 파일이 생성되지 않았습니다"
+            exit 1
+          fi
+          echo "Report generated: $(wc -c < brain-health-report.html) bytes"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: brain-health-report-${{ github.run_number }}
+          path: brain-health-report.html
+          retention-days: 14
