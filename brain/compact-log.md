@@ -4,6 +4,11 @@
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
 |------|------|------|-----------|------|
+| 2026-03-31 | (38건) | bulk-compact | d:syn+7 d:kw+11 | 농축 미완료 archive 노트 일괄 d:st "C" 마킹 + syn/kw 흡수 + 활동 로그 17건 정제 |
+| 2026-03-31 | CI-4148 | compact | d:syn+1 d:kw+2 | time-tracking: UserWorkRuleAllowCancelMappingCalculator 예약 취소 검증 버그. COOKBOOK 체크리스트 19번 추가 |
+| 2026-03-31 | CI-4132 | compact | d:syn+1 d:kw+2 | shift: DailyShiftConverter/timeBlockGroups 정렬 버그. COOKBOOK 체크리스트 5번 추가 |
+| 2026-03-31 | CI-4151 | compact | d:kw+3 | payroll: 76번코드/HealthInsuranceSettlementReasonCode 2중합산. COOKBOOK 체크리스트 13번 추가 |
+| 2026-03-31 | CI-4159 | compact | d:syn+1 d:kw+2 | payroll: HealthInsuranceMonthsCalculator 병합 누락. COOKBOOK 체크리스트 14번 추가 |
 | 2026-03-30 | CI-4226 | compact | d:syn+2 | account: 엑셀 미리보기 중복 표현 흡수. code-fix이지만 COOKBOOK 진단 체크리스트 추가 |
 | 2026-03-30 | CI-4238 | compact | — (기존 g:review-08/09 커버) | review: reviewee_evaluation_item 버그. COOKBOOK 체크리스트 추가 |
 | 2026-03-30 | CI-4239 | compact | d:syn+1 | time-tracking: 테스트 근무기록 삭제 표현 흡수 |

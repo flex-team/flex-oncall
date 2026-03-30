@@ -11,3 +11,11 @@
 {"ts":"2026-03-30T17:21:45+0900","epoch":1774858905,"date":"2026-03-30","user":"yj.kim","skill":"ops-note-issue","args":"FT-12290","session":"4faa55ab-e862-459a-ad84-8e4ac4490a13"}
 {"ts":"2026-03-30T17:27:45+0900","epoch":1774859265,"date":"2026-03-30","user":"yj.kim","skill":"git:git-commit","args":"","session":"24d945cd-ba0a-4e4e-93f4-e84583bffc88"}
 {"ts":"2026-03-30T17:28:53+0900","epoch":1774859333,"date":"2026-03-30","user":"yj.kim","skill":"ops-note-issue","args":"CI-4179","session":"5b785f29-b982-41cc-b25a-f23da0a8d1eb"}
+{"ts":"2026-03-30T17:38:08+0900","epoch":1774859888,"date":"2026-03-30","user":"yj.kim","skill":"ops-learn","args":"","session":"ba613668-d323-4d71-bd10-f12f9c6bcdec"}
+{"ts":"2026-03-30T18:15:44+0900","epoch":1774862144,"date":"2026-03-30","user":"yj.kim","skill":"git:git-commit","args":"","session":"ba613668-d323-4d71-bd10-f12f9c6bcdec"}
+{"ts":"2026-03-30T18:16:38+0900","epoch":1774862198,"date":"2026-03-30","user":"yj.kim","skill":"git:git-push","args":"","session":"ba613668-d323-4d71-bd10-f12f9c6bcdec"}
+{"ts":"2026-03-30T23:36:07+0900","epoch":1774881367,"date":"2026-03-30","user":"yj.kim","skill":"superpowers:receiving-code-review","args":"","session":"c6a7084b-53eb-4341-9aa4-9f5335f4b910"}
+{"ts":"2026-03-30T23:42:07+0900","epoch":1774881727,"date":"2026-03-30","user":"yj.kim","skill":"git:git-commit","args":"","session":"c6a7084b-53eb-4341-9aa4-9f5335f4b910"}
+{"ts":"2026-03-30T23:42:39+0900","epoch":1774881759,"date":"2026-03-30","user":"yj.kim","skill":"git:git-push","args":"","session":"c6a7084b-53eb-4341-9aa4-9f5335f4b910"}
+{"ts":"2026-03-30T23:45:28+0900","epoch":1774881928,"date":"2026-03-30","user":"yj.kim","skill":"git:git-commit","args":"","session":"c6a7084b-53eb-4341-9aa4-9f5335f4b910"}
+{"ts":"2026-03-30T23:45:34+0900","epoch":1774881934,"date":"2026-03-30","user":"yj.kim","skill":"git:git-push","args":"","session":"c6a7084b-53eb-4341-9aa4-9f5335f4b910"}

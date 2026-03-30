@@ -157,6 +157,7 @@
      ◦ 급한 경우: DB에서 `v2_user_work_rule` row 삭제 → ES sync
      ◦ 여유 있는 경우: Operation API `DELETE /api/v2/work-rule/users/{userId}/work-rules/{userWorkRuleId}` 반복 호출 (검증 유/무 분리된 operation API 존재, PR flex-timetracking-backend#7800)
 18. **휴일대체 취소 불가** ("대체 휴일을 찾을 수 없습니다") → 휴일대체 수정(CANCEL+재등록) 후 OpenSearch sync 지연으로 FE에 구 eventId가 전달되는 케이스. access log에서 `search/by-departments` 응답의 `alteredHoliday.eventId` 확인 → DB(`v2_time_tracking_user_alternative_holiday_event`)의 유효 이벤트 ID와 비교 → 불일치 시 `/sync-os-work-schedule-advanced`로 재동기화 [CI-4217]
+19. **근무유형 변경 예약 취소 불가** ("근무 유형을 취소할 수 없어요" / WORKRULE_400_005) → `UserWorkRuleAllowCancelMappingCalculator` 조건3이 `distributePeriodOverToDay`만 확인하고 `applyStartDateForDistributePeriodOver`를 미고려 → 실질 주기연장일귀속을 false로 오판. PR flex-timetracking-backend#12027 — **버그** [CI-4148]
 
 #### 조사 플로우
 
@@ -280,12 +281,13 @@
 ### 교대근무 (Shift)
 
 #### 진단 체크리스트
-문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다" / "퇴근 자동 조정이 안 돼요" / "초단시간 근로자 연장근무가 이상해요"
+문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다" / "퇴근 자동 조정이 안 돼요" / "초단시간 근로자 연장근무가 이상해요" / "교대근무 리포트 시간이 다릅니다"
 
 1. 구성원 조회 누락 → 해당 관리자의 **근무 권한**과 **휴가 권한** 범위 확인 → 전체 구성원 vs 소속 및 하위 조직 [CI-4103]
 2. 두 권한 중 **범위가 좁은 쪽**이 최종 조회 범위를 결정함. 권한 범위를 맞추도록 안내
 3. 교대근무 휴무일에 스케줄 근무 시 퇴근 자동 조정 실패 → `baseAgreedDayWorkingMinutes`가 휴무일에 0이 되어 일연장 조건이 null로 평가 — **버그 (수정 예정)** [CI-4119]
 4. 초단시간 근로자 연장근무 계산 이상 → `baseAgreedDayWorkingMinutes`가 휴무일에 법적 소정근로시간(예: 168분)으로 사용되어 일연장이 과소 계산. 주휴일은 480분(8시간) 고정인데 휴무일만 비대칭 — **버그 추정** [CI-4048]
+5. 교대근무 일별 리포트 스케줄 시간 불일치 → `DailyShiftUserWorkScheduleExportDataNightType5Converter`에서 `timeBlockGroups` 미정렬 + `associateBy` 덮어쓰기 2중 결함. 2개 이상 교대배치 시 잘못된 블록의 시간 출력 — **버그** [CI-4132]
 
 **고객 안내 예시 (구성원 누락):**
 > 교대근무 관리 화면에서는 **근무 권한**과 **휴가 권한**을 **모두** 보유한 조직의 구성원만 표시됩니다.
@@ -844,7 +846,7 @@
 
 → 상세: [cookbook/contract.md](cookbook/contract.md)
 
-**F2: 전자계약 일괄 다운로드 링크 미생성** · 히트: 0 · [CI-4248]
+**F2: 전자계약 일괄 다운로드 링크 미생성** · 히트: 1 · [CI-4248]
 > 트리거: "일괄 다운로드 링크가 안 나와요" / "대량 다운로드 실패"
 
 ```
@@ -872,7 +874,7 @@
 → 도메인 이해: [cookbook/payroll.md#도메인-컨텍스트](cookbook/payroll.md#도메인-컨텍스트)
 
 #### 진단 체크리스트
-문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요" / "급여정산 해지하면 명세서 공개가 되나요?"
+문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요" / "급여정산 해지하면 명세서 공개가 되나요?" / "원천징수영수증 일괄 다운로드 실패" / "중도정산 건강보험이 2배에요" / "휴직자 건강보험 근무월수가 이상해요"
 1. 올림 자릿수 이상 문의 → 설정 변경 시점과 정산 생성 시점 비교. 정산 생성 시 올림 설정이 스냅샷됨 → 기존 진행 중 정산은 이전 설정 유지 [CI-4131]
    - `payroll_legal_payment_setting`(현재 설정)과 `work_income_over_work_payment_calculation_basis`(정산 스냅샷) 비교
    - 불일치하면 설정 변경 전 생성된 정산 → 신규 정산 생성 안내
@@ -888,6 +890,10 @@
 10. 휴직자 지급항목 금액 0원 문의 → `allowance_global` 테이블에서 해당 항목의 `allowance_on_leave_rule` 확인. `DAILY_BASE`이고 `paymentRatio=0`(육아휴직 등)이면 정상 동작. 고객에게 해당 항목의 "휴직월 지급 방법"을 `FULL`(전액지급)로 변경 안내 — 히트: 1 (CI-4225) [CI-4225]
 
 11. 외국인 고용보험 미공제 문의 → `work_income_settlement_payee`의 `residence_qualification` 확인. UNKNOWN이 아닌 외국인 체류자격이면 → `employment_insurance_qualification_history`에서 취득일 존재 여부 확인. 취득일 없음 → 사회보험 자격관리에서 고용보험 취득일 등록 안내 — 스펙 (임의가입 대상) [CI-4241]
+
+12. 원천징수영수증 일괄 다운로드 실패 → 비동기 백그라운드 태스크 구조. access log에서 `POST /action/v2/payroll/work-income/settlement-results/async-bulk-download-withholding-receipts-by-filter` 호출 확인 → 파일 서비스 장애(CI-4236 유사) 여부 확인. 장애 해소 후 **재시도**로 해결 [CI-4240]
+13. **중도정산 건강보험료 2배** → 76번 코드(휴복직보험료)가 `HealthInsuranceSettlementReasonCode`에서 `LEAVE_OF_ABSENCE_REASON_CODES`와 `SETTLEMENT_REASON_CODES` 양쪽에 속해 `RetireeYearEndHealthInsuranceCalculatorImpl.calculate()`에서 2중 합산. 74번 코드는 영향 없음 — **버그** [CI-4151]
+14. **사회보험 연말정산 휴직자 건강보험 근무월수 오집계** → 연속 휴직(예: 04-01~09-28, 09-29~이후)이 개별 루프로 처리되어 경계 월(9월)이 어느 쪽에도 포함되지 않고 근무월로 잘못 카운트. `HealthInsuranceMonthsCalculator.calculateOnLeaveMonths()` 에서 병합 로직 부재 — **버그** [CI-4159]
 
 #### 조사 플로우
 
@@ -907,6 +913,27 @@
    ├─ 취득일 없음 → 사회보험 자격관리에서 취득일 등록 안내
    └─ 취득일 있음 + 상실일 유효 → 상실일 이후 정산이라 EXCLUDED
 ```
+
+**F-pay-2: 원천징수영수증 일괄 다운로드 실패 — 파일 서비스 밀림 확인** · 히트: 0 · [CI-4240]
+> 트리거: "원천징수영수증 일괄 다운로드 실패" / "다운로드 준비중 무한 로딩"
+
+```
+① Access log: API 호출 확인
+   OpenSearch be-access → POST /action/v2/payroll/.../async-bulk-download-withholding-receipts-by-filter
+   → 호출 없으면 프론트엔드/네트워크 문제
+   ↓
+② 비동기 태스크 상태 확인
+   API 자체는 즉시 응답(~100ms). 백그라운드 태스크가 파일 생성 담당
+   ├─ 태스크 성공 → 정상 (네트워크 일시 문제 가능성)
+   └─ 태스크 실패/타임아웃 → ③으로
+   ↓
+③ 파일 서비스 장애 확인
+   동일 시간대 파일 서비스 밀림(CI-4236 유사) 여부 확인
+   ├─ 장애 확인 → 장애 해소 후 재시도 안내
+   └─ 장애 없음 → app log에서 상세 에러 추적
+```
+
+> 핵심: 전자계약 F2 플로우와 동일 패턴 — 파일 merge 큐 지연 시 임시 파일 TTL(600초) 초과로 실패.
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -1429,7 +1456,7 @@ WHERE id IN (?);
 2. 대체휴일: `v2_customer_holiday`의 `support_alternative`, `supports_saturday_alternative` 확인
 3. 휴일대체 범위(gap): `flex-timetracking-config` repo의 `experimental.json`
 4. 휴일대체 Metabase: question/5062
-5. 근로자의날 삭제 → operation API로 제거 (PR #7421 참조)
+5. 공휴일 삭제 (근로자의날 등) → `v2_customer_holiday_group`으로 대상 그룹 특정 후 Operation API `POST .../customer-holiday-groups/delete` 호출. ⚠️ 국내 법인 법정유급휴일 삭제 시 법령 위반 검토 필수 · 히트: 1 · [CI-4252] · 상세: [cookbook/holiday.md](cookbook/holiday.md)
 6. 특정 유저의 휴일 조회 → operation API 사용
 
 #### 조사 플로우
@@ -1447,6 +1474,27 @@ WHERE id IN (?);
    v2_customer_holiday_group → v2_customer_holiday
    ├─ 휴일 미등록 → 관리자에게 등록 안내
    └─ 휴일 등록됨 → 날짜/타입 확인, 대체휴일 설정 확인
+```
+
+→ 상세: [cookbook/holiday.md](cookbook/holiday.md)
+
+**F2: 공휴일(쉬는 날) 삭제 요청** · 히트: 1 · [CI-4252]
+> 트리거: "근로자의 날 삭제해주세요" / "쉬는 날 기본유형에서 OO 삭제해주세요"
+
+```
+① 대상 휴일 그룹 특정
+   v2_customer_holiday_group WHERE customer_id = ?
+   ├─ 그룹이 여러 개 → 고객에게 어떤 정책에서 삭제할지 재확인
+   └─ 그룹 특정됨 → ②로
+   ↓
+② 국내/해외 법인 확인
+   ├─ 국내 법인 + 법정유급휴일(근로자의 날 등) → 법령 위반 리스크 검토 필수
+   └─ 해외 법인 또는 비법정 휴일 → ③으로
+   ↓
+③ Operation API 호출
+   POST /action/operation/v2/holiday/customers/customer-holiday-groups/delete
+   - appliedEveryHoliday: true → 매년 삭제
+   - appliedEveryHoliday: false → 해당 연도만 삭제
 ```
 
 → 상세: [cookbook/holiday.md](cookbook/holiday.md)
@@ -1801,8 +1849,10 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
+| 2026-03-30 | CI-4240, CI-4248 | 파일 서비스 밀림(CI-4236) 연관 다운로드 실패 패턴 통합 학습. 급여: 원천징수영수증 일괄 다운로드 실패 — 체크리스트#12 + F-pay-2 플로우 추가, 과거 사례 추가. 전자계약: 과거 사례 추가. domain-map.ttl verdict `"ops"` + `d:st "C"` 완료 |
 | 2026-03-30 | CI-4248 | 전자계약: 일괄 다운로드 링크 미생성 — 진단 체크리스트 #5 추가, F2 플로우 추가 (merge 큐 지연 → 임시 파일 만료 패턴), domain-map.ttl 키워드(대량 다운로드/bulk-download/fileMergeId) + 사용자 표현 추가 |
-| 2026-03-30 | CI-4247 | 급여: 원천세 신고 과거 연도 선택 불가 — Tier-2 과거 사례 추가, domain-map.ttl 키워드(원천세/지방소득세/신고서/귀속연월) + 사용자 표현 추가. code-fix이므로 진단 플로우 스킵 |
+| 2026-03-30 | CI-4247 | 급여: 원천세 신고 과거 연도 선택 불가 — Not a Bug(스펙)로 verdict 변경. Tier-2 과거 사례 갱신, domain-map.ttl verdict `"spec"` + `d:st "C"` 완료 |
 | 2026-03-30 | Notion | 빌링 섹션 신규 추가. 알림 suppress list 케이스 추가. 계정 OTP 잠김(10번 제한) + 겸직 주법인 변경 진단 추가. 승인 요승설 확인/정책 복구 기조 추가. 캘린더 rate limit 경고 + 퇴사자 연동 해제 + insufficientPermissions 케이스 추가 |
 | 2026-03-30 | CI-4238 | 평가: 역량 항목 미사용 시 할일 미발송 — 진단 체크리스트 추가. `useCompetencyItem=false` + COMPETENCY factor + `competencyGroupMappings=[]` → createAll 필터 버그. PR#5199 수정됨 |
 | 2026-03-30 | CI-4226 | 계정/구성원: 정보 일괄 변경 엑셀 미리보기 중복 로우 — 진단 체크리스트 추가. 프론트엔드가 이메일 컬럼을 사번으로 잘못 파싱, 두 번 검색 결과 합산 |

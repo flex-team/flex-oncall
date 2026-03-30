@@ -29,6 +29,13 @@ WHERE nd.id = ?;
 -- 수신자 locale 확인 (디폴트: KOREAN)
 SELECT * FROM member_setting WHERE member_id = ?;
 
+-- file merge 중복 요청 확인 (동일 파일명 수백건이면 render 타임아웃 재시도)
+SELECT customer_id, status, merged_file_name, COUNT(*) AS cnt
+FROM flex.v2_file_merge
+WHERE customer_id = ?
+GROUP BY customer_id, status, merged_file_name
+ORDER BY cnt DESC;
+
 -- 메일 발송 확인 (mail_send_history — BEI-151 이후 기록 중단, 2026-02-20 이전 데이터만 존재)
 SELECT status, requested_at FROM flex_pavement.mail_send_history
 WHERE primary_recipient = ? ORDER BY requested_at DESC;
@@ -42,6 +49,7 @@ WHERE primary_recipient = ? ORDER BY requested_at DESC;
 - **en/ko 템플릿 CTA URL 불일치**: 3건 발견 (`approve.refer.cta-web`, `remind.work-record.missing.one.cta-web`, `workflow.task.request-view.request.cta-web`) — **별도 버그** [CI-3914]
 - **Core 알림 title_meta_map 빈값**: Core 인사정보 변경 알림(`FLEX_USER_DATA_CHANGE`)의 토픽 제목은 고정("내 정보 변경")이므로 `titleMetaMap = emptyMap()` — **스펙**. 실제 내용은 `notification.message_data_map.changedDataName`으로 확인 [CI-4122]
 - **메일 미수신 — SES Delivery 확인 후 고객 안내**: 인앱 알림 정상 + Kafka produce 정상 + SES Send/Delivery 확인 → flex 측 전체 정상. 수신자 메일 서버 내부 문제. `mail_send_history`는 BEI-151로 기록 중단(2026-02-20)되었으므로 SES 이벤트 OpenSearch 사용 필수 — **고객 안내** [CI-4142]
+- **메일 중복 발신 — file merge 무한 재시도**: 워크플로우 문서 일괄 다운로드(1만건) → render→impact→file 3단계에서 2단계 처리 시간 > 1단계 타임아웃 → render가 1분 주기 재시도 → file merge 요청 827건 폭증 → 매 merge 완료마다 `FLEX_FILE_STORAGE_DOWNLOAD_PREPARATION_COMPLETED` 알림 → 메일 수백통. 즉시 대응: `max.poll.interval.ms` 증가 + CPU 증설 + `v2_file_merge` TODO→DONE UPDATE. 근본: renderer 타임아웃 개선 ([EPBE-230](https://linear.app/flexteam/issue/EPBE-230)) — **버그/resolution:ops** [CI-4236]
 
 ## 메일 미수신 — 코어 런북 보강
 
