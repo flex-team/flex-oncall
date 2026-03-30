@@ -43,8 +43,8 @@ jobs:
           echo "Report generated: $(wc -c < brain-health-report.html) bytes"
 
       - name: Upload report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: brain-health-report-${{ github.run_number }}
+          name: brain-health-report.html
+          archive: false
           path: brain-health-report.html
-          retention-days: 14
