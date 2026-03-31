@@ -592,6 +592,41 @@
 3. 1차(이메일 파싱, 0건) + 2차(사번 파싱, N건) 결과가 합쳐져 중복 표시 / 이메일 기반 엔트리는 "알 수 없음" 표시
 4. 백엔드 이슈 아님 — FE 팀에 버그 전달 (validate API 호출은 0건이므로 미리보기 단계에서만 발생)
 
+#### 진단 체크리스트 (문서함 삭제 복구)
+문의: "문서함을 삭제했는데 복구해주세요" / "신분증 문서함이 사라졌어요"
+1. 문서함 삭제 방식 확인 → **Hard Delete** (물리 삭제, soft delete 없음) [CI-4256]
+2. Hibernate Envers audit 테이블에 이력 존재 → `user_document_audit`, `user_document_file_audit` 조회 [CI-4256]
+3. audit 테이블에서 삭제 전 데이터 확인:
+   - `user_document_audit`에서 삭제된 문서함 설정(preset_type, name 등) 확인
+   - `user_document_file_audit`에서 해당 문서함의 파일 목록(file_key, user_id 등) 확인
+4. 복구 판별:
+   - audit 데이터 있고 + S3 파일 잔존 → INSERT로 문서함 + 파일 복원 가능
+   - audit 데이터 없음 → DB Snapshot 복구 요청 (삭제된 구성원 복구 절차 동일)
+   - 원칙: **고객이 직접 삭제한 데이터는 원칙적으로 복구 불가** [QNA-1180]
+5. 삭제 API: `POST /action/v2/core/customers/{customerIdHash}/user-documents/delete-bulk` [CI-4256]
+
+#### 조사 플로우 (문서함)
+
+**F3: 문서함 삭제 복구 검토** · 히트: 1 · [CI-4256]
+> 트리거: "문서함 삭제 복구", "문서함이 사라졌어요", "신분증/이력서 문서함 복구"
+
+```
+① user_document_audit 테이블에서 삭제 이력 확인
+   SELECT * FROM user_document_audit WHERE customer_id = ? AND preset_type = ?
+   ↓
+② audit 데이터 존재 여부 판별
+   ├─ 있음 → ③으로
+   └─ 없음 → DB Snapshot 복구 요청 (DBA 협조)
+   ↓
+③ user_document_file_audit에서 파일 목록 확인
+   SELECT * FROM user_document_file_audit WHERE customer_id = ? AND user_document_id = ?
+   → file_key 목록 추출
+   ↓
+④ S3 파일 잔존 확인
+   ├─ 파일 존재 → INSERT로 user_document + user_document_file 복원
+   └─ 파일 삭제됨 → 메타데이터만 복원 가능, 파일은 불가 안내
+```
+
 ---
 
 ### 승인 (Approval)
@@ -815,12 +850,13 @@
 ### 전자계약 (Contract/Digicon)
 
 #### 진단 체크리스트
-문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요"
+문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요" / "임시저장한 계약서가 사라졌어요"
 1. 서명 완료(SUCCEED) 계약서 삭제/취소 요청 → **삭제 불가(스펙)**. `DigiconProgressStatus.cancelable()` = `this === IN_PROGRESS`만 허용. 올바른 내용으로 새 계약서 재발송 안내 [CI-4152]
 2. 서식(template) 삭제자 추적 → access log에서 `DELETE /api/v2/digicon/templates` 검색 → traceId로 호출 체인 추적 → permission-api 호출에서 userId 확인 → view_user 테이블로 이메일 매핑. 감사로그에 서식 삭제 미기록 [CI-4168]
 3. 양식 개수 제한 여부 → 제한 없음 [CI-4168]
 4. 삭제된 서식 복구 → Operation API: `POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates` [CI-4168]
-5. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
+5. 선택 발송 후 임시저장 계약서 삭제 문의 → **현재 스펙**. CandidateSet = 한 번의 발송 단위로 설계되어, 선택 발송 시 미선택 CandidateUnit은 물리 삭제됨. 복구 불가. VOC-2410으로 개선 요청 등록됨 [CI-4257]
+6. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
 
 #### 조사 플로우
 
@@ -1521,7 +1557,7 @@ WHERE id IN (?);
 
 #### 조사 플로우
 
-**F1: 구글 캘린더 동기화 실패** · 히트: 1 · [CI-4235] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
+**F1: 구글 캘린더 동기화 실패** · 히트: 2 · [CI-4235] [CI-4262] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
 > 트리거: "구글 캘린더에 휴가가 안 떠요" / "미연동 일정 재연동 요청"
 
 ```
@@ -1854,6 +1890,9 @@ ORDER BY last_modified_date DESC;
 |------|------|----------|
 | 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |
 | 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
+| 2026-03-31 | CI-4256 | 계정/구성원: 문서함 삭제 복구 — 진단 체크리스트 + 플로우(F3) 추가. hard delete + Envers audit 기반 복구 검토 패턴. d:kw "문서함"/"user_document", d:syn 추가 |
+| 2026-03-31 | CI-4262 | 캘린더 연동: F1 히트 +1 (구글캘린더 수동 연동 365건, Operation API batch 처리) |
+| 2026-03-31 | CI-4257 | 전자계약: 선택 발송 시 미선택 CandidateUnit 삭제는 스펙 — 체크리스트#5 추가, 과거 사례 추가, d:kw/d:syn 보강 |
 | 2026-03-30 | CI-4240, CI-4248 | 파일 서비스 밀림(CI-4236) 연관 다운로드 실패 패턴 통합 학습. 급여: 원천징수영수증 일괄 다운로드 실패 — 체크리스트#12 + F-pay-2 플로우 추가, 과거 사례 추가. 전자계약: 과거 사례 추가. domain-map.ttl verdict `"ops"` + `d:st "C"` 완료 |
 | 2026-03-30 | CI-4248 | 전자계약: 일괄 다운로드 링크 미생성 — 진단 체크리스트 #5 추가, F2 플로우 추가 (merge 큐 지연 → 임시 파일 만료 패턴), domain-map.ttl 키워드(대량 다운로드/bulk-download/fileMergeId) + 사용자 표현 추가 |
 | 2026-03-30 | CI-4247 | 급여: 원천세 신고 과거 연도 선택 불가 — Not a Bug(스펙)로 verdict 변경. Tier-2 과거 사례 갱신, domain-map.ttl verdict `"spec"` + `d:st "C"` 완료 |
