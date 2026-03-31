@@ -47,6 +47,7 @@ jobs:
         with:
           email: "flex-bot+oncall@flex.team"
           model: bedrock_claude_sonnet_4_6
+          timeout-minutes: '60'
           plugins: "linear@claude-plugins-official"
           prompt: |
             /ops-maintain-notes 를 실행하세요.
