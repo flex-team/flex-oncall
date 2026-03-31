@@ -103,6 +103,45 @@ flowchart TD
 
 ---
 
+## 측정 데이터 카탈로그
+
+각 데이터가 **무엇이고, 왜 수집하고, 어디서 활용되는지**.
+
+| 데이터 | 위치 | 수집 방식 | 왜 수집하는가 | 활용처 |
+|--------|------|-----------|--------------|--------|
+| **skill 이벤트** | `metrics/{user}/{date}.jsonl` | 자동 (PreToolUse hook) | 스킬 사용 패턴 파악, 사용자간 워크플로우 차이 분석 | brain-health 리포트 "스킬 사용 분석" |
+| **investigation 이벤트** | `metrics/{user}/{date}.jsonl` | 수동 (`ops-investigate` Step 9-2b) | COOKBOOK이 실제로 조사에 도움이 됐는지(hit/ref/miss) 검증, 조사 효율(steps, wrong_hypotheses) 추적 | brain-health 리포트 "조사 효율", "쿡북 효과" |
+| **freshness 이벤트** | `metrics/{user}/{date}.jsonl` | 수동 (`ops-compact` Step 6-3) | COOKBOOK·스펙 문서가 현재 코드와 일치하는지 부패율 추적 | brain-health 리포트 "신선도 분석", `freshness-report.md` |
+| **COOKBOOK 히트 카운트** | `COOKBOOK.md` 인라인 `히트: N` | `ops-investigate` Step 9-2a | 어떤 진단 플로우가 자주 사용되는지 → 승격/강등 근거 | `ops-compact` 계층 조정 (Tier-1 ↔ Tier-2) |
+| **라우팅 미스 로그** | `routing-misses.md` | `ops-find-domain` 자동 기록 | domain-map.ttl 키워드 커버리지 부족 감지 | `ops-learn` 이 소비 → `d:kw`/`d:syn` 보강 |
+| **컴팩션 이력** | `compact-log.md` | `ops-compact` 자동 기록 | 농축·퇴출·계층 조정 이력 추적 | 수동 감사, brain-health 리포트 |
+
+### 핵심 질문과 답을 찾는 경로
+
+| 질문 | 답을 찾는 경로 |
+|------|---------------|
+| COOKBOOK이 실제로 이슈 해결에 도움이 되나? | investigation 이벤트의 `cookbook_verdict` 분포 (hit vs ref vs miss) |
+| 자주 쓰이는 진단 플로우는? | `COOKBOOK.md` `히트: N` + investigation `cookbook_hit_flow` |
+| 죽은(쓸모없는) 플로우는? | `cookbook_flows_consulted` 에만 등장하고 `cookbook_hit_flow` 에는 없는 플로우 |
+| 조사 효율이 개선되고 있나? | investigation `steps`, `wrong_hypotheses` 추이 (WoW 비교) |
+| 문서가 코드와 맞지 않는 곳은? | freshness `spec_review_needed`, `api_stale` |
+| 도메인 라우팅이 정확한가? | `routing-misses.md` miss/reject 건수 추이 |
+
+### 데이터 흐름
+
+```
+[자동] PreToolUse hook ──→ skill 이벤트 ──────────────→ brain-health 리포트
+[수동] ops-investigate ──→ investigation 이벤트 ──────→ brain-health 리포트
+                         + COOKBOOK 히트 N+1 ──────────→ ops-compact 계층 조정
+[수동] ops-compact Step 6 → freshness 이벤트 ─────────→ brain-health 리포트
+                           + freshness-report.md ──────→ 수동 리뷰
+[수동] ops-find-domain ──→ routing-misses.md ──────────→ ops-learn → d:kw/d:syn 보강
+```
+
+> 상세 스키마와 필드 설명은 `.claude/skills/ops-common/metrics-guide.md` 참조.
+
+---
+
 ## ops 스킬 관계도
 
 ```mermaid
