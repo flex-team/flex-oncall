@@ -599,10 +599,20 @@
 
 #### 진단 체크리스트 (겸직 주법인 변경)
 문의: "대표회사 바꿔주세요" / "겸직 주법인 전환해주세요"
-1. 전환 조건 확인 — **양쪽 유저 모두** 퇴직 예정이 아니어야 하고 온보딩 완료 상태여야 함
-2. 변경 방법: Operation API `PATCH /api/operation/v2/core/users/primaryUser`
-3. 주법인 전환 후 이메일/인증은 새 주법인 기준으로 변경됨 — 고객에게 안내 필요
-4. 겸직 해지 불가 케이스 확인: (1) 대표회사 비소속, (2) 계열사 비소속, (3) 해지 대상이 계열사 마지막 최고관리자
+1. **대상자별 겸직 매핑 확인** — `member_user_mapping` 기반으로 **1명씩 개별 조회** (IN으로 일괄 조회 금지 — member_id 교차오염 발생) [CI-4271]
+   ```sql
+   SELECT customer_id, id AS user_id, email FROM flex.view_user
+   WHERE id IN (SELECT user_id FROM flex.member_user_mapping
+   WHERE member_id = (SELECT member_id FROM flex.member_user_mapping
+   WHERE user_id = (SELECT id FROM flex.view_user WHERE email = trim('{이메일}'))));
+   ```
+   - 2건 → 겸직 등록됨, 주법인 변경 가능
+   - 1건 → 겸직 미등록 → 변경 불가, 고객에게 겸직 등록 선행 안내
+2. 전환 조건 확인 — **양쪽 유저 모두** 퇴직 예정이 아니어야 하고 온보딩 완료 상태여야 함
+3. 변경 방법: Operation API `PUT /action/v2/operation/core/users/primaryUser`
+   - `sourceUserId`: 현재 주법인(변경 전) user_id / `targetUserId`: 새 주법인(변경 후) user_id
+4. 주법인 전환 후 이메일/인증은 새 주법인 기준으로 변경됨 — 고객에게 안내 필요
+5. 겸직 해지 불가 케이스 확인: (1) 대표회사 비소속, (2) 계열사 비소속, (3) 해지 대상이 계열사 마지막 최고관리자
 
 #### 진단 체크리스트 (정보 일괄 변경 엑셀 미리보기)
 문의: "기본 정보 변경 엑셀 미리보기에서 구성원이 중복으로 나와요" / "미리보기에서 알 수 없음이 표시돼요"

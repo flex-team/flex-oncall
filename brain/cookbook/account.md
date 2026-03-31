@@ -50,6 +50,36 @@ FROM flex_auth.customer_credential_t_otp_setting
 WHERE customer_id = ?;
 ```
 
+## 겸직 매핑 조회 — ⚠️ 반드시 1명씩 개별 조회
+
+겸직 구성원의 양쪽 회사 user_id를 찾을 때 `member_user_mapping`을 사용한다.
+
+> ⚠️ **절대 IN으로 여러 이메일을 한 번에 조회하지 않는다.**
+> 서브쿼리가 여러 `member_id`를 반환하면, 바깥 쿼리가 여러 member에 속한 사용자를 모두 섞어서 반환한다.
+> 결과 건수가 얼핏 맞아 보여도 user_id 매핑이 잘못된다.
+
+**올바른 방법 — 이메일 1개씩 개별 조회:**
+```sql
+SELECT customer_id, id AS user_id, email
+FROM flex.view_user
+WHERE id IN (
+    SELECT user_id FROM flex.member_user_mapping
+    WHERE member_id = (
+        SELECT member_id FROM flex.member_user_mapping
+        WHERE user_id = (
+            SELECT id FROM flex.view_user WHERE email = trim('{이메일}')
+        )
+    )
+);
+```
+→ 3명이면 이 쿼리를 3번 실행한다. [^account-concurrent-1]
+
+**결과 해석:**
+- 2건 반환 → 겸직 등록됨 (이스트소프트 1건 + 이스트시큐리티 1건)
+- 1건 반환 → 해당 회사에만 유저가 있음 → **겸직 미등록** → 주법인 변경 불가
+
+[^account-concurrent-1]: CI-4271 — IN 일괄 조회 시 member_id 교차오염 확인. leezho/jina가 같은 member에 속해 잘못된 매핑이 반환됨.
+
 ## 과거 사례
 
 - **단건 이메일 변경 (퇴사자 관리자 계정)**: 스폰서십 등록 계정의 관리자 이메일이 퇴사자. Operation API 단건 변경으로 처리 — **운영 요청** [CI-4118]

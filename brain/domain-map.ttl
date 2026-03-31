@@ -2225,6 +2225,16 @@ n:CI-4252
   d:ca "2026-03-30" ;
   d:s  "glluga JAPAN 기본 휴일 정책에서 근로자의 날(LABOR_DAY) 삭제 요청 — Operation API로 당일 처리" .
 
+n:CI-4259 a d:Note ;
+    d:s "모바일앱 일정에서 휴가 이벤트 2건 중복 표시 — flex-mobile-bff getScheduleCalendarsEvents API 응답에 2건 포함" ;
+    d:in :time-tracking ;
+    d:verdict "investigating" .
+
+n:CI-4271
+  d:in :account ;
+  d:v  "investigating" ;
+  d:s  "겸직 구성원 주법인 변경 요청 — member_user_mapping 기반 조회 후 Operation API primaryUser 변경" .
+
 n:CI-4291
   d:in :account ;
   d:v  "spec" ;

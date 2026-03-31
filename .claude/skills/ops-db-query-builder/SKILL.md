@@ -228,3 +228,4 @@ db_show_indexes(env={env}, table={테이블명}, caller_id="ops-db-query-builder
 3. **인덱스 활용** — env가 확인 가능하면 인덱스를 확인하여 WHERE/JOIN이 인덱스를 타도록 구성한다.
 4. **기존 패턴 재활용** — `domain-routing.md` 인라인 수행, `db_show_indexes`/`db_describe` 조합.
 5. **실행 분리** — SQL 구성까지만 담당. env 결정과 실행은 호출 쪽 책임.
+6. **단건 보장 서브쿼리는 IN으로 일괄화 금지** — `= (단건 서브쿼리)` 패턴이 필요한 경우, 여러 입력값을 `IN`으로 묶어 처리하지 않는다. 서브쿼리가 여러 행을 반환하면 상위 쿼리 결과가 교차오염된다. 사용자가 보여준 쿼리 패턴을 임의로 최적화(일괄화)하지 않는다. [CI-4271 — member_user_mapping 기반 겸직 매핑 조회 시 IN 일괄 처리로 잘못된 매핑 반환]
