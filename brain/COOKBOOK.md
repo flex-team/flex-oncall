@@ -947,7 +947,31 @@
 14. **사회보험 연말정산 휴직자 건강보험 근무월수 오집계** → 연속 휴직(예: 04-01~09-28, 09-29~이후)이 개별 루프로 처리되어 경계 월(9월)이 어느 쪽에도 포함되지 않고 근무월로 잘못 카운트. `HealthInsuranceMonthsCalculator.calculateOnLeaveMonths()` 에서 병합 로직 부재 — **버그** [CI-4159]
 15. 급여정산 실행 시 "알 수 없는 오류" + 대상자 0명 stuck → 사업장 담당자 계정 여부 확인 → 회사 전체 구성원 수 확인(2,000명↑ 위험). 원인: 인가 로직이 전체 구성원 조회 → `resolveAccessibleUsers` 타임아웃. flex-permission-backend v3.58.3(6초→10초) + payroll hotfix #8714로 수정됨 [CI-4260]
 
+15. **정산 실행 시 "알 수 없는 오류" + 대상자 0명** → 대규모 회사(1,000명+)에서 사업장 담당자 계정으로 정산 실행 시 인가 타임아웃(`resolveAccessibleUsers`) 발생 가능. settlement은 커밋되지만 payee 초기화 실패 → 0명 IN_PROGRESS stuck. 깨진 정산 CANCELED 처리 필요 [CI-4260]
+
 #### 조사 플로우
+
+**F-pay-3: 정산 실행 타임아웃 — 인가 조회 + 정합성 확인** · 히트: 1 · [CI-4260]
+> 트리거: "급여정산 실행 시 알 수 없는 오류" / "정산 대상자가 0명이에요" / 대규모 회사 사업장 담당자
+
+```
+① Sentry에서 FlexRemoteUnknownStateException: timeout 확인
+   ├─ 있음 → ②로
+   └─ 없음 → 다른 원인 (F-pay-1~2 시도)
+   ↓
+② 고객사 전체 구성원 수 확인
+   ├─ 1,000명+ → 인가 타임아웃 가능성 높음 → ③으로
+   └─ 소규모 → 다른 원인 조사
+   ↓
+③ 깨진 정산 조회
+   SELECT s.id, s.settlement_status, COUNT(p.id)
+   FROM work_income_settlement s
+   LEFT JOIN work_income_settlement_payee p ON p.settlement_id = s.id
+   WHERE s.customer_id = {cid} AND s.created_at >= '{date}'
+   GROUP BY s.id
+   ├─ payee 0명 + IN_PROGRESS → CANCELED 처리
+   └─ 정상 → 일시적 네트워크 문제
+```
 
 **F-pay-1: 외국인 고용보험 공제 제외 — 체류자격+자격관리 확인** · 히트: 1 · [CI-4241]
 > 트리거: "외국인 고용보험이 빠졌어요" / 특정 월부터 고용보험 미공제
@@ -1895,6 +1919,38 @@ ORDER BY last_modified_date DESC;
 1. PG 카드 결제 영수증은 기본 제공
 2. **크레딧 결제 전자 영수증은 미지원** — 고객에게 안내
 
+### 외부 API / 데이터 통합 (OpenAPI)
+
+#### 진단 체크리스트
+문의: "OpenAPI에서 403 에러가 나요" / "OpenAPI 호출이 안 돼요" / "일부 API만 에러가 나요"
+1. access log에서 응답 코드 확인 → 403이면 아래 분기, 401이면 토큰/ownerType 문제 [CI-4270]
+2. 403일 때 `flexErrorCode` 확인 → `AUTHZ_403_000`이면 grant configuration 권한 세분화 이슈 [CI-4270]
+3. `OPENAPI_403_001`이면 IP ACL 검증 실패 → `client-real-ip`와 허용 IP 대조
+4. 일부 API만 성공하는 경우 → bypass API 목록 확인: `/v2/departments/all`, `/v2/users/employee-numbers`는 access check 없음 [CI-4270]
+
+#### 조사 플로우
+
+**F1: OpenAPI 403 — grant configuration 권한 세분화** · 히트: 1 · [CI-4270]
+> 트리거: OpenAPI 호출 시 AUTHZ_403_000 에러, 일부 API만 성공
+
+```
+① access log에서 403 응답의 traceId 추출
+   flex-app.be-access-* / customerId + responseStatus=403
+   ↓
+② 같은 traceId로 전체 요청 흐름 추적
+   grant-configuration 조회 응답 확인
+   ├─ grantConfigurationId = null → 권한 제한 없음 (다른 원인)
+   └─ grantConfigurationId != null → ③으로
+   ↓
+③ batch-check 요청/응답 확인
+   action별 allowed 값 확인
+   ├─ allowed=false → grant configuration에 해당 action 미설정 또는 OpenFGA 동기화 문제
+   └─ allowed=true → 다른 원인 (컨트롤러 레벨 검증 등)
+   ↓
+④ DB 대조: flex_authorization.flex_grant + flex_grant_authority_group
+   DB에 action 존재하는데 batch-check 거부 → OpenFGA 동기화 문제
+```
+
 ---
 
 ## 변경 이력
@@ -1904,6 +1960,7 @@ ORDER BY last_modified_date DESC;
 | 2026-04-01 | CI-4260 | 급여: 급여정산 실행 시 인가 타임아웃 → 대상자 0명 stuck — 체크리스트#15 추가. flex-permission v3.58.3(6초→10초) + hotfix #8714 수정. domain-map.ttl verdict bug-fix + closed |
 | 2026-04-01 | CI-4049, CI-4270 | 외부 API(OpenAPI) 섹션 신규 추가. 부서 null(조직 코드 미등록) + 403(grantConfigurationId granular 권한 체크). domain-map.ttl :openapi d:kw 보강 + verdicts closed |
 | 2026-04-01 | CI-4212, CI-4241, CI-4257, CI-4256 | domain-map.ttl d:st "C" + d:ca 일괄 설정 (이미 COOKBOOK 반영 완료된 이슈 마감 처리) |
+| 2026-03-31 | CI-4270 | OpenAPI: 403 권한 세분화 진단 — 체크리스트 + F1 플로우 신설. Tier-2 openapi.md 생성 (도메인 컨텍스트 + 과거 사례 + SQL). d:kw/glossary 추가 |
 | 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |
 | 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
 | 2026-03-31 | CI-4256 | 계정/구성원: 문서함 삭제 복구 — 진단 체크리스트 + 플로우(F3) 추가. hard delete + Envers audit 기반 복구 검토 패턴. d:kw "문서함"/"user_document", d:syn 추가 |
