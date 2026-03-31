@@ -118,3 +118,8 @@
 	url = git@github.com:flex-team/flex-billing-backend.git
 	branch = main
 	ignore = dirty
+[submodule "flex-mobile-bff"]
+	path = flex-mobile-bff
+	url = git@github.com:flex-team/flex-mobile-bff.git
+	branch = main
+	ignore = dirty
