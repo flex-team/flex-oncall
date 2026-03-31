@@ -340,6 +340,9 @@
 10. 캡스 수동 동기화 "전송 실패" → Grafana 캡스 RDB 모니터링에서 로그 확인. `e_date` 컬럼이 보이면 **테이블 매핑 설정 오류**. 고객에게 올바른 매핑 설정 가이드 안내 [CI-4202]
 11. 캡스/세콤 연결 실패 + "방화벽 문제" 주장 → **먼저 DB 로그에서 패스워드 실패 여부 확인**. 고객/기사의 PW 오입력이 원인인 경우가 많음. ODBC 연결 성공했다면 방화벽은 거의 아님 [FT-12290]
 12. 방화벽 해제 / flex IP 요청 → **IP는 변경될 수 있으므로 제공 불가**. 도메인(`flex-caps.flex.team`, `flex-secom.flex.team`) 기반 예외처리를 안내. CMD 명령어(`nslookup`, `telnet`, `tracert`)로 네트워크 연결 상태 확인 후 결과 전달 요청 [FT-12290]
+13. 연동 이벤트 미반영 (이벤트 지연 + 수동 START 충돌) → `v2_user_external_provider_event`에서 이벤트 수신 시각 확인 (발생 시각 vs DB 저장 시각) → 이벤트 지연이 있으면 사용자가 그 사이 수동 START 했는지 컨슈머 로그 확인 → `v2_user_work_clock_draft_event`에서 해당 이벤트 기준 start 레코드 유무 확인 [CI-4237]
+14. 세콤 수동전송 시 중복 START 이벤트 → PC·모바일 표시 불일치로 나타남. `v2_user_work_clock_event`에서 해당 유저/날짜 CANCEL 대상 이벤트 탐색. 잘못된 START 이벤트를 CANCEL 처리 [CI-4246]
+15. 캡스 기기 변경 후 동기화 불량 → 캡스 프로그램 근태처리옵션 계정 재설정 여부 확인. 원본선택 항목이 가이드와 다르면 캡스 버전 차이일 수 있음 (캡스 담당자에게 확인) [CI-4249]
 
 #### 조사 플로우
 
@@ -1849,6 +1852,7 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |
 | 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
 | 2026-03-30 | CI-4240, CI-4248 | 파일 서비스 밀림(CI-4236) 연관 다운로드 실패 패턴 통합 학습. 급여: 원천징수영수증 일괄 다운로드 실패 — 체크리스트#12 + F-pay-2 플로우 추가, 과거 사례 추가. 전자계약: 과거 사례 추가. domain-map.ttl verdict `"ops"` + `d:st "C"` 완료 |
 | 2026-03-30 | CI-4248 | 전자계약: 일괄 다운로드 링크 미생성 — 진단 체크리스트 #5 추가, F2 플로우 추가 (merge 큐 지연 → 임시 파일 만료 패턴), domain-map.ttl 키워드(대량 다운로드/bulk-download/fileMergeId) + 사용자 표현 추가 |

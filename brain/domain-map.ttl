@@ -130,13 +130,19 @@
         "EventProvider" , "WORK_START" , "WORK_STOP" , "transmitter" ,
         "ODBC" , "odbc_connection_limit" , "CONNECTION LIMIT" ,
         "테이블매핑" , "e_date" , "AUTO_WORK_STOP" ,
-        "isDraftEventRegistrationAllowed" , "checkWorkClockStatus" ;
+        "isDraftEventRegistrationAllowed" , "checkWorkClockStatus" ,
+        "v2_user_external_provider_event" , "v2_user_work_clock_draft_event" ,
+        "근태처리옵션" , "원본선택" , "ACServer" ;
   d:syn "세콤 연동이 풀렸어요" , "수동 전송했는데 반영 안 돼요" ,
         "세콤으로 퇴근했는데 정시로 찍혀요" ,
         "세콤으로 퇴근했는데 근무 종료 알림이 와요" ,
         "ODBC 연결이 안 돼요" ,
         "수동 동기화 실패" ,
-        "출근이 여러번 찍혀요" ;
+        "출근이 여러번 찍혀요" ,
+        "캡스 타각했는데 플렉스에 반영이 안 돼요" ,
+        "기기 바꿨더니 캡스 타각이 안 들어와요" ,
+        "캡스 원본선택이 가이드랑 달라요" ,
+        "PC랑 모바일 근무 표시가 달라요" ;
   d:x   :time-tracking , :account , :work-event-transmitter .
 
 :permission
@@ -457,6 +463,27 @@
 # ============================================================
 # Notes — active (brain/notes/)
 # ============================================================
+
+n:CI-4249
+  d:in :integration ;
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-03-31" ;
+  d:s  "캡스 기기 변경 후 근태처리옵션 계정 오설정으로 동기화 불량 — 고객사 직접 수정 후 정상화" .
+
+n:CI-4246
+  d:in :integration ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-03-31" ;
+  d:s  "세콤 수동전송 시 START 이벤트 중복 생성 버그 — CANCEL 처리 + 핫픽스 배포" .
+
+n:CI-4237
+  d:in :integration ;
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-03-31" ;
+  d:s  "캡스 이벤트 12분 지연 전달 중 사용자 수동 START로 충돌 — 지연 해소 후 자연 정상화" .
 
 n:CI-4240
   d:in :payroll ;
