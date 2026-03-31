@@ -25,4 +25,5 @@ POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates
 
 - **서명 완료 계약서 삭제 불가**: SUCCEED 상태 계약서는 `cancelable() = this === IN_PROGRESS`로 취소 불가, Operation API에도 삭제 엔드포인트 없음. 법적 효력 보존이 설계 의도. 정석: 올바른 내용으로 재계약 발송 — **스펙** [CI-4152]
 - **서식 삭제자 access log 추적**: 감사로그에 서식 삭제 미기록. access log traceId → permission-api 호출 체인으로 삭제자 특정 가능. soft delete로 Operation API 복구 가능 — **스펙 (개선 필요)** [CI-4168]
+- **선택 발송 시 미선택 임시저장 계약서 삭제**: CandidateSet = 한 번의 발송 단위로 설계. `execute()` 시 `targetDigiconCandidateUnitIdHashes`에 포함되지 않은 CandidateUnit은 `deleteAllById()`로 물리 삭제. 복구 불가. VOC-2410으로 UX 개선 요청 등록됨 — **스펙** [CI-4257]
 - **전자계약 일괄 다운로드 링크 미생성 — 파일 서비스 밀림**: admin-shell에서 bulk-download-pdf 요청 후 PDF 업로드(87건) 정상 완료, fileMergeId 발급 후 merge 큐가 ~3~8시간 지연. S3 임시 파일 TTL(600초) 초과로 병합 시 파일 부재 → ERROR. 병합 실패 callback이 digicon 서비스에 미전달(MEREGED 로그 0건). 구조적 문제: TTL < merge 큐 처리시간이면 항상 실패. 파일 서비스 장애 해소 후 재시도로 해결 — **Not a Bug(ops)** [CI-4248]
