@@ -394,7 +394,8 @@
         "76번코드" , "HealthInsuranceSettlementReasonCode" ,
         "calculateOnLeaveMonths" , "HealthInsuranceMonthsCalculator" ,
         "RetireeYearEndHealthInsuranceCalculatorImpl" ,
-        "원천세" , "지방소득세" , "withholding_status_report" , "귀속연월" , "신고서" ;
+        "원천세" , "지방소득세" , "withholding_status_report" , "귀속연월" , "신고서" ,
+        "resolveAccessibleUsers" , "PayrollAuthorityJpaEntity" , "사업장담당자" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
@@ -407,7 +408,8 @@
         "건강보험 연말정산 분할납부금이 이상해요" ,
         "원천세 신고서 작성 시 연도 선택이 안 돼요" ,
         "중도정산 건강보험이 2배에요" ,
-        "휴직자 건강보험 근무월수가 이상해요" ;
+        "휴직자 건강보험 근무월수가 이상해요" ,
+        "급여정산 실행 시 알 수 없는 오류" , "정산 대상자가 0명이에요" ;
   d:x   :time-tracking , :scheduling , :notification .
 
 :flow
@@ -444,6 +446,9 @@
         "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ,
         "OpenAPI로 부서 조회 시 null이 나와요" ,
         "OpenAPI 호출하면 403 에러가 나요" ;
+        "grant_configuration" , "AUTHZ_403_000" , "FlexObjectAccessDeniedException" ,
+        "batch-check" , "grantConfigurationId" ;
+  d:cb  "외부 API / 데이터 통합 (OpenAPI)" ;
   d:x   :payroll , :account , :permission .
 
 :yearend
@@ -525,6 +530,11 @@ n:CI-4236
   d:st "C" ;
   d:ca "2026-03-27" ;
   d:s  "워크플로우 일괄 다운로드 완료 안내 메일 수백통 중복 발신 — render 타임아웃 → file merge 재시도 폭증" .
+
+n:CI-4266
+  d:in :approval ;
+  d:v  "investigating" ;
+  d:s  "휴직 예정자 승인 라인 174건 강제 승인 요청 — replacement-targets는 퇴직자 전용, bulk-approve-for-user로 처리 예정" .
 
 n:CI-4228
   d:in :approval ;
@@ -1536,6 +1546,20 @@ n:CI-4222
   d:st "C" ;
   d:ca "2026-03-29" ;
   d:s  "건강보험 연말정산 분할납부금액(74번)이 전년도 기납보험료에 잘못 합산 — getYearEndTotalAmountByType 귀속연도 미필터링" .
+
+# ============================================================
+# Glossary — openapi
+# ============================================================
+
+g:openapi-01
+  d:q "OpenAPI 403 에러" , "OpenAPI 권한 에러" , "AUTHZ_403_000" ;
+  d:a "grant configuration 권한 세분화 — grantConfigurationId가 NOT null이면 batch-check 실행" ;
+  d:in :openapi .
+
+g:openapi-02
+  d:q "일부 API만 안 돼요" , "departments는 되는데 다른 건 안 돼요" ;
+  d:a "bypass API: /v2/departments/all, /v2/users/employee-numbers는 access check 없음" ;
+  d:in :openapi .
 
 # ============================================================
 # Glossary — notification
