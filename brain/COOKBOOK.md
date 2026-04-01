@@ -459,6 +459,18 @@
 
 ---
 
+### 외부 API (OpenAPI)
+
+#### 진단 체크리스트
+문의: "OpenAPI로 부서 조회 시 null 리턴돼요" / "OpenAPI 호출하면 403이 나요" / "특정 API만 403이고 나머지는 돼요"
+1. 부서(departments) 필드 null 응답 → `department.code` 미등록 확인. SELECT code FROM department WHERE id = {고객사 customerId} — null이면 고객에게 flex 설정에서 조직 코드 등록 안내. [FAQ 문서](https://developers.flex.team/reference/faq-limitation#항목-별-사전-코드-등록-필요) [CI-4049]
+2. OpenAPI 403(AUTHZ_403_000) 발생 시 → grant-configuration 확인: `grantConfigurationId` null이면 모든 action 허용, NOT null이면 명시적 허용 action만 접근 가능 — 스펙. 특정 API만 403이고 다른 API는 정상이면 grant-configuration 설정 확인. DB↔OpenFGA 동기화 이상 가능성도 확인 [CI-4270]
+3. `/v2/departments/all`, `/v2/users/employee-numbers`는 access check가 없어 grant configuration에 무관하게 항상 접근 가능 (bypass 설계) [CI-4270]
+
+→ 상세: [cookbook/integration.md](cookbook/integration.md)
+
+---
+
 ### 계정/구성원 (Account / Member)
 
 #### 진단 체크리스트
@@ -933,6 +945,7 @@
 12. 원천징수영수증 일괄 다운로드 실패 → 비동기 백그라운드 태스크 구조. access log에서 `POST /action/v2/payroll/work-income/settlement-results/async-bulk-download-withholding-receipts-by-filter` 호출 확인 → 파일 서비스 장애(CI-4236 유사) 여부 확인. 장애 해소 후 **재시도**로 해결 [CI-4240]
 13. **중도정산 건강보험료 2배** → 76번 코드(휴복직보험료)가 `HealthInsuranceSettlementReasonCode`에서 `LEAVE_OF_ABSENCE_REASON_CODES`와 `SETTLEMENT_REASON_CODES` 양쪽에 속해 `RetireeYearEndHealthInsuranceCalculatorImpl.calculate()`에서 2중 합산. 74번 코드는 영향 없음 — **버그** [CI-4151]
 14. **사회보험 연말정산 휴직자 건강보험 근무월수 오집계** → 연속 휴직(예: 04-01~09-28, 09-29~이후)이 개별 루프로 처리되어 경계 월(9월)이 어느 쪽에도 포함되지 않고 근무월로 잘못 카운트. `HealthInsuranceMonthsCalculator.calculateOnLeaveMonths()` 에서 병합 로직 부재 — **버그** [CI-4159]
+15. 급여정산 실행 시 "알 수 없는 오류" + 대상자 0명 stuck → 사업장 담당자 계정 여부 확인 → 회사 전체 구성원 수 확인(2,000명↑ 위험). 원인: 인가 로직이 전체 구성원 조회 → `resolveAccessibleUsers` 타임아웃. flex-permission-backend v3.58.3(6초→10초) + payroll hotfix #8714로 수정됨 [CI-4260]
 
 #### 조사 플로우
 
@@ -1888,6 +1901,9 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-01 | CI-4260 | 급여: 급여정산 실행 시 인가 타임아웃 → 대상자 0명 stuck — 체크리스트#15 추가. flex-permission v3.58.3(6초→10초) + hotfix #8714 수정. domain-map.ttl verdict bug-fix + closed |
+| 2026-04-01 | CI-4049, CI-4270 | 외부 API(OpenAPI) 섹션 신규 추가. 부서 null(조직 코드 미등록) + 403(grantConfigurationId granular 권한 체크). domain-map.ttl :openapi d:kw 보강 + verdicts closed |
+| 2026-04-01 | CI-4212, CI-4241, CI-4257, CI-4256 | domain-map.ttl d:st "C" + d:ca 일괄 설정 (이미 COOKBOOK 반영 완료된 이슈 마감 처리) |
 | 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |
 | 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
 | 2026-03-31 | CI-4256 | 계정/구성원: 문서함 삭제 복구 — 진단 체크리스트 + 플로우(F3) 추가. hard delete + Envers audit 기반 복구 검토 패턴. d:kw "문서함"/"user_document", d:syn 추가 |

@@ -4,6 +4,7 @@
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
 |------|------|------|-----------|------|
+| 2026-04-01 | CI-4178 | orphan-compact | d:v, d:st "C" 설정 | payroll: CI-4174 동일 원인 재정산 버그. 파일 없는 orphan 항목 정리 |
 | 2026-03-31 | (38건) | bulk-compact | d:syn+7 d:kw+11 | 농축 미완료 archive 노트 일괄 d:st "C" 마킹 + syn/kw 흡수 + 활동 로그 17건 정제 |
 | 2026-03-31 | CI-4148 | compact | d:syn+1 d:kw+2 | time-tracking: UserWorkRuleAllowCancelMappingCalculator 예약 취소 검증 버그. COOKBOOK 체크리스트 19번 추가 |
 | 2026-03-31 | CI-4132 | compact | d:syn+1 d:kw+2 | shift: DailyShiftConverter/timeBlockGroups 정렬 버그. COOKBOOK 체크리스트 5번 추가 |

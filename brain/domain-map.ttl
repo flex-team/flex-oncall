@@ -437,9 +437,13 @@
         "외부연동" , "데이터통합" , "인사연동" , "회계연동" ,
         "sap_rfc_server" , "external_integration_source" ,
         "external_key_mapping" , "PEOPLE" , "ACCOUNTING" ,
-        "CLIENT_CREDENTIALS" , "REFRESH_TOKEN" ;
+        "CLIENT_CREDENTIALS" , "REFRESH_TOKEN" ,
+        "grantConfigurationId" , "grant-configuration" , "OpenFGA" ,
+        "권한세분화" , "조직 코드" , "부서 null" , "AUTHZ_403_000" ;
   d:syn "OpenAPI 토큰이 만료됐어요" , "외부 시스템 연동이 안 돼요" ,
-        "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ;
+        "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ,
+        "OpenAPI로 부서 조회 시 null이 나와요" ,
+        "OpenAPI 호출하면 403 에러가 나요" ;
   d:x   :payroll , :account , :permission .
 
 :yearend
@@ -494,8 +498,10 @@ n:CI-4237
 
 n:CI-4270
   d:in :openapi ;
-  d:v  "investigating" ;
-  d:s  "OpenAPI 403 에러 — grant configuration DB↔OpenFGA 동기화 문제 추정. customerId 96860" .
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "OpenAPI 403 에러 — grantConfigurationId NOT null 시 OpenFGA batch-check에서 allowed=false. DB↔OpenFGA 동기화 문제. customerId 96860. 윤성복 처리 완료" .
 
 n:CI-4240
   d:in :payroll ;
@@ -507,8 +513,10 @@ n:CI-4240
 
 n:CI-4260
   d:in :payroll ;
-  d:v  "investigating" ;
-  d:s  "사업장 담당자 계정 급여정산 실행 시 인가 타임아웃(FlexRemoteUnknownStateException) — 회사 전체 구성원 2000명 조회로 timeout. 대상자 0명 정산 stuck" .
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "사업장 담당자 계정 급여정산 실행 시 인가 타임아웃(FlexRemoteUnknownStateException) — 회사 전체 구성원 2000명 조회로 timeout. flex-permission v3.58.3(6초→10초) + PR #8714 수정" .
 
 n:CI-4236
   d:in :notification ;
@@ -561,6 +569,8 @@ n:CI-4163
 n:CI-4212
   d:in :payroll ;
   d:v  "bug-workaround" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
   d:s  "이관 회사 중도정산 보험료 불일치 — recipient 생성 시점 보수총액 기반 1회 계산, 이관 후 자동 재계산 없음. 리셋 워크어라운드 존재" .
 
 n:CI-4227
@@ -612,8 +622,10 @@ n:CI-4183
 
 n:CI-4178
   d:in :payroll ;
-  d:v  "investigating" ;
-  d:s  "재정산 대상자 사회보험료 실제와 다르게 산정 — CI-4174와 동일 원인의 재정산 버전" .
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-03-24" ;
+  d:s  "재정산 대상자 사회보험료 실제와 다르게 산정 — CI-4174와 동일 원인(건강보험 제외 대상 확정해제 리버트 누락). 노트 파일 없음(orphan)" .
 
 n:CI-4048
   d:in :time-tracking ;
@@ -831,8 +843,10 @@ n:CI-4025
 
 n:CI-4049
   d:in :openapi ;
-  d:v  "investigating" ;
-  d:s  "API 부서(departments) 호출 시 null 리턴" .
+  d:v  "not-a-bug" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "API 부서(departments) 호출 시 null 리턴 — 조직 코드 미등록. 고객 설정 누락" .
 
 n:CI-4073
   d:in :payroll ;
@@ -1149,12 +1163,16 @@ n:CI-4248
 
 n:CI-4256
   d:in :account ;
-  d:v  "investigating" ;
-  d:s  "문서함(신분증) 삭제 복구 요청 — hard delete, audit 테이블 기반 복구 검토 중" .
+  d:v  "not-a-bug" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "문서함(신분증) 삭제 복구 불가 — hard delete 스펙. audit 테이블에 이력 있으나 복구 API 없음. 복구 불가 안내 완료" .
 
 n:CI-4257
   d:in :contract ;
   d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
   d:s  "계약서 선택 발송 시 미선택 CandidateUnit 물리 삭제 — 의도된 스펙. VOC-2410으로 UX 개선 요청 등록됨" .
 
 n:CI-4251
@@ -2127,6 +2145,8 @@ n:CI-4239
 n:CI-4241
   d:in :payroll ;
   d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
   d:s  "외국인(F-4) 고용보험 미공제 — 체류자격 UNKNOWN→F4 변경 + 자격관리 취득일 미등록 → EXCLUDED 처리. 임의가입 스펙" .
 
 n:CI-4252
