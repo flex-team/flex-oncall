@@ -133,3 +133,7 @@
 	url = git@github.com:flex-team/flex-frontend-apps-people.git
 	branch = main
 	ignore = dirty
+[submodule "flex-calendar-backend"]
+	path = flex-calendar-backend
+	url = git@github.com:flex-team/flex-calendar-backend.git
+	branch = main
