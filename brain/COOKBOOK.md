@@ -595,6 +595,18 @@
 2. **대안 안내**: 감사로그에서 최근 로그를 엑셀 다운로드 → 사용자별 피벗을 돌려 "마지막 활동 시점"을 간접 확인
 3. 고객이 원하는 "접속 기록"의 정확한 정의를 먼저 파악 (마지막 로그인 vs 마지막 활동)
 
+#### 진단 체크리스트 (감사로그 다운로드)
+문의: "감사로그 다운로드 요청드립니다" / "감사로그 데이터 추출해주세요" / "장기간 감사로그가 필요합니다"
+1. **제품 내 기능**: 감사로그 다운로드는 **7일 기간 제한** — 장기간 요청 시 Operation API 필요 [CI-4309]
+2. **법적 대응 목적**: 법적 요건으로 협조 필요 — 엔터프라이즈 유도 목적 제한이지만 거부 불가 [CI-4309]
+3. **Operation API 실행**: raccoon Swagger `https://flex-raccoon.grapeisfruit.com/swagger/audit` → "audit operation" [CI-4309]
+   - `POST /action/operation/v2/audit/{customerId}/download?userId={userId}`
+   - `personalInformationType`: 근태_근무정보, 근태_휴가정보, 기타 등 (enum 목록은 CI-4309 노트 참조)
+   - `eventCategory`: CREATE, UPDATE, DELETE
+   - `from`/`to`: KST 기준 ISO 8601
+4. **응답은 200만 반환** — 파일은 userId의 **이메일로 비동기 발송**. 중복 클릭 주의 [CI-4309]
+5. **참고 문서**: [감사로그데이터 전달 대응 관련 Notion 문서](https://www.notion.so/flexnotion/2450592a4a928024b02eebe84fd722b6)
+
 #### 진단 체크리스트 (코어 런북 보강)
 문의: "입사일 변경해주세요" / "삭제된 구성원 복구해주세요" / "개인정보 보유현황 파악" / "이메일 대량 변경해주세요"
 1. **입사일 변경 요청** → 입사일을 미래로 설정해 접속 불가한 경우. 어드민 페이지 생성됨 (확인 필요)
@@ -1028,7 +1040,7 @@
 → 도메인 이해: [cookbook/payroll.md#도메인-컨텍스트](cookbook/payroll.md#도메인-컨텍스트)
 
 #### 진단 체크리스트
-문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요" / "급여정산 해지하면 명세서 공개가 되나요?" / "원천징수영수증 일괄 다운로드 실패" / "중도정산 건강보험이 2배에요" / "휴직자 건강보험 근무월수가 이상해요"
+문의: "초과근무 계산이 이상해요" / "포괄 공제가 안 맞아요" / "올림 계산이 안 맞아요" / "급여정산 해지하면 명세서 공개가 되나요?" / "원천징수영수증 일괄 다운로드 실패" / "중도정산 건강보험이 2배에요" / "휴직자 건강보험 근무월수가 이상해요" / "주휴수당 대상자에 안 불러와져요"
 1. 올림 자릿수 이상 문의 → 설정 변경 시점과 정산 생성 시점 비교. 정산 생성 시 올림 설정이 스냅샷됨 → 기존 진행 중 정산은 이전 설정 유지 [CI-4131]
    - `payroll_legal_payment_setting`(현재 설정)과 `work_income_over_work_payment_calculation_basis`(정산 스냅샷) 비교
    - 불일치하면 설정 변경 전 생성된 정산 → 신규 정산 생성 안내
@@ -1051,6 +1063,8 @@
 15. 급여정산 실행 시 "알 수 없는 오류" + 대상자 0명 stuck → 사업장 담당자 계정 여부 확인 → 회사 전체 구성원 수 확인(2,000명↑ 위험). 원인: 인가 로직이 전체 구성원 조회 → `resolveAccessibleUsers` 타임아웃. flex-permission-backend v3.58.3(6초→10초) + payroll hotfix #8714로 수정됨 [CI-4260]
 
 15. **정산 실행 시 "알 수 없는 오류" + 대상자 0명** → 대규모 회사(1,000명+)에서 사업장 담당자 계정으로 정산 실행 시 인가 타임아웃(`resolveAccessibleUsers`) 발생 가능. settlement은 커밋되지만 payee 초기화 실패 → 0명 IN_PROGRESS stuck. 깨진 정산 CANCELED 처리 필요 [CI-4260]
+
+16. **퇴직자 급여정산 주휴수당 미노출** → 정산 템플릿의 `work_record_import` 확인. `NONE`이면 TT 주휴수당 미조회 → default recipient 생성 시 dateRange가 전체 기간으로 설정됨 → 월 중도 퇴사자는 base payment dateRange와 불일치 → items:[] 반환 (Known Issue). 워크어라운드: 지급 항목 별도 추가로 수동 반영 [CI-4307]
 
 #### 조사 플로우
 
@@ -1113,6 +1127,25 @@
 ```
 
 > 핵심: 전자계약 F2 플로우와 동일 패턴 — 파일 merge 큐 지연 시 임시 파일 TTL(600초) 초과로 실패.
+
+**F-pay-4: 퇴직자 정산 주휴수당 미노출 — work_record_import + dateRange 불일치** · 히트: 1 · [CI-4307]
+> 트리거: "주휴수당 대상자에 안 불러와져요" / "퇴직자 급여정산 주휴수당이 안 나와요" / 월 중도 퇴사자 주휴수당
+
+```
+① 정산 템플릿의 work_record_import 확인
+   SELECT work_record_import FROM work_income_settlement_template WHERE id = ?
+   ├─ FLEX → TT 연동 회사, 이 플로우 해당 없음 → 다른 원인 조사
+   └─ NONE → ②로
+   ↓
+② 대상자 퇴사일 확인
+   work_income_settlement_payee에서 offboarded_date 확인
+   ├─ 정산 기간 말일 = 퇴사일 → 이 버그 해당 없음
+   └─ 정산 기간 중도 퇴사 → ③으로 (Known Issue 확정)
+   ↓
+③ 워크어라운드 안내
+   지급 항목 별도 추가(커스텀 지급 항목)로 주휴수당 수동 반영
+   근본 수정은 스쿼드 과제 대기 중
+```
 
 *(급여 도메인은 근태/휴가, 스케줄링과 겹치는 이슈가 많으며, 상세 진단은 해당 도메인 참조)*
 
@@ -1235,7 +1268,7 @@
    WHERE id = ?
 ```
 
-**F2: 후발 추가 reviewer UserForm 미초기화** · 타입: Error · 히트: 1 · [CI-4188]
+**F2: 후발 추가 reviewer UserForm 미초기화** · 히트: 2 · [CI-4188] [CI-4301]
 > 트리거: "특정 구성원 평가지가 생성 중", "평가지가 안 보여요" — finalize 이후 추가된 reviewer에서 발생
 
 ```
@@ -1318,7 +1351,7 @@ WHERE id IN (?);
 - **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
 <!-- TODO: 시나리오 테스트 추가 권장 — title=null DRAFT 평가 리스트 정상 노출 검증 -->
 - **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
-- **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
+- **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188] [CI-4301]
 - **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
 - **평가 등급 배분 완료 시 validation 오류**: 과거 버그 수정 전 평가를 복제하여 `grades_to_calculate`가 비어있는 상태로 전파. `draft_evaluation` DML 보정으로 해결 — **운영 대응** [CI-4204]
 - **뉴성과관리 전환 후 진행 중 평가 사라짐**: `MigrationScheduler`가 구 리뷰 → 뉴 성과관리 전환 시 진행 중 리뷰셋을 의도적으로 soft delete. `review_set` 테이블 `deleted=0, deletedAt=NULL` 복구 가능 — **스펙** [CI-4210]
@@ -1697,7 +1730,7 @@ WHERE id IN (?);
 
 #### 조사 플로우
 
-**F1: 구글 캘린더 동기화 실패** · 타입: Error · 히트: 3 · [CI-4235] [CI-4262] [CI-4285] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
+**F1: 구글 캘린더 동기화 실패** · 타입: Error · 히트: 4 · [CI-4235] [CI-4262] [CI-4285] [CI-4306] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
 > 트리거: "구글 캘린더에 휴가가 안 떠요" / "미연동 일정 재연동 요청"
 
 ```
@@ -2096,6 +2129,9 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-02 | CI-4307 | 급여: 퇴직자 정산 주휴수당 미노출(work_record_import=NONE + 월 중도 퇴사자 dateRange 불일치) — 체크리스트#16 + F-pay-4 플로우 추가, 과거 사례 추가, glossary g:pay-16 추가. domain-map.ttl d:kw/d:syn 보강 |
+| 2026-04-02 | CI-4309 | 계정/구성원: 감사로그 다운로드 체크리스트 신설 — raccoon audit operation API, 7일 제한 스펙, 이메일 비동기 발송 패턴 |
+| 2026-04-02 | CI-4301 | 평가: F2(후발 추가 reviewer UserForm 미초기화) 히트 +1, 과거 사례에 CI-4301 추가 — CI-4188 동일 패턴 재발 |
 | 2026-04-02 | CI-4049, CI-4212, CI-4241, CI-4256, CI-4268, CI-4271, CI-4284, QNA-1972, CI-4219, CI-4230 | 완료 이슈 10건 일괄 갱신. OpenAPI 도메인 신규 추가(CI-4049 조직 코드 미입력). 교대근무 여러날 휴가 체크리스트#6+F2(CI-4268). 계정/구성원 문서함 삭제(CI-4256)+접속기록(QNA-1972) 체크리스트 추가. 목표 엑셀 업로드 시계열 매칭(CI-4284) 체크리스트 추가. 급여 중도정산 보험료 히트+1(CI-4212), 겸직 주법인 히트+1(CI-4271). domain-map.ttl 11개 노트 verdict 확정 + 키워드/사용자표현 보강 |
 | 2026-04-01 | kafka-rebalance-issue-report | Kafka 메시지 재발행: consumer group rebalance 루프 진단 체크리스트(#6) + F3 플로우 추가. Tier-2 (cookbook/time-tracking.md) 구현 특이사항 + 과거 사례 추가. domain-map.ttl `CommitFailedException`/`CooperativeStickyAssignor`/`partition.assignment.strategy`/`PREPARING_REBALANCE` 키워드 추가 |
 | 2026-04-01 | CI-4288 | 인사발령: API 발령 displayOrder fallback 버그 — code-fix이므로 진단 플로우 스킵. Tier-2 도메인 컨텍스트(구현 특이사항) + SQL 템플릿(복수 직무 display_order 조회) + 과거 사례 추가. d:kw/d:syn 보강 |
@@ -2105,6 +2141,7 @@ ORDER BY last_modified_date DESC;
 | 2026-04-01 | CI-4279 | 급여: 원천세 신고서 전월미환급세액 미반영 — 과거 사례 추가, SQL 템플릿 추가, glossary g:pay-15 추가. domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-01 | CI-4260 | 급여: 급여정산 실행 시 인가 타임아웃 → 대상자 0명 stuck — 체크리스트#15 추가. flex-permission v3.58.3(6초→10초) + hotfix #8714 수정. domain-map.ttl verdict bug-fix + closed |
 | 2026-04-01 | CI-4049, CI-4270 | 외부 API(OpenAPI) 섹션 신규 추가. 부서 null(조직 코드 미등록) + 403(grantConfigurationId granular 권한 체크). domain-map.ttl :openapi d:kw 보강 + verdicts closed |
+| 2026-04-02 | CI-4306 | 캘린더 연동: F1 히트 +1 (구캘 미연동 349건 재동기화, 이노바이드 199157) |
 | 2026-04-01 | CI-4212, CI-4241, CI-4257, CI-4256 | domain-map.ttl d:st "C" + d:ca 일괄 설정 (이미 COOKBOOK 반영 완료된 이슈 마감 처리) |
 | 2026-03-31 | CI-4270 | OpenAPI: 403 권한 세분화 진단 — 체크리스트 + F1 플로우 신설. Tier-2 openapi.md 생성 (도메인 컨텍스트 + 과거 사례 + SQL). d:kw/glossary 추가 |
 | 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |
