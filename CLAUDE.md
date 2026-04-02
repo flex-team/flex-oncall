@@ -19,13 +19,18 @@
 
 > **트리거**: `~하려면 어떻게 해`, `누가 했는지`, `어디서 봐야 해`, `왜 이런 거야` 등
 > 조사·추적 방법을 묻는 질문은 모두 온콜 워크플로우 진입점이다.
-> 일반 질문으로 분류하지 말고, 반드시 도메인 파악 → 쿡북 확인 순서를 따를 것.
+> 일반 질문으로 분류하지 말고, 반드시 타입 분류 → 도메인 파악 → 쿡북 확인 순서를 따를 것.
 
 ```
 이슈 접수 (Linear/Slack)
+  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec)
   → 도메인 파악 (ops-find-domain)
+  → d:api로 관련 API 패턴 확인 (있으면 즉시 사용, 없으면 코드 탐색)
+  → 타입별 첫 번째 액션:
+    - Error/Perf/Auth → access log 확인
+    - Data → DB 쿼리
+    - Spec → 도메인 스펙 문서 확인 (의도된 동작인지 판별)
   → 쿡북 확인 (brain/COOKBOOK.md — 히트율 순 진단 플로우)
-  → API 이슈일 때: 가설 전에 access log부터 확인
   → 데이터 조사 (DB/OpenSearch/Kafka)
   → 원인 분석 및 해결
   → 운영 노트 기록 (ops-note-issue / ops-investigate-issue)
@@ -38,7 +43,7 @@
 
 | 스킬 | 용도 |
 |------|------|
-| `ops-find-domain` | 이슈 키워드로 도메인 라우팅 — 관련 서브모듈, 쿡북 섹션, 과거 노트 탐색 |
+| `ops-find-domain` | 이슈 타입 분류 + 도메인 라우팅 — 관련 서브모듈, API 패턴, 쿡북 섹션, 과거 노트 탐색 |
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
 | `ops-investigate-issue` | Linear 이슈 조사 → 원인 파악 → operation-note 기록 |
 | `ops-fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
