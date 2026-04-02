@@ -254,7 +254,8 @@
         "경력변경" , "학력변경" , "UserDataApproval" , "activities" , "댓글중복" ,
         "ThreadTopicType.USER_DATA" ,
         "요승설" , "match-step" , "ApprovalPolicy" , "승인정책복구" ,
-        "approval_replacement_target" , "replacement-targets" ;
+        "approval_replacement_target" , "replacement-targets" ,
+        "대결" , "휴직자승인" , "bulk-approve-for-user" ;
   d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
         "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
         "승인 설정/라인 확인해주세요" ,
@@ -263,7 +264,10 @@
         "경력 변경 요청 댓글이 사라져요" ,
         "승인 댓글이 중복으로 보여요" ,
         "요승설이 뭐가 적용됐나요" , "어떤 승인 정책이 매칭됐나요" ,
-        "승인 정책 복구해주세요" ;
+        "승인 정책 복구해주세요" ,
+        "휴직자가 승인 라인에 있어서 승인이 안 돼요" ,
+        "대결 요청" , "결재 진행 중인 건 승인자 교체" ,
+        "퇴사자 미승인건 강제 승인 처리" , "퇴사자가 승인 라인에 있어서 승인이 안 돼요" ;
   d:x   :notification , :time-tracking , :flow .
 
 :data-export
@@ -327,13 +331,15 @@
   d:kw  "전자계약" , "계약서" , "서명" , "digicon" , "SUCCEED" , "IN_PROGRESS" , "IN_REVIEW" ,
         "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ,
         "대량 다운로드" , "bulk-download" , "fileMergeId" ,
-        "임시저장" , "선택발송" , "CandidateSet" , "CandidateUnit" ;
+        "임시저장" , "선택발송" , "CandidateSet" , "CandidateUnit" ,
+        "복제" , "duplicateTemplates" , "duplicate-templates" ;
   d:syn "전자계약 서식이 안 보여요" , "계약서 발송이 안 돼요" ,
         "서명 완료된 계약서 삭제 가능한가요" ,
         "전자계약 일괄 다운로드 링크가 안 나와요" ,
         "대량 다운로드 실패" ,
         "임시저장한 계약서가 사라졌어요" ,
-        "일부만 발송했더니 나머지가 삭제됐어요" ;
+        "일부만 발송했더니 나머지가 삭제됐어요" ,
+        "전자계약 서식 계열사에 복사해달라" ;
   d:x   :account , :notification .
 
 :insurance
@@ -395,7 +401,8 @@
         "calculateOnLeaveMonths" , "HealthInsuranceMonthsCalculator" ,
         "RetireeYearEndHealthInsuranceCalculatorImpl" ,
         "원천세" , "지방소득세" , "withholding_status_report" , "귀속연월" , "신고서" ,
-        "resolveAccessibleUsers" , "PayrollAuthorityJpaEntity" , "사업장담당자" ;
+        "resolveAccessibleUsers" , "PayrollAuthorityJpaEntity" , "사업장담당자" ,
+        "전월미환급세액" , "차월이월환급세액" , "amountCarriedOverFromPrevMonth" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
@@ -409,7 +416,8 @@
         "원천세 신고서 작성 시 연도 선택이 안 돼요" ,
         "중도정산 건강보험이 2배에요" ,
         "휴직자 건강보험 근무월수가 이상해요" ,
-        "급여정산 실행 시 알 수 없는 오류" , "정산 대상자가 0명이에요" ;
+        "급여정산 실행 시 알 수 없는 오류" , "정산 대상자가 0명이에요" ,
+        "전월미환급세액이 안불러와져요" , "연말정산이후 전월미환급세액이 자동으로 안불러와요" ;
   d:x   :time-tracking , :scheduling , :notification .
 
 :flow
@@ -523,6 +531,17 @@ n:CI-4260
   d:ca "2026-04-01" ;
   d:s  "사업장 담당자 계정 급여정산 실행 시 인가 타임아웃(FlexRemoteUnknownStateException) — 회사 전체 구성원 2000명 조회로 timeout. flex-permission v3.58.3(6초→10초) + PR #8714 수정" .
 
+n:CI-4279
+  d:in :payroll ;
+  d:v  "bug" ;
+  d:s  "원천세 신고서 전월 미환급세액 미반영 — 2월 차월이월 환급세액이 3월 신고서 전월 미환급세액으로 자동 불러와지지 않음. 오피스디포코리아" .
+
+n:CI-4292
+  d:in :payroll ;
+  d:x  :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "시급직 주휴수당 유/무급 반전 + 유급휴일시간 비례계산 오류 — TT 주간유급휴일 데이터 동기화 의심. 에디토컴퍼니" .
+
 n:CI-4236
   d:in :notification ;
   d:x  :approval ;
@@ -533,8 +552,17 @@ n:CI-4236
 
 n:CI-4266
   d:in :approval ;
-  d:v  "investigating" ;
-  d:s  "휴직 예정자 승인 라인 174건 강제 승인 요청 — replacement-targets는 퇴직자 전용, bulk-approve-for-user로 처리 예정" .
+  d:v  "operational" ;
+  d:s  "휴직 예정자 승인 라인 강제 승인 — replacement-targets는 퇴직자 전용, bulk-approve-for-user로 29건 처리 완료" ;
+  d:st "C" ;
+  d:ca "2026-04-01" .
+
+n:CI-4286
+  d:in :approval ;
+  d:v  "operational" ;
+  d:s  "퇴사자 미승인건 강제 승인 — bulk-approve-for-user(APPROVAL_DOCUMENT) + sync-with-approval로 workflow 동기화" ;
+  d:st "C" ;
+  d:ca "2026-04-01" .
 
 n:CI-4228
   d:in :approval ;
@@ -1184,6 +1212,11 @@ n:CI-4257
   d:st "C" ;
   d:ca "2026-04-01" ;
   d:s  "계약서 선택 발송 시 미선택 CandidateUnit 물리 삭제 — 의도된 스펙. VOC-2410으로 UX 개선 요청 등록됨" .
+
+n:CI-4283
+  d:in :contract ;
+  d:v  "ops" ;
+  d:s  "주법인 전자계약 서식 계열사 복제 요청 — 엘케이홀딩스(208733) → 엔마트 세류점(227471). duplicateTemplates로 해결" .
 
 n:CI-4251
   d:in :scheduling ;
@@ -2133,6 +2166,18 @@ n:CI-4262
   d:st "C" ;
   d:ca "2026-03-31" .
 
+n:CI-4288
+  d:in :personnel-appointment ;
+  d:v  "investigating" ;
+  d:s  "인사발령 대량 진행 시 동일 직무 부여 후 구성원 목록 대표 직무 표시 불일치 — 크몽(115261)" .
+
+n:CI-4285
+  d:in :time-tracking ;
+  d:v  "ops" ;
+  d:s  "구글 캘린더 미연동 41건 재연동 — 알피(189332), Operation API 1회 호출로 해결" ;
+  d:st "C" ;
+  d:ca "2026-04-01" .
+
 n:CI-4263
   d:in :time-tracking ;
   d:v  "investigating" ;
@@ -2179,6 +2224,13 @@ n:CI-4252
   d:st "C" ;
   d:ca "2026-03-30" ;
   d:s  "glluga JAPAN 기본 휴일 정책에서 근로자의 날(LABOR_DAY) 삭제 요청 — Operation API로 당일 처리" .
+
+n:CI-4291
+  d:in :account ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "구독 플랜 추가 후에도 무료체험 종료 화면 표시 — 무료체험 종료+카드 미등록 시 isShutdownActivated 카드 체크 선행으로 차단 유지(스펙). 종료일 연장+카드 등록으로 해결" .
 
 g:pay-10
   d:in :payroll ;
@@ -2490,6 +2542,11 @@ g:pay-14
   d:in :payroll ;
   d:q  "체류자격 변경 후 고용보험 안 빠져요" ;
   d:a  "user_personal.residence_qualification 변경 → 정산 payee에 반영 → 외국인 로직 적용" .
+
+g:pay-15
+  d:in :payroll ;
+  d:q  "전월미환급세액이 자동으로 안불러와져요" , "연말정산이후 전월미환급세액 안불러오나요" ;
+  d:a  "withholding_status_report 직전 지급월 CLOSED 신고서의 차월이월환급세액 → 전월미환급세액 자동 할당. 동일 지급월에 CLOSED 신고서 복수 존재 시 선택 로직 확인" .
 
 # ============================================================
 # Glossary — GLOSSARY.md migration (fins)

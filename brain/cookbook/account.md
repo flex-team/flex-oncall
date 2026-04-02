@@ -2,6 +2,12 @@
 
 > COOKBOOK.md Tier-1에서 참조되는 상세 SQL 템플릿과 과거 사례 모음
 
+## 도메인 컨텍스트
+### 구현 특이사항
+- **isShutdownActivated() 판단 순서**: 서비스 접근 차단 판단 시 `billingRule 없음 → 차단 상태 → 차단 비활성화(force-open) → 무료체험 기간 내 → 카드 없음 → 활성 피처 확인` 순으로 평가. 카드 null 체크(조건 5)가 활성 피처 체크(조건 6)보다 선행하므로, 카드 미등록 상태에서는 구독 플랜 유무와 무관하게 차단된다 [CI-4291]
+
+---
+
 ## 데이터 접근
 
 ```sql
@@ -51,6 +57,7 @@ WHERE customer_id = ?;
 - **계열사 전환 시 로그인 풀림 (SSO)**: SSO(OAuth2/SAML2/OIDC) PC웹 로그인 시 workspace refresh token 미발급(보안 설계). workspace access token(12h) 만료 후 계열사 전환(`/tokens/customer-user/exchange`) 시 401. 단일 회사 사용은 customer-user token(7일)으로 정상 — **스펙** [CI-4166]
 - **관리자 퇴사 후 OTP 해제 불가**: 기존 관리자가 OTP 설정을 켜고 퇴사 → 신규 관리자 로그인 차단 → DB UPDATE로 해제 — **스펙** [CI-4176]
 - **결제 취소 후 로그인 차단 → 카드 재등록 불가**: 결제 취소 시 접근 차단(스펙). raccoon billing `force-open`으로 임시 접근 허용 → 카드 등록 → `close-forced-open` 원복. 체험 종료일은 결제 이력 있는 고객 변경 불가 — **스펙** [CI-4169]
+- **무료체험 종료 + 카드 미등록 → 구독 추가만으로 접속 불가**: `isShutdownActivated()`에서 카드 null 체크(조건 5)가 활성 피처 체크(조건 6)보다 선행 → 구독 플랜 추가해도 카드 없으면 `return true`(차단). 무료체험 종료일을 오늘 이후로 연장 → 카드 등록 → 결제 생성으로 해결 — **스펙** [CI-4291]
 
 ## 코어 런북 보강 — 데이터 접근 (추가)
 
