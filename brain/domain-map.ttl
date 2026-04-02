@@ -245,9 +245,11 @@
   d:mod "personnel-appointment" , "user_position_time_series_segment" ;
   d:kw  "인사발령" , "발령엑셀" , "발령데이터" , "조직추출" ,
         "user_position_time_series_segment" , "personnel-appointment" ,
-        "발령취소" , "예약발령" ;
+        "발령취소" , "예약발령" ,
+        "대표직무" , "직무순서" , "displayOrder" , "복수직무" ;
   d:syn "인사발령 엑셀 데이터 뽑아주세요" ,
-        "특정 시점의 조직 정보 추출해주세요" ;
+        "특정 시점의 조직 정보 추출해주세요" ,
+        "인사발령 후 대표 직무가 사람마다 다르게 표시돼요" ;
   d:x   :department , :account .
 
 :checklist
@@ -1264,6 +1266,8 @@ n:CI-4257
 n:CI-4283
   d:in :contract ;
   d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "주법인 전자계약 서식 계열사 복제 요청 — 엘케이홀딩스(208733) → 엔마트 세류점(227471). duplicateTemplates로 해결" .
 
 n:CI-4251
@@ -2216,8 +2220,8 @@ n:CI-4262
 
 n:CI-4288
   d:in :personnel-appointment ;
-  d:v  "investigating" ;
-  d:s  "인사발령 대량 진행 시 동일 직무 부여 후 구성원 목록 대표 직무 표시 불일치 — 크몽(115261)" .
+  d:v  "bug-fix" ;
+  d:s  "인사발령 대량 진행 시 동일 직무 부여 후 구성원 목록 대표 직무 표시 불일치 — API 발령 displayOrder fallback 버그 — 크몽(115261)" .
 
 n:CI-4285
   d:in :time-tracking ;

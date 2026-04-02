@@ -2098,6 +2098,7 @@ ORDER BY last_modified_date DESC;
 |------|------|----------|
 | 2026-04-02 | CI-4049, CI-4212, CI-4241, CI-4256, CI-4268, CI-4271, CI-4284, QNA-1972, CI-4219, CI-4230 | 완료 이슈 10건 일괄 갱신. OpenAPI 도메인 신규 추가(CI-4049 조직 코드 미입력). 교대근무 여러날 휴가 체크리스트#6+F2(CI-4268). 계정/구성원 문서함 삭제(CI-4256)+접속기록(QNA-1972) 체크리스트 추가. 목표 엑셀 업로드 시계열 매칭(CI-4284) 체크리스트 추가. 급여 중도정산 보험료 히트+1(CI-4212), 겸직 주법인 히트+1(CI-4271). domain-map.ttl 11개 노트 verdict 확정 + 키워드/사용자표현 보강 |
 | 2026-04-01 | kafka-rebalance-issue-report | Kafka 메시지 재발행: consumer group rebalance 루프 진단 체크리스트(#6) + F3 플로우 추가. Tier-2 (cookbook/time-tracking.md) 구현 특이사항 + 과거 사례 추가. domain-map.ttl `CommitFailedException`/`CooperativeStickyAssignor`/`partition.assignment.strategy`/`PREPARING_REBALANCE` 키워드 추가 |
+| 2026-04-01 | CI-4288 | 인사발령: API 발령 displayOrder fallback 버그 — code-fix이므로 진단 플로우 스킵. Tier-2 도메인 컨텍스트(구현 특이사항) + SQL 템플릿(복수 직무 display_order 조회) + 과거 사례 추가. d:kw/d:syn 보강 |
 | 2026-04-01 | CI-4291 | 빌링: "서비스 이용이 안 돼요" 체크리스트#4 추가 (무료체험 종료+카드 미등록). F1 히트 +1 (2), 무료체험 종료 분기 추가. 과거 사례 추가 |
 | 2026-04-01 | CI-4283 | 전자계약: 계열사 서식 복제 체크리스트(#6) + F3 플로우 추가. d:kw "복제"/"duplicateTemplates", d:syn 추가 |
 | 2026-04-01 | CI-4286 | 승인: F1 히트 +1 (3), APPROVAL_DOCUMENT 카테고리 추가, sync-with-approval 단계(⑥) 추가. 퇴사자 트리거 보강 |
