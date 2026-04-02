@@ -10,7 +10,7 @@
 :notification
   d:n   "알림 (Notification)" ;
   d:cb  "알림 (Notification)" ;
-  d:repo "flex-pavement-backend" , "flex-timetracking-backend" ;
+  d:repo "flex-pavement-backend" , "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "notification-deliver" , "ses-feedback" , "notification-trigger" ;
   d:api "/api/v2/notification" , "/api/v2/inbox" ;
   d:kw  "알림" , "notification" , "이메일" , "CTA" , "push" , "SES" ,
@@ -33,7 +33,7 @@
 :annual-promotion
   d:n   "연차촉진 (Annual Time-Off Promotion)" ;
   d:cb  "연차촉진 (Annual Time-Off Promotion)" ;
-  d:repo "flex-timetracking-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "annual-time-off-boost" ;
   d:kw  "연차촉진" , "연차사용계획" , "촉진문서" ,
         "annual_time_off_boost_history" , "boosted_at" ,
@@ -46,7 +46,7 @@
 :time-tracking
   d:n   "근태/휴가 (Time Tracking / Time Off)" ;
   d:cb  "근태/휴가 (Time Tracking)" ;
-  d:repo "flex-timetracking-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "work-record" , "time-off" , "work-clock" , "work-rule" ,
         "compensatory-time-off" , "holiday" ;
   d:api "/api/v2/time-tracking" , "/api/v2/time-off" , "/api/v2/work-record" ,
@@ -96,7 +96,7 @@
 :scheduling
   d:n   "스케줄링 (Scheduling)" ;
   d:cb  "스케줄링 (Scheduling)" ;
-  d:repo "flex-timetracking-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "work-schedule" , "work-plan" ;
   d:api "/api/v2/work-schedule" , "/api/v2/work-rule" ;
   d:kw  "스케줄" , "게시" , "정시전출근불가" , "연장근무" , "dry-run" ,
@@ -115,7 +115,7 @@
 :shift
   d:n   "교대근무 (Shift)" ;
   d:cb  "교대근무 (Shift)" ;
-  d:repo "flex-timetracking-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "shift-schedule" ;
   d:api "/api/v2/work-shift" ;
   d:kw  "교대근무" , "휴무일" , "퇴근자동조정" , "초단시간근로자" ,
@@ -135,7 +135,7 @@
 :integration
   d:n   "외부 연동 (Integration)" ;
   d:cb  "외부 연동 (Integration)" ;
-  d:repo "flex-timetracking-backend" , "flex-work-event-transmitter-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" , "flex-work-event-transmitter-backend" ;
   d:mod "external-work-clock" , "work-event-transmitter" ;
   d:kw  "세콤" , "SECOM" , "캡스" , "CAPS" , "텔레캅" , "외부연동" ,
         "수동전송" , "customerKey" , "커넥션수" , "PostgreSQL" , "TCP/IP" ,
@@ -176,7 +176,7 @@
 :account
   d:n   "계정/구성원 (Account / Member)" ;
   d:cb  "계정/구성원 (Account / Member)" ;
-  d:repo "flex-core-backend" , "flex-raccoon" ;
+  d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "user" , "Operation API" , "search" ;
   d:api "/api/v2/core" , "/api/v2/workspace" , "/api/v2/onboarding" ;
   d:kw  "이메일변경" , "관리자계정" , "퇴사자계정" , "primary_user_id" ,
@@ -223,7 +223,7 @@
 :department
   d:n   "조직 관리 (Department)" ;
   d:cb  "조직 관리 (Department)" ;
-  d:repo "flex-core-backend" , "flex-raccoon" ;
+  d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "department" , "department_time_series_segment" , "department_time_series_snapshot" ;
   d:kw  "조직삭제" , "조직종료" , "조직변경예약" , "발령예약" , "데드락" ,
         "department_time_series_segment" , "department_change_history_set" ,
@@ -241,7 +241,7 @@
 :personnel-appointment
   d:n   "인사발령 (Personnel Appointment)" ;
   d:cb  "인사발령 (Personnel Appointment)" ;
-  d:repo "flex-core-backend" , "flex-raccoon" ;
+  d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "personnel-appointment" , "user_position_time_series_segment" ;
   d:kw  "인사발령" , "발령엑셀" , "발령데이터" , "조직추출" ,
         "user_position_time_series_segment" , "personnel-appointment" ,
@@ -255,7 +255,7 @@
 :checklist
   d:n   "체크리스트/온보딩 (Checklist / Onboarding)" ;
   d:cb  "체크리스트/온보딩 (Checklist / Onboarding)" ;
-  d:repo "flex-core-backend" ;
+  d:repo "flex-core-backend" , "flex-frontend-apps-people" ;
   d:mod "checklist" ;
   d:kw  "체크리스트" , "온보딩" , "checklist" , "template" , "task" ,
         "체크리스트미발송" , "온보딩완료" ;
@@ -264,7 +264,7 @@
 :approval
   d:n   "승인 (Approval)" ;
   d:cb  "승인 (Approval)" ;
-  d:repo "flex-timetracking-backend" , "flex-core-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" , "flex-core-backend" ;
   d:mod "approval" , "cloud_event_entity" ;
   d:kw  "승인" , "퇴직자승인자교체" , "고아승인요청" , "승인정책" , "target_uid" ,
         "승인완료반영오류" , "re-produce-messages" , "ONGOING" , "APPROVED" ,
@@ -293,7 +293,7 @@
 :data-export
   d:n   "데이터 추출 (Data Export)" ;
   d:cb  "데이터 추출 (Data Export)" ;
-  d:repo "flex-timetracking-backend" ;
+  d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "export" , "download" ;
   d:kw  "엑셀" , "다운로드" , "타임아웃" , "SocketTimeoutException" ,
         "구성원누락" , "core-api" ;
@@ -303,7 +303,7 @@
 :goal
   d:n   "목표 (Goal/OKR)" ;
   d:cb  "목표 (Goal/OKR)" ;
-  d:repo "flex-goal-backend" ;
+  d:repo "flex-goal-backend" , "flex-frontend-apps-performance-management" ;
   d:mod "objective" , "root-objectives" , "objective-search-v3" ;
   d:kw  "목표" , "OKR" , "cycle" , "root-objectives" , "cross-year" ,
         "hit" , "회색목표" , "ObjectiveSearchServiceImpl" ,
@@ -324,7 +324,7 @@
 :review
   d:n   "평가 (Evaluation / Performance Management)" ;
   d:cb  "평가 (Evaluation / Performance Management)" ;
-  d:repo "flex-review-backend" ;
+  d:repo "flex-review-backend" , "flex-frontend-apps-performance-management" ;
   d:mod "review" , "evaluation" , "form" , "grade" , "authorization" ;
   d:kw  "평가" , "리뷰" , "등급" , "DRAFT" , "validation" , "DraftGradeItem" ,
         "공동편집자" , "co-author" , "evaluation" , "폼" , "평가주기" ,
