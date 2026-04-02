@@ -2308,6 +2308,13 @@ n:CI-4291
   d:ca "2026-04-01" ;
   d:s  "구독 플랜 추가 후에도 무료체험 종료 화면 표시 — 무료체험 종료+카드 미등록 시 isShutdownActivated 카드 체크 선행으로 차단 유지(스펙). 종료일 연장+카드 등록으로 해결" .
 
+n:CI-4309
+  d:in :permission ;
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "감사로그 다운로드 요청 — raccoon audit operation API로 메일 발송 처리. customerId 25546, 기간 2025-09-22~2026-01-30" .
+
 g:pay-10
   d:in :payroll ;
   d:q  "외국인 고용보험 공제가 빠졌어요" , "고용보험이 안 빠져요" ;
