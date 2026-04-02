@@ -64,7 +64,9 @@
         "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ,
         "v2_external_calendar_connection" , "v2_oauth_user_token" ,
         "insufficientPermissions" , "FlexCalendarSyncEventConsumer" ,
-        "쉬는 날" , "LABOR_DAY" , "v2_customer_holiday_group" ;
+        "쉬는 날" , "LABOR_DAY" , "v2_customer_holiday_group" ,
+        "CommitFailedException" , "CooperativeStickyAssignor" ,
+        "partition.assignment.strategy" , "PREPARING_REBALANCE" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
         "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
@@ -113,11 +115,15 @@
   d:kw  "교대근무" , "휴무일" , "퇴근자동조정" , "초단시간근로자" ,
         "baseAgreedDayWorkingMinutes" , "access-check" ,
         "filterIsInstance" , "DraftTimeOff" ,
-        "DailyShiftUserWorkScheduleExportDataNightType5Converter" , "timeBlockGroups" ;
+        "DailyShiftUserWorkScheduleExportDataNightType5Converter" , "timeBlockGroups" ,
+        "MultiDayTimeOffCancellationValidator" , "timeOffDeletion" ,
+        "여러날휴가" , "확인필요" , "UserShiftScheduleDraftEntity" ;
   d:syn "교대근무 관리 화면에서 일부 구성원만 조회됩니다" ,
         "퇴근 자동 조정이 안 돼요" ,
         "교대근무 엑셀 업로드 시 연차가 안 들어가요" ,
-        "교대근무 리포트 시간이 다릅니다" ;
+        "교대근무 리포트 시간이 다릅니다" ,
+        "교대근무 스케줄 게시 시 확인 필요 오류" ,
+        "여러날 휴가 등록했는데 게시가 안 돼요" ;
   d:x   :time-tracking , :permission , :payroll .
 
 :integration
@@ -180,7 +186,9 @@
         "겸직" , "직책" , "겸조직" , "겸직책" ,
         "TOTP" , "2차인증" , "OTP잠김" , "겸직주법인전환" , "겸직해지" ,
         "workspace_customer_mapping" , "account_user_mapping" ,
-        "authentication_method" , "verification/identifier" ;
+        "authentication_method" , "verification/identifier" ,
+        "문서함" , "UserDocument" , "UserDocumentFile" , "user_document_aud" ,
+        "login_history" , "z_last_login_at" , "감사로그" , "마지막접속" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -199,7 +207,9 @@
         "대표회사 바꿔주세요" , "겸직 주법인 전환해주세요" ,
         "겸직 해지가 안 돼요" , "비밀번호 초기화해주세요" ,
         "문서함 삭제 복구해주세요" , "문서함이 사라졌어요" ,
-        "신분증 문서함 복구" ;
+        "신분증 문서함 복구" ,
+        "문서함 삭제 복구 가능한가요" , "삭제한 문서함 복구해주세요" ,
+        "마지막 접속 기록 추출해주세요" , "접속 기록 데이터 제공 가능한가요" ;
   d:x   :permission , :department .
 
 :department
@@ -291,12 +301,15 @@
         "userIdHashes" , "departmentIdHashesWithDescendants" ,
         "ancestorObjectiveIds" , "companyObjectives" , "departmentObjectives" ,
         "personalObjectives" , "memberObjectives" , "hasChild" , "detail" ,
-        "500건" , "5000건" , "내목표탭" , "전체목표탭" , "구성원목표탭" ;
+        "500건" , "5000건" , "내목표탭" , "전체목표탭" , "구성원목표탭" ,
+        "엑셀업로드" , "담당주체" , "시계열" , "인사기준일" ;
   d:syn "다른 연도 목표가 보여요" , "회색 목표가 뭐예요?" ,
         "내 목표가 안 보여요" , "목표 검색 결과가 다르게 나와요" ,
         "목표가 너무 많아서 안 나와요" ,
         "전체 목표에서 조직 선택하면 다르게 보여요" ,
-        "하위 목표가 안 펼쳐져요" .
+        "하위 목표가 안 펼쳐져요" ,
+        "목표 엑셀 업로드 시 조직명이 안 맞아요" ,
+        "담당 주체를 잘못 입력했다고 나와요" .
 
 :review
   d:n   "평가 (Evaluation / Performance Management)" ;
@@ -449,13 +462,14 @@
         "external_key_mapping" , "PEOPLE" , "ACCOUNTING" ,
         "CLIENT_CREDENTIALS" , "REFRESH_TOKEN" ,
         "grantConfigurationId" , "grant-configuration" , "OpenFGA" ,
-        "권한세분화" , "조직 코드" , "부서 null" , "AUTHZ_403_000" ;
+        "권한세분화" , "조직 코드" , "부서 null" , "AUTHZ_403_000" ,
+        "grant_configuration" , "FlexObjectAccessDeniedException" ,
+        "batch-check" , "조직코드" , "department.code" , "departments" ;
   d:syn "OpenAPI 토큰이 만료됐어요" , "외부 시스템 연동이 안 돼요" ,
         "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ,
         "OpenAPI로 부서 조회 시 null이 나와요" ,
-        "OpenAPI 호출하면 403 에러가 나요" ;
-        "grant_configuration" , "AUTHZ_403_000" , "FlexObjectAccessDeniedException" ,
-        "batch-check" , "grantConfigurationId" ;
+        "OpenAPI 호출하면 403 에러가 나요" ,
+        "Open API 부서 조회 시 null이 나와요" , "API에서 부서 정보가 안 내려와요" ;
   d:cb  "외부 API / 데이터 통합 (OpenAPI)" ;
   d:x   :payroll , :account , :permission .
 
@@ -488,12 +502,31 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:QNA-1972
+  d:in :account ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "구성원별 마지막 접속 기록 추출 요청 — 해당 데이터 없음, 감사로그 피벗으로 대체 안내" .
+
+n:CI-4275
+  d:in :goal ;
+  d:v  "investigating" ;
+  d:st "A" ;
+  d:s  "삭제된 부서 owner 목표에서 상위목표 변경 시 department 조회 404 → 500 오류" .
+
 n:CI-4249
   d:in :integration ;
   d:v  "operational" ;
   d:st "C" ;
   d:ca "2026-03-31" ;
   d:s  "캡스 기기 변경 후 근태처리옵션 계정 오설정으로 동기화 불량 — 고객사 직접 수정 후 정상화" .
+
+n:CI-4277
+  d:in :integration ;
+  d:v  "config-fix" ;
+  d:st "A" ;
+  d:s  "캡스 연동 미반영 — employee_number 컬럼 매핑 누락으로 transmitter skip" .
 
 n:CI-4246
   d:in :integration ;
@@ -582,6 +615,8 @@ n:CI-4226
 n:CI-4219
   d:in :payroll ;
   d:v  "improvement" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "급여정산 홈 퇴직자 집계에 퇴직예정자 미포함 — payeeCountByEmploymentStatus가 RESIGNATION_SCHEDULED를 IN_EMPLOYMENT로 분류. EPBE-194로 개선 진행 중" .
 
 n:CI-4214 d:in :personnel-appointment ;
@@ -924,12 +959,7 @@ n:CI-4204
   d:st "C" ;
   d:ca "2026-03-31" .
 
-n:CI-4197
-  d:in :payroll ;
-  d:v  "bug" ;
-  d:s  "급여정산 결과 검색 필터 포커스 빠짐 — onFilterChanged 로직 추가로 한글 입력 시 포커스 유실, FE 핫픽스(#1708) 완료" ;
-  d:st "C" ;
-  d:ca "2026-03-31" .
+# retired: CI-4197 (R1 — FE 핫픽스 완료, COOKBOOK 미등록, 재현 불가)
 
 n:CI-4182
   d:in :approval ;
@@ -937,6 +967,20 @@ n:CI-4182
   d:s  "2단계 승인 완료 문서가 진행중으로 표시 — approval-workflow 이벤트 동기화 실패, sync-with-approval로 보정. CI-4019 동일 패턴" ;
   d:st "C" ;
   d:ca "2026-03-31" .
+
+n:CI-4256
+  d:in :account ;
+  d:v  "not-a-bug" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "삭제된 문서함 복구 가능 여부 — hard delete, 복구 불가. UserDocument에 soft delete 없음" .
+
+n:CI-4268
+  d:in :shift ;
+  d:v  "bug-workaround" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "교대근무 스케줄 게시 시 여러날 휴가 확인 필요 오류 — draft에 timeOffDeletion 잔존, MultiDayTimeOffCancellationValidator가 ERROR 반환. draft 제거로 해결" .
 
 # ============================================================
 # Notes — archive (brain/notes/archive/)
@@ -984,12 +1028,7 @@ n:CI-4147
   d:ca "2026-03-29" ;
   d:s  "보상휴가 회수 후 잠금 미해제 — 단일 부여 0분 항목 불필요 잠금 방지, PR #12033 수정 완료" .
 
-n:CI-4165
-  d:in :integration ;
-  d:v  "bug" ;
-  d:st "C" ;
-  d:ca "2026-03-29" ;
-  d:s  "SECOM 배치 동기화 중복 START — checkWorkClockStatus 시간 역전 버그, PR #12058 수정 완료" .
+# retired: CI-4165 (R3 — CI-4207 동일 원인/PR, COOKBOOK이 CI-4207을 대표로 등록)
 
 n:CI-3998
   d:in :shift ;
@@ -2232,8 +2271,22 @@ n:CI-4259 a d:Note ;
 
 n:CI-4271
   d:in :account ;
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "겸직 구성원 주법인 변경 요청 — member_user_mapping 기반 조회 후 Operation API primaryUser 변경. 겸직 미등록 구성원 발견" .
+
+n:CI-4280
+  d:in :account ;
   d:v  "investigating" ;
-  d:s  "겸직 구성원 주법인 변경 요청 — member_user_mapping 기반 조회 후 Operation API primaryUser 변경" .
+  d:s  "팬세이션주식회사 구성원 PC웹 로그인 오류로 접속 불가" .
+
+n:CI-4284
+  d:in :goal ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-01" ;
+  d:s  "목표 엑셀 업로드 시 담당 주체 조직명 매칭 실패 — 시계열 데이터 제약으로 목표 시작일 기준 조직만 매칭" .
 
 n:CI-4291
   d:in :account ;

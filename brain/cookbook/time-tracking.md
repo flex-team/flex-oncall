@@ -42,6 +42,7 @@
 - **OpenSearch sync 지연**: 휴일대체 수정(CANCEL+재등록) 후 OpenSearch에 구 eventId가 잔존할 수 있다. `NON_NULL` + `doc()` partial update 조합이 원인. `/sync-os-work-schedule-advanced`로 재동기화 필요.
 - **보상휴가 lock 비대칭**: 단일 부여에서 추출 0분인 날짜에도 lock이 생성되지만, 벌크 부여에서는 필터링된다. 미회수 assign의 lock이 잔존하여 근무 수정을 차단할 수 있다.
 - **근무유형 삭제는 soft-delete**: `v2_customer_work_rule.active=false`. 유저 매핑(`v2_user_work_rule`)은 time-series라 매핑 존재 자체가 삭제를 막지 않는다. 해석 결과에서 해당 근무유형이 없으면 삭제 가능.
+- **work-schedule-sync consumer group 구조**: `@FlexMessageKafkaListener` 21개가 1개 group ID(`workqueue-kafka-timetracking-search-work-schedule-sync-prod`)를 공유하며, 20개 토픽(75 파티션)을 구독. concurrency=3으로 pod당 63 consumer 인스턴스, 3 pod 기준 ~189 멤버. 이 구성에서 `CooperativeStickyAssignor` 단독 전환 시 STABLE↔PREPARING_REBALANCE 무한 루프 발생 확인(2026-04-01). pod 1대(60 멤버)로 줄여도 동일 현상. 공식 2단계 전환 절차를 따랐음에도 불안정하므로, 이 consumer group에서는 `RangeAssignor` 병행 설정 필수. 중장기로 group ID 분리 검토 필요.
 
 ---
 
@@ -104,5 +105,6 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **보상휴가 회수 후 잠금 미해제 — 고아 lock**: 단일 부여 경로에서 추출 0분인 날짜에도 lock 생성 (벌크 부여는 필터링됨). 미회수 assign의 lock이 잔존하여 근무 수정 차단 — **조사 중 (버그 추정)** [CI-4147]
 - **근무유형 적용 시 500 오류 — 매핑 없는 유저**: `validateBulk`의 `.first {}` 호출이 매핑 없는 유저에서 `NoSuchElementException` 발생. 원인: 근무유형 삭제 후 유저 맵핑 취소 시 비활성 근무유형이 잔존하여 유효 매핑 없는 상태. 데이터 보정(CANCEL INSERT)으로 즉시 대응, `.firstOrNull {}` 방어 처리 코드 수정 예정 — **버그** [CI-4180]
 - **휴일대체 취소 불가 — OpenSearch sync 지연**: 휴일대체 수정(CANCEL+재등록) 후 OpenSearch 문서에 구 eventId가 잔존하여 FE가 이미 CANCEL된 ID로 취소 요청 → 400 오류. `NON_NULL` + `doc()` partial update 조합이 원인. `/sync-os-work-schedule-advanced`로 재동기화하여 해결 — **버그 (OpenSearch sync)** [CI-4217]
+- **Kafka consumer rebalance 무한 루프**: `flex-v2-backend-commons` #1451에서 `CooperativeStickyAssignor` 단독 적용 후, `work-schedule-sync` consumer group이 STABLE↔PREPARING_REBALANCE 반복. `CommitFailedException` 200건+ 발생. 21개 리스너 × 1 group ID × 20토픽 구성에서 cooperative 전환 불안정. assignor를 `RangeAssignor,CooperativeStickyAssignor`로 오버라이드하여 정상화 — **인프라 (config 오버라이드)** [kafka-rebalance-issue-report]
 <!-- TODO: 시나리오 테스트 추가 권장 — 선택적 근무 추천 휴게 자동 입력 조건 검증 -->
 <!-- TODO: 시나리오 테스트 추가 권장 — 휴직 기간 휴가 등록 차단 + 휴가 기간 휴직 등록 허용 비대칭 검증 -->

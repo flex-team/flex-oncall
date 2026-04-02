@@ -281,13 +281,14 @@
 ### 교대근무 (Shift)
 
 #### 진단 체크리스트
-문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다" / "퇴근 자동 조정이 안 돼요" / "초단시간 근로자 연장근무가 이상해요" / "교대근무 리포트 시간이 다릅니다"
+문의: "교대근무 관리 화면에서 일부 구성원만 조회됩니다" / "퇴근 자동 조정이 안 돼요" / "초단시간 근로자 연장근무가 이상해요" / "교대근무 리포트 시간이 다릅니다" / "교대근무 스케줄 게시 시 확인 필요 오류"
 
 1. 구성원 조회 누락 → 해당 관리자의 **근무 권한**과 **휴가 권한** 범위 확인 → 전체 구성원 vs 소속 및 하위 조직 [CI-4103]
 2. 두 권한 중 **범위가 좁은 쪽**이 최종 조회 범위를 결정함. 권한 범위를 맞추도록 안내
 3. 교대근무 휴무일에 스케줄 근무 시 퇴근 자동 조정 실패 → `baseAgreedDayWorkingMinutes`가 휴무일에 0이 되어 일연장 조건이 null로 평가 — **버그 (수정 예정)** [CI-4119]
 4. 초단시간 근로자 연장근무 계산 이상 → `baseAgreedDayWorkingMinutes`가 휴무일에 법적 소정근로시간(예: 168분)으로 사용되어 일연장이 과소 계산. 주휴일은 480분(8시간) 고정인데 휴무일만 비대칭 — **버그 추정** [CI-4048]
 5. 교대근무 일별 리포트 스케줄 시간 불일치 → `DailyShiftUserWorkScheduleExportDataNightType5Converter`에서 `timeBlockGroups` 미정렬 + `associateBy` 덮어쓰기 2중 결함. 2개 이상 교대배치 시 잘못된 블록의 시간 출력 — **버그** [CI-4132]
+6. 여러날 휴가 등록 구성원에 스케줄 게시 시 "확인 필요" 오류 → draft에 `timeOffDeletion` 잔존 여부 확인. `MultiDayTimeOffCancellationValidator`가 여러날 휴가 삭제를 감지하여 ERROR 반환. 해당 구성원의 draft에서 `timeOffDeletion` 제거로 해결 [CI-4268]
 
 **고객 안내 예시 (구성원 누락):**
 > 교대근무 관리 화면에서는 **근무 권한**과 **휴가 권한**을 **모두** 보유한 조직의 구성원만 표시됩니다.
@@ -316,6 +317,22 @@
    근무 조회 권한 범위 vs 휴가 조회 권한 범위
    ├─ 범위 다름 → 스펙. 고객에게 두 권한 범위 통일 안내
    └─ 범위 같은데 누락 → 코드 버그, 조직 필터 로직(교집합/합집합) 확인
+```
+
+**F2: 교대근무 게시 시 여러날 휴가 "확인 필요" — draft timeOffDeletion 잔존** · 히트: 1 · [CI-4268]
+> 트리거: "교대근무 스케줄 게시 시 확인 필요 오류" + 여러날 휴가 등록 구성원
+
+```
+① Access log: dry-run 응답에서 validationType 확인
+   → TIME_OFF_MULTI_DAY_CANCELLATION_NOT_ALLOWED 이면 ②로
+   ↓
+② 해당 구성원의 draft DB에서 timeOffDeletion 확인
+   UserShiftScheduleDraftEntity에서 해당 월/구성원의 timeOffDeletion 컬럼 조회
+   ├─ 여러날 휴가의 eventId 잔존 → ③으로
+   └─ 없음 → 다른 validator 원인 조사
+   ↓
+③ draft에서 timeOffDeletion 제거
+   해당 draft의 timeOffDeletion을 비우고 재게시
 ```
 
 → 상세: [cookbook/shift.md](cookbook/shift.md)
@@ -550,6 +567,22 @@
    `UPDATE flex_auth.customer_credential_t_otp_setting SET required = 0 WHERE customer_id = ?`
    ├─ 쿼리 승인자 필요 (보안 규정)
    └─ 실행 후 고객 로그인 확인 요청
+
+#### 진단 체크리스트 (문서함/서류)
+문의: "삭제한 문서함 복구 가능한가요" / "실수로 문서함을 삭제했어요"
+1. **즉시 답변 가능**: 문서함 삭제는 **hard delete** — 복구 불가 [CI-4256]
+2. 업로드된 서류 파일도 문서함 삭제 시 연계 삭제됨 (`UserDocumentFile` 100건씩 배치 hard delete)
+3. S3 파일 자체는 삭제되지 않으나, DB 레코드가 없어 접근 불가
+4. `@Audited`(Hibernate Envers)로 audit 테이블(`user_document_aud`)에 이력이 남을 수 있으나, 복구 가능 여부는 별도 확인 필요
+
+#### 진단 체크리스트 (접속 기록/감사로그)
+문의: "마지막 접속 기록 추출해주세요" / "접속 기록 데이터 제공 가능한가요"
+1. **직접 제공 불가**: 마지막 접속 기록 데이터는 시스템에 저장하지 않음 [QNA-1972]
+   - `user.z_last_login_at` 컬럼은 2024-10-16에 DROP됨
+   - `login_history`는 로그인 시도만 기록, 이후 활동 미추적
+   - access log의 유저별 마지막 시간을 저장하는 별도 테이블/로직 없음
+2. **대안 안내**: 감사로그에서 최근 로그를 엑셀 다운로드 → 사용자별 피벗을 돌려 "마지막 활동 시점"을 간접 확인
+3. 고객이 원하는 "접속 기록"의 정확한 정의를 먼저 파악 (마지막 로그인 vs 마지막 활동)
 
 #### 진단 체크리스트 (코어 런북 보강)
 문의: "입사일 변경해주세요" / "삭제된 구성원 복구해주세요" / "개인정보 보유현황 파악" / "이메일 대량 변경해주세요"
@@ -888,6 +921,14 @@
 > 내 목표 탭에서 최대 500건까지 표시됩니다. 500건을 초과하는 경우 검색 기능을 활용해주세요.
 > 전체 목표 > 조직 선택 시 서버 내부적으로 최대 5,000건의 목표를 처리합니다.
 
+#### 진단 체크리스트 (엑셀 업로드)
+문의: "목표 엑셀 업로드 시 조직명이 안 맞아요" / "담당 주체를 잘못 입력했다고 나와요"
+1. 오류가 발생하는 조직의 **생성일**과 엑셀에 설정된 **목표 시작일**을 비교 [CI-4284]
+   - 목표 시작일이 조직 생성일보다 이전이면 → 시계열 매칭 실패가 원인
+   - 조직은 시계열 데이터이므로, 엑셀 업로드 시 목표 시작일 기준으로 해당 시점에 존재하는 조직만 매칭됨
+2. **조치**: 목표 시작일을 조직 생성일과 동일하거나 이후로 설정 후 업로드 안내. 업로드 완료 후 목표 시작일은 자유롭게 변경 가능
+3. 근본 개선 티켓: [EPBE-317](https://linear.app/flexteam/issue/EPBE-317/) (부서 name 매칭 개선), [EPBE-318](https://linear.app/flexteam/issue/EPBE-318/) (validation message 개선) — backlog
+
 → 상세: [cookbook/goal.md](cookbook/goal.md)
 
 ---
@@ -986,7 +1027,7 @@
 5. 정산 수정 후 소득세 변경 문의 → 정산 자물쇠 해제 후 재처리 시 소득세 변경 → 1차 정산 ~ 수정 정산 사이에 기본 공제 대상(부양가족 수)이 변경되었는지 확인. `work_income_settlement_payee`의 `dependent_families_count` 조회 [CI-4149]
 6. 급여정산 해지 후 명세서 공개/알림 문의 → 알림은 해지와 무관하게 발송됨. 단, 구독 해지 시 급여 탭 접근 차단되어 실제 열람 불가. 1달 연장 권장 안내 [QNA-1933]
 7. 중도정산 시 건강보험 제외 대상인데 사회보험 금액 표시 → 확정→확정해제→최신정보반영 경로를 거쳤는지 확인. 워크어라운드: 건강보험 제외→확정→확정해제→포함 변경 [CI-4174]
-8. 이관 회사 중도정산 보험료(건강보험/장기요양) 불일치 → 이관 회사 여부 확인 → 맞으면 보험료 리셋(DELETE /premium → recalculate) 안내. 원인: recipient 생성 시점의 불완전한 보수총액으로 1회 계산·저장되며 이관 데이터 추가 후 자동 재계산 안 됨 — 히트: 1 (CI-4212) [CI-4212]
+8. 이관 회사 중도정산 보험료(건강보험/장기요양) 불일치 → 이관 회사 여부 확인 → 맞으면 보험료 리셋(DELETE /premium → recalculate) 안내. 원인: recipient 생성 시점의 불완전한 보수총액으로 1회 계산·저장되며 이관 데이터 추가 후 자동 재계산 안 됨 — 히트: 2 (CI-4212) [CI-4212]
 9. 사회보험 연말정산 기납보험료에 전년도 분할납부 합산 문의 → `HealthInsuranceSettlementReasonCode`의 `YEAR_END_REASON_CODES`에 74번(정산분할고지보험료) 포함 여부 확인 → `PaidSocialInsuranceCalculator.getYearEndTotalAmountByType()`이 귀속연도 필터 없이 전체 합산하는 버그. CI-4174 핫픽스 파생 — 버그 (수정 대기) [CI-4222]
 
 10. 휴직자 지급항목 금액 0원 문의 → `allowance_global` 테이블에서 해당 항목의 `allowance_on_leave_rule` 확인. `DAILY_BASE`이고 `paymentRatio=0`(육아휴직 등)이면 정상 동작. 고객에게 해당 항목의 "휴직월 지급 방법"을 `FULL`(전액지급)로 변경 안내 — 히트: 1 (CI-4225) [CI-4225]
@@ -1690,6 +1731,7 @@ WHERE id IN (?);
 3. `ce_id` 또는 `consume_log`로 operation API 호출하여 재발행
 4. `cloud_event_entity`: 프로듀싱 때 쌓임. 프로듀싱 실패 시 `produced_at`이 안 쌓임
 5. `message_consume_log`: ce_id 단위로 insert. 실패 시 백오프 후 마지막까지 실패하면 에러 로그 찍고 commit
+6. `CommitFailedException` + consumer group STABLE↔PREPARING_REBALANCE 반복 → `partition.assignment.strategy` 설정 변경 여부 확인. `CooperativeStickyAssignor` 단독 전환 시 대규모 group(멤버 100+, 토픽 10+)에서 rebalance 루프 발생 가능. assignor 오버라이드로 `RangeAssignor` 병행 복원 [kafka-rebalance-issue-report]
 
 #### 조사 플로우
 
@@ -1718,6 +1760,29 @@ WHERE id IN (?);
 ② Workspace Operation API 호출
    POST /action/operation/v2/workspace/users/produce
    body: { productType: "USER", identities: [...] }
+```
+
+**F3: Consumer Group Rebalance 무한 루프** · 히트: 1 · [kafka-rebalance-issue-report]
+> 트리거: `CommitFailedException` 반복 + Kafka UI에서 consumer group이 STABLE↔PREPARING_REBALANCE 반복
+
+```
+① Kafka UI에서 consumer group 상태 확인
+   ├─ STABLE + lag 정상 → 다른 원인 (F1~F2 시도)
+   └─ PREPARING_REBALANCE 반복 → ②로
+   ↓
+② consumer group 멤버 수 / 구독 토픽 수 확인
+   → 멤버 100+ 또는 토픽 10+ → 대규모 group 의심 → ③으로
+   ↓
+③ partition.assignment.strategy 설정 확인
+   서비스 application.yml 또는 commons consumer.properties 확인
+   ├─ CooperativeStickyAssignor 단독 → ④로 (eager→cooperative 전환 문제)
+   └─ RangeAssignor 포함 → 다른 원인 (네트워크, max.poll.interval.ms 등)
+   ↓
+④ 즉시 대응: assignor 오버라이드 배포
+   application.yml에 RangeAssignor,CooperativeStickyAssignor 병행 설정
+   ⚠️ flex.v2.message-queue.kafka.consumer.properties 경로로 오버라이드
+      (spring.kafka.consumer.properties가 아님)
+   → 배포 후 Kafka UI에서 STABLE 안정화 확인
 ```
 
 ---
@@ -2005,10 +2070,23 @@ ORDER BY last_modified_date DESC;
 
 ---
 
+### 외부 API / 데이터 통합 (OpenAPI)
+
+#### 진단 체크리스트
+문의: "Open API 부서 조회 시 null이 나와요" / "API에서 부서 정보가 안 내려와요"
+1. Open API에서 부서(departments) 필드가 null → 해당 고객사의 **조직 코드** 등록 여부 확인. 미등록이면 null 반환이 스펙 [CI-4049]
+   - DB: `SELECT code FROM department WHERE id = ?` — null이면 코드 미등록
+   - 참조: [Open API FAQ — 사전 코드 등록 필요](https://developers.flex.team/reference/faq-limitation#항목-별-사전-코드-등록-필요)
+2. 조직 코드 등록 후에도 null → 캐시 갱신 시점 확인 (API 호출 시 실시간 반영되는지)
+
+---
+
 ## 변경 이력
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-02 | CI-4049, CI-4212, CI-4241, CI-4256, CI-4268, CI-4271, CI-4284, QNA-1972, CI-4219, CI-4230 | 완료 이슈 10건 일괄 갱신. OpenAPI 도메인 신규 추가(CI-4049 조직 코드 미입력). 교대근무 여러날 휴가 체크리스트#6+F2(CI-4268). 계정/구성원 문서함 삭제(CI-4256)+접속기록(QNA-1972) 체크리스트 추가. 목표 엑셀 업로드 시계열 매칭(CI-4284) 체크리스트 추가. 급여 중도정산 보험료 히트+1(CI-4212), 겸직 주법인 히트+1(CI-4271). domain-map.ttl 11개 노트 verdict 확정 + 키워드/사용자표현 보강 |
+| 2026-04-01 | kafka-rebalance-issue-report | Kafka 메시지 재발행: consumer group rebalance 루프 진단 체크리스트(#6) + F3 플로우 추가. Tier-2 (cookbook/time-tracking.md) 구현 특이사항 + 과거 사례 추가. domain-map.ttl `CommitFailedException`/`CooperativeStickyAssignor`/`partition.assignment.strategy`/`PREPARING_REBALANCE` 키워드 추가 |
 | 2026-04-01 | CI-4291 | 빌링: "서비스 이용이 안 돼요" 체크리스트#4 추가 (무료체험 종료+카드 미등록). F1 히트 +1 (2), 무료체험 종료 분기 추가. 과거 사례 추가 |
 | 2026-04-01 | CI-4283 | 전자계약: 계열사 서식 복제 체크리스트(#6) + F3 플로우 추가. d:kw "복제"/"duplicateTemplates", d:syn 추가 |
 | 2026-04-01 | CI-4286 | 승인: F1 히트 +1 (3), APPROVAL_DOCUMENT 카테고리 추가, sync-with-approval 단계(⑥) 추가. 퇴사자 트리거 보강 |

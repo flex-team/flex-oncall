@@ -1,0 +1,4 @@
+{"ts":"2026-04-02T09:54:19+0900","epoch":1775091259,"date":"2026-04-02","user":"yj.kim","skill":"ops-find-domain","args":"구성원 정보 엑셀 다운로드 실패","session":"241072ab-f10e-4b60-94f5-b7c4235bf1c1"}
+{"ts":"2026-04-02T09:55:11+0900","epoch":1775091311,"date":"2026-04-02","user":"yj.kim","skill":"opensearch:os-query-log","args":"access log에서 고객사 77952의 구성원 엑셀 다운로드 실패 확인. export 또는 download 관련 API 엔드포인트, 최근 24시간, 5xx 또는 에러 응답 위주로 검색","session":"241072ab-f10e-4b60-94f5-b7c4235bf1c1"}
+{"ts":"2026-04-02T10:04:02+0900","type":"maintain-notes","user":"yj.kim","model":"claude-opus-4-6","env":"local","active_notes":18,"archived":10,"cookbook_updated":true,"notes_archived":["CI-4049","CI-4212","CI-4219","CI-4230","CI-4241","CI-4256","CI-4268","CI-4271","CI-4284","QNA-1972"],"session":"unknown"}
+{"ts":"2026-04-02T10:08:11+0900","epoch":1775092091,"date":"2026-04-02","user":"yj.kim","skill":"git:git-commit","args":"","session":"a28b8292-a758-40fc-9bda-f8dce7b301df"}

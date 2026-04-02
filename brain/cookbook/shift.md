@@ -8,3 +8,4 @@
 - **교대근무 조직 필터링 합집합 버그**: 조직 레벨에서 합집합으로 구현되어 있던 것을 교집합으로 수정 (#11994). — **버그 (수정 완료)** [CI-4103]
 - **교대근무 휴무일 퇴근 자동 조정 실패**: `baseAgreedDayWorkingMinutes=0`으로 일연장 조건이 null → 퇴근 자동 조정 불가. 유급휴일은 480분 기준 별도 처리되나 휴무일은 미고려 — **버그 (수정 예정)** [CI-4119]
 - **초단시간 근로자 연장근무 과소 계산**: 휴무일의 `baseAgreedDayWorkingMinutes` 기준 비대칭. 노무 가이드 변경("휴무일도 8시간 기준") 미반영 추정 — **버그 추정** [CI-4048]
+- **교대근무 스케줄 게시 시 여러날 휴가 "확인 필요" 오류**: 4/25~29 여러날 휴가 등록 구성원에게 다른 날짜 스케줄 배치 후 게시 시 `MultiDayTimeOffCancellationValidator`가 ERROR 반환. draft에 `timeOffDeletion`이 잔존하여, `convertToRegisterModel`에서 eventId → 전체 날짜 확장 시 여러날 휴가 삭제로 감지됨. draft에서 `timeOffDeletion` 제거로 해결. 스펙 변경 전 생성된 draft가 점차 소멸될 것으로 예상 — **버그 워크어라운드** [CI-4268]

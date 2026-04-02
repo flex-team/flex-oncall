@@ -177,3 +177,11 @@ WHERE email LIKE '%@{some-domain}' ORDER BY db_created_at DESC;
 ## 구성원 검색 페이지네이션 — 과거 사례
 
 - **사번 정렬 무한 스크롤 + 겸직 인원 중복 표시**: `ValuesContinuation.print()`에서 `joinToString()`이 null을 "null" 문자열로 변환 → OpenSearch `search_after`에서 keyword 필드의 null(missing)과 "null"은 다른 정렬 위치 → 커서가 null 구간을 벗어나지 못하고 무한 반복. 사번 null 구성원이 있는 모든 회사에서 재현. 겸직은 무관(1 user = 1 document) — **버그** [CI-4232]
+
+## 문서함/서류 — 과거 사례
+
+- **삭제한 문서함 복구 가능 여부**: `UserDocument` 엔티티에 soft delete 컬럼(`deleted_at`, `is_deleted`)이 없으며, 삭제 시 `userDocumentRepository.deleteAll()` (hard delete) 호출. 업로드된 서류(`UserDocumentFile`)도 100건씩 배치 hard delete 연계 삭제. `@Audited` 적용으로 `user_document_aud` 테이블에 이력이 남을 가능성 있으나, 실제 복구 사례 없음. **복구 불가**로 즉시 답변 — **Not a Bug** [CI-4256]
+
+## 접속 기록/감사로그 — 과거 사례
+
+- **마지막 접속 기록 추출 요청**: `user.z_last_login_at`(2024-10-16 DROP), `login_history`(로그인 시도만), access log 유저별 마지막 시간(저장 없음) — 모든 후보 데이터 소스에 해당 없음. 감사로그 엑셀 다운로드 → 사용자별 피벗으로 "마지막 활동 시점" 간접 확인 안내. 유사 사례: [DATA-1792](https://linear.app/flexteam/issue/DATA-1792/) — **제공 불가 (데이터 없음)** [QNA-1972]
