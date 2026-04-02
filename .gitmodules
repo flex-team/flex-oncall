@@ -123,3 +123,13 @@
 	url = git@github.com:flex-team/flex-mobile-bff.git
 	branch = main
 	ignore = dirty
+[submodule "flex-frontend-apps-performance-management"]
+	path = flex-frontend-apps-performance-management
+	url = git@github.com:flex-team/flex-frontend-apps-performance-management.git
+	branch = main
+	ignore = dirty
+[submodule "flex-frontend-apps-people"]
+	path = flex-frontend-apps-people
+	url = git@github.com:flex-team/flex-frontend-apps-people.git
+	branch = main
+	ignore = dirty
