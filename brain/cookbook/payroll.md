@@ -27,6 +27,7 @@
 - **외국인 고용보험**: 체류자격(F-4 등)에 따라 임의가입/당연가입이 나뉜다. 임의가입 대상자는 `employment_insurance_qualification_history`에 취득일이 등록되어 있어야 공제된다. 미등록 시 EXCLUDED 처리.
 - **휴직자 지급항목**: `allowance_on_leave_rule`이 `DAILY_BASE`(기본값)이면 `paymentRatio`와 곱해진다. 육아휴직(`paymentRatio=0`)이면 0원. `FULL`로 변경하면 전액 지급.
 - **구독 해지와 명세서**: 급여정산 구독 해지 후에도 명세서 알림은 발송된다. 급여 탭 접근만 차단되어 열람 불가.
+- **work_record_import 설정**: 정산 템플릿의 `work_record_import`가 정산에 상속된다. `FLEX`이면 TT(근태) 주휴수당 데이터를 조회하고, `NONE`이면 TT 미조회 → default recipient(0원)으로 생성. `NONE` 회사의 주휴수당은 수동 관리가 전제.
 
 ### 자주 혼동되는 것들
 
@@ -44,6 +45,7 @@
 
 - **지급항목 이벤트 이중 발행**: v3.128.0 리팩토링(PR #8655)에서 `AllowanceGlobalCreatedEvent` 발행 경로가 활성화되어 리스너가 전체 템플릿에 매핑 자동 생성. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성 → 고아 레코드. 핫픽스 PR #8686.
 - **사회보험 연말정산 합산 로직**: `PaidSocialInsuranceCalculator.getYearEndTotalAmountByType()`이 귀속연도 필터 없이 전체 합산하는 이슈가 있었다(CI-4222).
+- **주휴수당 default recipient dateRange**: `work_record_import=NONE` 회사에서 주휴수당 default recipient 생성 시 `createRecipients()`가 전체 `regularPayPerHours`의 min/max로 dateRange를 산출한다. 개별 사용자별 범위가 아닌 전체 MAX를 사용하므로, 월 중도 퇴사자의 item.dateRange.to가 base payment 범위를 초과하여 JOIN 실패 → items:[] 반환(Known Issue, CI-4307).
 
 ---
 
@@ -131,6 +133,23 @@ SELECT id, settlement_id, year, working_months, settled_months,
 FROM flex_payroll.retiree_year_end_settlement_social_insurance_recipient
 WHERE user_id = ?
 ORDER BY year;
+
+-- 주휴수당 recipient 및 item dateRange 확인 (work_record_import=NONE 디버깅)
+SELECT slp.id, slp.settlement_id, slp.user_id, slp.amount,
+       slpi.from_date, slpi.to_date
+FROM flex_payroll.statutory_leisure_payment_v2 slp
+LEFT JOIN flex_payroll.statutory_leisure_payment_item slpi ON slpi.payment_id = slp.id
+WHERE slp.settlement_id = ? AND slp.user_id = ?;
+
+-- base payment dateRange 확인 (주휴수당 JOIN 조건 디버깅)
+SELECT user_id, from_date, to_date
+FROM flex_payroll.work_income_base_payment_calculation_basis
+WHERE settlement_id = ? AND user_id = ?;
+
+-- 정산 템플릿 work_record_import 설정 확인
+SELECT id, name, work_record_import
+FROM flex_payroll.work_income_settlement_template
+WHERE id = ?;
 ```
 
 ## 과거 사례
@@ -147,3 +166,4 @@ ORDER BY year;
 - **원천세 신고서 전월미환급세액 미반영 — 동일 지급월 복수 신고서 선택 로직 버그**: `buildReconciliationSummaryFrom()`에서 `maxByOrNull { withholdingStatusReportId }`가 귀속월 무시하고 ID만으로 선택. 동일 지급월에 귀속월이 다른 CLOSED 신고서 복수 존재 시 잘못된 신고서 선택 — **버그(수정 대기)** [CI-4279]
 - **원천세 신고 생성 시 과거 연도 선택 불가 — FE 컴포넌트 재사용(의도된 동작)**: 지방소득세 모달의 귀속연월 picker(`FormField_귀속지급_연월.tsx`)가 "작년 1월"부터만 허용. 원천세 모달에서 재사용 시 도입 이전 연도(2020~2024) 귀속 신고 불가. BE에는 연도 제한 없음. 세금팀 확인 결과 의도된 동작으로 판정 — **Not a Bug(스펙)** [CI-4247]
 - **정산 중 지급항목 추가 시 이벤트 이중 발행으로 고아 레코드 생성**: v3.128.0 리팩토링(PR #8655)에서 `allowanceGlobalCommandPort` → `customerAllowanceUseCase` 변경 시 `AllowanceGlobalCreatedEvent` 발행 경로 활성화. 리스너가 전체 템플릿에 매핑 자동 생성 → 이후 명시적 매핑 시 중복 오류. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성. 121개 고객 488건 고아 레코드. 핫픽스 PR #8686 — **버그(핫픽스 완료, 데이터 패치 대기)** [CI-4216]
+- **퇴직자 급여정산 주휴수당 미노출 — work_record_import=NONE + 월 중도 퇴사자**: `createRecipients()`에서 전체 `regularPayPerHours`의 min/max로 default item dateRange 산출 → 월 중도 퇴사자(offboarded_date < 정산기간 말일)의 item.to가 base payment 범위를 초과 → `createReadData()` JOIN 실패 → items:[] 반환. 말일 퇴사자는 dateRange 일치하여 정상. 워크어라운드: 지급 항목 별도 추가. Known Issue, 스쿼드 과제 대기 — **버그(Won'fix)** [CI-4307]
