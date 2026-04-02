@@ -39,13 +39,14 @@
 
 ```
 이슈 접수 (Linear/Slack)
-  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec)
+  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec/Render)
   → 도메인 파악 (ops-find-domain)
   → d:api로 관련 API 패턴 확인 (있으면 즉시 사용, 없으면 코드 탐색)
   → 타입별 첫 번째 액션:
     - Error/Perf/Auth → access log 확인
     - Data → DB 쿼리
     - Spec → 도메인 스펙 문서 확인 (의도된 동작인지 판별)
+    - Render → access log로 API 응답 확인 → 정상이면 FE 코드 탐색
   → 쿡북 확인 (brain/COOKBOOK.md — 히트율 순 진단 플로우)
   → 데이터 조사 (DB/OpenSearch/Kafka)
   → 원인 분석 및 해결
