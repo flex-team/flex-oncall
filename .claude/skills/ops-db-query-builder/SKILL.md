@@ -5,7 +5,7 @@ description: >
   도메인 라우팅 → 쿡북 확인 → Entity 탐색 → 인덱스 확인 → SQL + 근거 각주 출력.
   Triggers: 'SQL 만들어줘', '쿼리 짜줘', '테이블 뭐야', 'DB 조회 필요',
   또는 다른 ops 스킬 내부에서 DB 쿼리가 필요할 때.
-allowed-tools: Read, Grep, Glob, Agent
+allowed-tools: Read, Grep, Glob, Agent, mcp__plugin_db_flex-db-mcp__db_query, mcp__plugin_db_flex-db-mcp__db_show_indexes, mcp__plugin_db_flex-db-mcp__db_describe, mcp__plugin_db_flex-db-mcp__db_show_tables
 argument-hint: <자연어 질문 (예: "특정 회사의 사번 보유 구성원 수")>
 ---
 
@@ -16,8 +16,8 @@ argument-hint: <자연어 질문 (예: "특정 회사의 사번 보유 구성원
 자연어 질문을 받아 **근거 있는 SQL 쿼리**를 구성하는 오케스트레이터 스킬.
 테이블명/컬럼명을 절대 추측하지 않고, 기존 지식(도메인맵 → 쿡북 → Entity → 인덱스)을 순서대로 탐색한다.
 
-- SQL 쿼리 + 근거 각주를 출력한다. **env 지정이나 실행은 하지 않는다.**
-- 최종 SQL 실행은 호출하는 쪽이 `db:db-query` 로 수행한다.
+- SQL 쿼리를 구성하고, env를 결정한 뒤 **직접 실행까지 수행**한다.
+- 결과와 근거 각주를 함께 출력한다.
 
 ## Input
 
@@ -40,9 +40,10 @@ flowchart TD
     B --> C{쿡북에<br/>SQL 템플릿<br/>있음?}
     C -->|있음| D[Step 2a: 템플릿 기반<br/>Entity 검증만]
     C -->|없음| E[Step 2b: Entity 탐색<br/>@Table + @Column + 컬럼 의미 파악]
-    D --> G[Step 3: 인덱스 확인<br/>env 결정 → db_show_indexes]
+    D --> G[Step 3: 인덱스 확인<br/>db_show_indexes]
     E --> G
     G --> I[Step 4: SQL 구성<br/>+ 근거 각주 출력]
+    I --> J[Step 5: SQL 실행<br/>env 결정 → db_query]
 ```
 
 ### Step 1. 도메인 라우팅 + 쿡북 확인
@@ -205,7 +206,34 @@ db_show_indexes(env={env}, table={테이블명}, caller_id="ops-db-query-builder
 - 근거 각주의 파일 경로는 탐색 시점의 스냅샷이며, 코드 변경 시 무효화될 수 있다.
 - 쿡북 템플릿 기반(Step 2a)인 경우, 출처에 쿡북 섹션도 함께 표기한다.
 
-> 이 스킬은 SQL 구성까지만 담당한다. 출력된 SQL의 실행은 호출하는 쪽이 `db:db-query` 로 수행한다.
+### Step 5. SQL 실행
+
+SQL 구성이 완료되면 실행까지 수행한다.
+
+**env 결정:**
+- 이슈 조사 맥락에서 env가 이미 알려져 있으면 → 그 환경 사용
+- env를 모르면 → 사용자에게 질문: `"어떤 환경(dev/qa/prod)에서 실행할까요?"`
+
+**실행:**
+```
+db_query(env={env}, sql={Step 4에서 구성한 SQL}, caller_id={세션 caller_id}, description="{이슈ID} 조사: {질문 요약}")
+```
+
+**db_query 실행 규칙** (`db:db-query` 스킬 규칙 준수):
+- 모든 테이블에 database를 명시한다 (prod: `flex.`, dev: `flexdev.`, qa: `flexqa.`)
+- 유저 관련 테이블은 `view_` prefix 뷰를 사용한다 (`view_user`, `view_member` 등)
+- 모든 SELECT에 LIMIT을 명시한다 (기본 100)
+- 시간 범위가 필요한데 특정할 수 없으면 사용자에게 질문한다
+- `db_` prefix 시간 컬럼은 KST, 그 외는 UTC 기준이다
+
+**결과 출력:**
+- 쿼리 결과를 근거 각주와 함께 출력한다
+- 50행 초과 시 요약 + 전체 결과 파일 저장 제안
+
+**실행 실패 시:**
+- 1Password 만료 → 사용자에게 `eval $(op signin --account flexteam)` 안내 후 중단
+- 테이블 미허용 (`confirmationRequired`) → 사용자에게 확인 요청 후 `confirmed=true`로 재실행
+- 기타 오류 → 에러 메시지를 그대로 보여주고 중단
 
 ## 에러/예외 처리 요약
 
@@ -227,5 +255,5 @@ db_show_indexes(env={env}, table={테이블명}, caller_id="ops-db-query-builder
 2. **근거 각주 필수** — 모든 SQL 요소에 Entity 출처를 붙인다.
 3. **인덱스 활용** — env가 확인 가능하면 인덱스를 확인하여 WHERE/JOIN이 인덱스를 타도록 구성한다.
 4. **기존 패턴 재활용** — `domain-routing.md` 인라인 수행, `db_show_indexes`/`db_describe` 조합.
-5. **실행 분리** — SQL 구성까지만 담당. env 결정과 실행은 호출 쪽 책임.
+5. **구성부터 실행까지** — SQL 구성 후 env를 결정하여 직접 실행한다. `db:db-query` 스킬의 실행 규칙(database 명시, view_ prefix, LIMIT, 시간대 등)을 준수한다.
 6. **단건 보장 서브쿼리는 IN으로 일괄화 금지** — `= (단건 서브쿼리)` 패턴이 필요한 경우, 여러 입력값을 `IN`으로 묶어 처리하지 않는다. 서브쿼리가 여러 행을 반환하면 상위 쿼리 결과가 교차오염된다. 사용자가 보여준 쿼리 패턴을 임의로 최적화(일괄화)하지 않는다. [CI-4271 — member_user_mapping 기반 겸직 매핑 조회 시 IN 일괄 처리로 잘못된 매핑 반환]

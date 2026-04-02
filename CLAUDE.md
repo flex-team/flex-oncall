@@ -67,10 +67,14 @@
 
 ### 데이터 조사
 
+> **⚠️ DB 조회 규칙**: DB 조회가 필요하면 **반드시 `ops-db-query-builder` 를 통해 수행**한다. `db:db-query` MCP 도구를 직접 호출하지 않는다.
+> - `ops-db-query-builder`가 도메인 라우팅 → Entity 탐색 → SQL 구성 → 실행까지 일괄 처리한다.
+> - 예외: `db_show_tables`, `db_describe` 등 스키마 탐색 목적의 단순 조회는 직접 허용.
+> - 테이블명을 "알고 있다고 생각"해도 건너뛰지 않는다. Entity 출처 없는 SQL은 실행하지 않는다.
+
 | 스킬 | 용도 |
 |------|------|
-| `ops-db-query-builder` | 도메인 라우팅 → Entity 탐색 → 근거 있는 SQL 구성 |
-| `db:db-query` | Aurora MySQL DB 쿼리 (dev/qa/prod) |
+| `ops-db-query-builder` | 도메인 라우팅 → Entity 탐색 → 근거 있는 SQL 구성 → 실행 |
 | `db:db-data-sync` | prod → dev 데이터 복제 (INSERT 생성) |
 | `opensearch:os-query-log` | 애플리케이션 로그 검색 (Kibana) |
 | `opensearch:os-query-service` | TT 서비스 문서 조회 (근무스케줄, 휴가사용 등) |
