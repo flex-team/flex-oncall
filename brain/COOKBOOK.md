@@ -510,21 +510,28 @@
 
 #### 조사 플로우
 
-**F1: Billing force-open (결제 취소 접근 차단)** · 히트: 1 · [CI-4169]
-> 트리거: "결제 취소 후 로그인 불가", "체험 종료일 변경", "카드 등록 불가"
+**F1: Billing 접근 차단 (결제 취소 / 무료체험 종료)** · 히트: 2 · [CI-4169] [CI-4291]
+> 트리거: "결제 취소 후 로그인 불가", "무료체험 종료 후 접속 불가", "구독 추가했는데 로그인 안 됨", "체험 종료일 변경", "카드 등록 불가"
 
 ```
-① 결제 취소 여부 및 접근 차단 상태 확인
-   고객사 Metabase 대시보드에서 구독 상태 확인
+① 라쿤 > 빠른 회사 검색 > 상세 정보에서 확인
+   - 무료체험 종료일
+   - 카드 등록 여부
+   - 구독 상태
    ↓
-② raccoon > billing operation > force-open 실행
+② 원인 분기
+   ├─ 무료체험 종료 + 카드 미등록 → ③-A
+   └─ 결제 취소 / 기타 차단 → ③-B
+   ↓
+③-A 무료체험 종료일을 오늘 이후로 변경
+   → 고객에게 로그인 → 카드 등록 안내
+   → 카드 등록 완료 확인 → 결제 생성
+   ⚠️ 구독 플랜만 추가해도 접속 불가 (카드 체크가 피처 체크보다 선행)
+   ↓
+③-B raccoon > billing operation > force-open 실행
    → 고객사 임시 접근 허용
-   ↓
-③ 고객에게 로그인 → 카드 등록 안내
    → 카드 등록 완료 확인
-   ↓
-④ close-forced-open 실행
-   → 강제 진입 플래그 원복
+   → close-forced-open 실행
    ├─ 체험 종료일 변경 요청 시 → 결제 이력 있으면 변경 불가 안내
    └─ 청구서 삭제 요청 시 → 삭제 불가 안내
 ```
@@ -655,8 +662,14 @@
 2. **퇴직자 vs 삭제된 구성원 구분**: 퇴직자는 제품의 "퇴직자 승인자 교체" 기능 사용 가능. 삭제된 구성원은 퇴사 이벤트가 발행되지 않아 `approval_replacement_target`에 미등록 → 교체 불가, Operation API로 강제 승인 필요 [CI-4228] [CI-3769]
 3. 고객에게 "강제 승인 처리" 동의 확인 후 `bulk-approve-for-user` API 호출:
    - `POST /api/operation/v2/approval/process/customers/{customerId}/users/{userId}/bulk-approve-for-user`
-   - Body: `{ "categories": ["TIME_OFF", "WORK_RECORD"] }` (카테고리는 대상에 맞게 조정)
+   - Body: `{ "categories": ["TIME_OFF", "WORK_RECORD", "APPROVAL_DOCUMENT"] }` (카테고리는 대상에 맞게 조정, 워크플로우 문서는 `APPROVAL_DOCUMENT` 포함 [CI-4286])
 4. 응답의 `succeededProcesses` / `failedProcesses`로 처리 결과 확인
+
+문의: "휴직자가 승인 라인에 있어서 승인이 안 돼요" / "휴직 예정자 승인건 처리해주세요" / "대결 요청"
+1. 휴직자는 퇴직자가 아니므로 제품의 "퇴직자 승인자 교체" 기능 사용 **불가** — `replacement-targets`는 퇴사 이벤트 기반 퇴직자 전용 [CI-4266]
+2. `approval_process` 조회 시 미처리 상태값은 **`ONGOING`** (REQUESTED/IN_PROGRESS 아님) [CI-4266]
+3. 고객에게 "강제 승인 처리" 동의 확인 후 `bulk-approve-for-user` API 호출 (F1 플로우와 동일)
+4. 향후 방지: 고객에게 승인 정책에서 휴직자를 다른 승인자로 변경하도록 안내
 
 문의: "승인 설정/라인을 확인해주세요" / "위젯 종료 시 근무 승인이 안 돼요"
 1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
@@ -702,26 +715,36 @@
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 
-**F1: 삭제된 구성원 승인건 강제 승인** · 히트: 1 · [CI-4228] [CI-3769]
-> 트리거: "삭제된 구성원이 승인 라인에 있어 승인 불가" / "삭제한 사람 승인건 처리"
+**F1: 비활성 사용자(삭제/휴직/퇴직) 승인건 강제 승인** · 히트: 3 · [CI-4228] [CI-3769] [CI-4266] [CI-4286]
+> 트리거: "삭제된 구성원이 승인 라인에 있어 승인 불가" / "삭제한 사람 승인건 처리" / "휴직자 승인건 처리" / "퇴사자 미승인건 처리" / "대결 요청"
 
 ```
-① Metabase 대시보드(#245)에서 미처리 승인건 확인
-   https://metabase.dp.grapeisfruit.com/dashboard/245 에서 userId 검색
-   ↓
-② 퇴직자 vs 삭제된 구성원 판별
+① 대상 사용자 상태 확인
+   view_user에서 status/deleted_date 확인
    ├─ 퇴직자(resigned) → 제품의 "퇴직자 승인자 교체" 기능 사용
-   └─ 삭제된 구성원(deleted) → 퇴사 이벤트 미발행, approval_replacement_target 미등록 → ③으로
+   ├─ 삭제된 구성원(deleted) → ②로
+   └─ 휴직자/퇴직자(UI 교체 불가) → ②로 (replacement-targets 미지원)
+   ↓
+② approval_process에서 미처리 건 확인
+   ⚠️ 미처리 상태값은 ONGOING (REQUESTED/IN_PROGRESS 아님)
+   approval_line_actor에서 해당 userId가 PENDING인 건 조회
    ↓
 ③ 고객에게 강제 승인 동의 확인
    ↓
 ④ bulk-approve-for-user API 호출
    POST /api/operation/v2/approval/process/customers/{customerId}/users/{userId}/bulk-approve-for-user
-   Body: { "categories": ["TIME_OFF", "WORK_RECORD"] }
+   Body: { "categories": ["TIME_OFF", "WORK_RECORD", "APPROVAL_DOCUMENT"] }
+   ⚠️ categories는 대상 문서 유형에 맞게 조정 (워크플로우 문서는 APPROVAL_DOCUMENT)
    ↓
 ⑤ 응답 확인
-   ├─ succeededProcesses 에 대상 건 포함 → 완료
+   ├─ succeededProcesses 에 대상 건 포함 → ⑥으로
    └─ failedProcesses 에 건 포함 → 실패 원인 확인 (로그 조회)
+   ↓
+⑥ workflow_task 상태 확인
+   workflow_task.status가 여전히 IN_PROGRESS이면 → sync-with-approval API 호출
+   POST /api/v2/operation/workflow/customers/{customerId}/users/{writerId}/approval-document/{documentKey}/sync-with-approval
+   ├─ DONE으로 변경 → 완료
+   └─ 이미 DONE → ⑤에서 완료
 ```
 
 **F2: 승인 리마인드 발송자 추적** · 히트: 1 · [CI-4203]
@@ -862,13 +885,14 @@
 ### 전자계약 (Contract/Digicon)
 
 #### 진단 체크리스트
-문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요" / "임시저장한 계약서가 사라졌어요"
+문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요" / "임시저장한 계약서가 사라졌어요" / "전자계약 서식 계열사에 복사해달라"
 1. 서명 완료(SUCCEED) 계약서 삭제/취소 요청 → **삭제 불가(스펙)**. `DigiconProgressStatus.cancelable()` = `this === IN_PROGRESS`만 허용. 올바른 내용으로 새 계약서 재발송 안내 [CI-4152]
 2. 서식(template) 삭제자 추적 → access log에서 `DELETE /api/v2/digicon/templates` 검색 → traceId로 호출 체인 추적 → permission-api 호출에서 userId 확인 → view_user 테이블로 이메일 매핑. 감사로그에 서식 삭제 미기록 [CI-4168]
 3. 양식 개수 제한 여부 → 제한 없음 [CI-4168]
 4. 삭제된 서식 복구 → Operation API: `POST /api/operation/v2/digicon/customers/{customerId}/restore-deleted-templates` [CI-4168]
 5. 선택 발송 후 임시저장 계약서 삭제 문의 → **현재 스펙**. CandidateSet = 한 번의 발송 단위로 설계되어, 선택 발송 시 미선택 CandidateUnit은 물리 삭제됨. 복구 불가. VOC-2410으로 개선 요청 등록됨 [CI-4257]
-6. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
+6. 계열사에 전자계약 서식 복제 요청 → raccoon prod `POST /api/operation/v2/digicon/duplicate-templates` 실행. `originalCustomerId`(주법인) + `targetCustomerIds`(계열사 목록) + `postfix`("" = 원본 제목 유지) [CI-4283]
+7. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
 
 #### 조사 플로우
 
@@ -896,6 +920,23 @@
 ```
 
 → 상세: [cookbook/contract.md](cookbook/contract.md)
+
+**F3: 계열사 전자계약 서식 복제** · 히트: 1 · [CI-4283]
+> 트리거: "전자계약 서식 계열사에 복사해달라" / "주법인 서식 이관"
+
+```
+① 주법인 customer_id와 대상 계열사 customer_id 목록 파악
+   → Linear 이슈 설명 또는 CS 문의에서 확인
+   ↓
+② raccoon prod Swagger → digicon → duplicate-templates 실행
+   POST /api/operation/v2/digicon/duplicate-templates
+   {"originalCustomerId": ?, "targetCustomerIds": [?], "postfix": ""}
+   → 200 OK 확인
+   ↓
+③ 고객사에 복제 결과 확인 요청
+   ├─ 서식 목록 정상 노출 + 편집 가능 → 완료
+   └─ 문제 있음 → 서식/placeholder DB 직접 확인
+```
 
 **F2: 전자계약 일괄 다운로드 링크 미생성** · 히트: 1 · [CI-4248]
 > 트리거: "일괄 다운로드 링크가 안 나와요" / "대량 다운로드 실패"
@@ -1594,7 +1635,7 @@ WHERE id IN (?);
 
 #### 조사 플로우
 
-**F1: 구글 캘린더 동기화 실패** · 히트: 2 · [CI-4235] [CI-4262] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
+**F1: 구글 캘린더 동기화 실패** · 히트: 3 · [CI-4235] [CI-4262] [CI-4285] · [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c) · [SP팀 가이드](https://www.notion.so/04010959f43d486aaabe63a144a68339)
 > 트리거: "구글 캘린더에 휴가가 안 떠요" / "미연동 일정 재연동 요청"
 
 ```
@@ -1914,6 +1955,7 @@ ORDER BY last_modified_date DESC;
 1. **구독 만료** → 구독 추가 (기본 구독 반드시 포함) + 일할 결제 필요 시 수동청구
 2. **카드 미등록** → raccoon billing `force-open`으로 임시 진입 허용 → 고객에게 카드 등록 안내 → 미결제분 수동 청구
 3. **미결제 차단** → raccoon에서 임시차단해제
+4. **무료체험 종료 + 카드 미등록** → 구독 플랜만 추가해도 접속 차단 유지 (isShutdownActivated에서 카드 null 체크가 피처 체크보다 선행). 무료체험 종료일을 오늘 이후로 연장 → 고객 카드 등록 → 결제 생성 [CI-4291]
 
 문의: "영수증 발급해주세요" / "크레딧 결제 영수증 주세요"
 1. PG 카드 결제 영수증은 기본 제공
@@ -1957,6 +1999,10 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-01 | CI-4291 | 빌링: "서비스 이용이 안 돼요" 체크리스트#4 추가 (무료체험 종료+카드 미등록). F1 히트 +1 (2), 무료체험 종료 분기 추가. 과거 사례 추가 |
+| 2026-04-01 | CI-4283 | 전자계약: 계열사 서식 복제 체크리스트(#6) + F3 플로우 추가. d:kw "복제"/"duplicateTemplates", d:syn 추가 |
+| 2026-04-01 | CI-4286 | 승인: F1 히트 +1 (3), APPROVAL_DOCUMENT 카테고리 추가, sync-with-approval 단계(⑥) 추가. 퇴사자 트리거 보강 |
+| 2026-04-01 | CI-4279 | 급여: 원천세 신고서 전월미환급세액 미반영 — 과거 사례 추가, SQL 템플릿 추가, glossary g:pay-15 추가. domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-01 | CI-4260 | 급여: 급여정산 실행 시 인가 타임아웃 → 대상자 0명 stuck — 체크리스트#15 추가. flex-permission v3.58.3(6초→10초) + hotfix #8714 수정. domain-map.ttl verdict bug-fix + closed |
 | 2026-04-01 | CI-4049, CI-4270 | 외부 API(OpenAPI) 섹션 신규 추가. 부서 null(조직 코드 미등록) + 403(grantConfigurationId granular 권한 체크). domain-map.ttl :openapi d:kw 보강 + verdicts closed |
 | 2026-04-01 | CI-4212, CI-4241, CI-4257, CI-4256 | domain-map.ttl d:st "C" + d:ca 일괄 설정 (이미 COOKBOOK 반영 완료된 이슈 마감 처리) |
@@ -1965,6 +2011,7 @@ ORDER BY last_modified_date DESC;
 | 2026-03-30 | CI-4236 | 알림: ops-learn — Tier-2 (cookbook/notification.md) file merge 중복 확인 SQL 템플릿 + 과거 사례 추가. domain-map.ttl `render_job`/`max.poll.interval.ms` 키워드 추가, verdict closed |
 | 2026-03-31 | CI-4256 | 계정/구성원: 문서함 삭제 복구 — 진단 체크리스트 + 플로우(F3) 추가. hard delete + Envers audit 기반 복구 검토 패턴. d:kw "문서함"/"user_document", d:syn 추가 |
 | 2026-03-31 | CI-4262 | 캘린더 연동: F1 히트 +1 (구글캘린더 수동 연동 365건, Operation API batch 처리) |
+| 2026-04-01 | CI-4285 | 캘린더 연동: F1 히트 +1 (구캘 미연동 41건 재동기화, 알피 189332) |
 | 2026-03-31 | CI-4257 | 전자계약: 선택 발송 시 미선택 CandidateUnit 삭제는 스펙 — 체크리스트#5 추가, 과거 사례 추가, d:kw/d:syn 보강 |
 | 2026-03-30 | CI-4240, CI-4248 | 파일 서비스 밀림(CI-4236) 연관 다운로드 실패 패턴 통합 학습. 급여: 원천징수영수증 일괄 다운로드 실패 — 체크리스트#12 + F-pay-2 플로우 추가, 과거 사례 추가. 전자계약: 과거 사례 추가. domain-map.ttl verdict `"ops"` + `d:st "C"` 완료 |
 | 2026-03-30 | CI-4248 | 전자계약: 일괄 다운로드 링크 미생성 — 진단 체크리스트 #5 추가, F2 플로우 추가 (merge 큐 지연 → 임시 파일 만료 패턴), domain-map.ttl 키워드(대량 다운로드/bulk-download/fileMergeId) + 사용자 표현 추가 |

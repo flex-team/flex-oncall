@@ -143,6 +143,8 @@ WHERE customer_id = ? AND target_uid = '{task_key}' AND target_category = 'APPRO
 - **승인 리마인드 발송자 추적**: 관리자가 갑자기 승인 확인 알림을 받았다고 문의. access log 조회로 실제 발송자(다른 관리자)를 특정 — **스펙 (로그 확인)** [CI-4203]
 - **경력/학력 변경 요청 댓글 누락/중복**: FE가 UserDataApproval activities API를 `sort=ASC&size=1`로 호출하여 action history만 반환, 댓글 누락. BE 응답은 정상(targetUid 기반 UUID 고유키로 cross-contamination 없음). 동일 댓글 2회 POST도 확인(idempotency 미적용) — **버그 (FE)** [CI-4193]
 
+- **휴직자 승인 라인 강제 승인**: 휴직 예정자가 승인 라인에 포함된 TIME_OFF 미처리 건 29건. `replacement-targets`는 퇴직자 전용(퇴사 이벤트 기반)으로 휴직자 미지원. 고객 동의 후 `bulk-approve-for-user` API로 강제 승인 처리 — **스펙 (운영 대응, 반복 패턴)** [CI-4266]
+
 ## 코어 런북 보강 — 과거 사례 (추가)
 
 - **삭제된 구성원 승인건 강제 승인**: 관리자가 2차 조직장 계정을 삭제하여 승인 라인 깨짐. 삭제된 사용자는 퇴사 이벤트 미발행 → `approval_replacement_target` 미등록 → 퇴직자 교체 불가. `bulk-approve-for-user` API로 강제 승인 처리 — **스펙 (운영 대응, 반복 패턴)** [CI-4228] [CI-3769]

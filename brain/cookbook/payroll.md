@@ -34,6 +34,12 @@
 - **중도정산 보험료 vs 일반 정산 보험료**: 중도정산은 recipient 생성 시점에 1회 계산·저장. 이관 데이터 추가 후에도 자동 재계산 안 됨. 보험료 리셋(DELETE /premium → recalculate) 필요.
 - **확정해제 리버트 범위**: 2026-03-20 핫픽스 이전에는 확정해제 시 사회보험 연말정산 금액이 리버트되지 않았다. 핫픽스 이전 데이터는 수동 워크어라운드 필요.
 
+### 원천세 신고서
+
+- **원천세 신고서(`withholding_status_report`)**: 귀속월/지급월 단위로 생성. 상태는 DRAFT(작성중) → CLOSED(완료) → DELETED(삭제).
+- **환급세액 이월**: 신고서 생성 시 직전 지급월의 CLOSED 신고서에서 (20) 차월이월환급세액을 가져와 현재 신고서의 (12) 전월미환급세액에 자동 할당. `WithholdingStatusReportModelFactoryImpl.buildReconciliationSummaryFrom()`.
+- **동일 지급월에 복수 신고서**: 귀속월이 다른 신고서가 같은 지급월에 존재할 수 있음 (예: 1월귀속 2월지급 + 2월귀속 2월지급). 매월/반기 신고 구분(`isHalfType()`)으로 필터링 후 선택.
+
 ### 구현 특이사항
 
 - **지급항목 이벤트 이중 발행**: v3.128.0 리팩토링(PR #8655)에서 `AllowanceGlobalCreatedEvent` 발행 경로가 활성화되어 리스너가 전체 템플릿에 매핑 자동 생성. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성 → 고아 레코드. 핫픽스 PR #8686.
@@ -111,6 +117,14 @@ SELECT rev, audit_created_at, residence_qualification, nationality, update_actor
 FROM flex.user_personal_audit
 WHERE user_id = ? ORDER BY audit_created_at;
 
+-- 원천세 신고서 상태 및 환급세액 확인
+SELECT id, status, header_types, header_belonged_year_month, header_paid_year_month,
+  summary_amount_carried_over_from_prev_month, summary_amount_to_carry_over_to_next_month,
+  db_created_at
+FROM flex_payroll.withholding_status_report
+WHERE customer_id = ? AND header_paid_year_month = ?
+ORDER BY header_paid_year_month, id;
+
 -- 중도정산 사회보험 recipient 확인 (보험료 생성 시점·근무월수·정산월수)
 SELECT id, settlement_id, year, working_months, settled_months,
        db_created_at, db_updated_at
@@ -130,5 +144,6 @@ ORDER BY year;
 - **육아휴직자 보육수당 자동산정 0원**: `allowance_on_leave_rule=DAILY_BASE`(기본값) + `paymentRatio=0`(육아휴직) → `금액 × 0 = 0원`. 지급항목의 휴직월 지급 방법을 `FULL`로 변경하면 해결. 고객사 관리자가 UI에서 직접 변경 가능 — **스펙** [CI-4225]
 - **외국인(F-4) 고용보험 미공제 — 체류자격 변경 + 자격관리 미등록**: 체류자격 UNKNOWN→F4 변경 후 정산 시 외국인 로직 적용. F-4는 임의가입 대상으로 employment_insurance_qualification_history에 취득일이 필요하나 0건 → EXCLUDED. 사회보험 자격관리에서 취득일 등록 안내 — **스펙** [CI-4241]
 - **원천징수영수증 일괄 다운로드 실패 — 파일 서비스 밀림**: `async-bulk-download-withholding-receipts-by-filter` 비동기 태스크가 파일 서비스 merge 큐 지연(CI-4236)으로 실패. API 접수는 정상(~100ms)이나 백그라운드 파일 생성에서 실패/타임아웃. 파일 서비스 장애 해소 후 재시도로 정상화 — **Not a Bug(ops)** [CI-4240]
+- **원천세 신고서 전월미환급세액 미반영 — 동일 지급월 복수 신고서 선택 로직 버그**: `buildReconciliationSummaryFrom()`에서 `maxByOrNull { withholdingStatusReportId }`가 귀속월 무시하고 ID만으로 선택. 동일 지급월에 귀속월이 다른 CLOSED 신고서 복수 존재 시 잘못된 신고서 선택 — **버그(수정 대기)** [CI-4279]
 - **원천세 신고 생성 시 과거 연도 선택 불가 — FE 컴포넌트 재사용(의도된 동작)**: 지방소득세 모달의 귀속연월 picker(`FormField_귀속지급_연월.tsx`)가 "작년 1월"부터만 허용. 원천세 모달에서 재사용 시 도입 이전 연도(2020~2024) 귀속 신고 불가. BE에는 연도 제한 없음. 세금팀 확인 결과 의도된 동작으로 판정 — **Not a Bug(스펙)** [CI-4247]
 - **정산 중 지급항목 추가 시 이벤트 이중 발행으로 고아 레코드 생성**: v3.128.0 리팩토링(PR #8655)에서 `allowanceGlobalCommandPort` → `customerAllowanceUseCase` 변경 시 `AllowanceGlobalCreatedEvent` 발행 경로 활성화. 리스너가 전체 템플릿에 매핑 자동 생성 → 이후 명시적 매핑 시 중복 오류. `@Transactional` 부재로 allowance_global+매핑은 커밋되지만 customizable_allowance 미생성. 121개 고객 488건 고아 레코드. 핫픽스 PR #8686 — **버그(핫픽스 완료, 데이터 패치 대기)** [CI-4216]
