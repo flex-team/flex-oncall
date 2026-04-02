@@ -545,8 +545,9 @@ n:QNA-1972
 
 n:CI-4275
   d:in :goal ;
-  d:v  "investigating" ;
-  d:st "A" ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "삭제된 부서 owner 목표에서 상위목표 변경 시 department 조회 404 → 500 오류" .
 
 n:CI-4249
@@ -559,7 +560,8 @@ n:CI-4249
 n:CI-4277
   d:in :integration ;
   d:v  "config-fix" ;
-  d:st "A" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "캡스 연동 미반영 — employee_number 컬럼 매핑 누락으로 transmitter skip" .
 
 n:CI-4246
@@ -600,7 +602,9 @@ n:CI-4260
 
 n:CI-4279
   d:in :payroll ;
-  d:v  "bug" ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "원천세 신고서 전월 미환급세액 미반영 — 2월 차월이월 환급세액이 3월 신고서 전월 미환급세액으로 자동 불러와지지 않음. 오피스디포코리아" .
 
 n:CI-4297
@@ -2253,7 +2257,9 @@ n:CI-4262
 
 n:CI-4288
   d:in :personnel-appointment ;
-  d:v  "bug-fix" ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "인사발령 대량 진행 시 동일 직무 부여 후 구성원 목록 대표 직무 표시 불일치 — API 발령 displayOrder fallback 버그 — 크몽(115261)" .
 
 n:CI-4285
@@ -2279,7 +2285,9 @@ n:CI-4309
 
 n:CI-4263
   d:in :time-tracking ;
-  d:v  "investigating" ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
   d:s  "세콤 퇴근 타각 시 연장근무 최소시간 제한(minimumInputMinutes=30, FLOOR)으로 자동 퇴근 중단 — 설정에 의한 정상 동작" .
 
 n:CI-4245
@@ -2361,6 +2369,27 @@ n:CI-4309
   d:st "C" ;
   d:ca "2026-04-02" ;
   d:s  "감사로그 다운로드 요청 — raccoon audit operation API로 메일 발송 처리. customerId 25546, 기간 2025-09-22~2026-01-30" .
+
+n:CI-4244
+  d:in :approval ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "워크플로우 문서 강제 승인 요청 — 승인라인(DEPT) 구성원 전원 퇴사로 진행 불가. flex-flow-backend operation API로 강제 승인 처리. 세잎프닥(161808)" .
+
+n:CI-4278
+  d:in :time-tracking ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "근무 종료 시 실시간 기록 불가 오류 — 3/31 근무유형 재배정으로 선택적 근로 시간제(realTimeRecord=false) 적용. 설정에 의한 정상 동작. 원리테일익스페리언스코리아(207555)" .
+
+n:CI-4299
+  d:in :approval ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "DEV 환경 승인 정책 관리 근무/휴가 미응답 — flex-approval-backend SB4 마이그레이션 임시 fallback으로 timetracking internal-api-client 연결 실패. DEV 한정 기능 저하" .
 
 g:pay-10
   d:in :payroll ;
