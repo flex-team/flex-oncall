@@ -32,6 +32,7 @@
 
 :annual-promotion
   d:n   "연차촉진 (Annual Time-Off Promotion)" ;
+  d:tpl "event-calculated" ;
   d:cb  "연차촉진 (Annual Time-Off Promotion)" ;
   d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "annual-time-off-boost" ;
@@ -45,6 +46,7 @@
 
 :time-tracking
   d:n   "근태/휴가 (Time Tracking / Time Off)" ;
+  d:tpl "event-calculated" ;
   d:cb  "근태/휴가 (Time Tracking)" ;
   d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "work-record" , "time-off" , "work-clock" , "work-rule" ,
@@ -95,6 +97,7 @@
 
 :scheduling
   d:n   "스케줄링 (Scheduling)" ;
+  d:tpl "event-calculated" ;
   d:cb  "스케줄링 (Scheduling)" ;
   d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "work-schedule" , "work-plan" ;
@@ -114,6 +117,7 @@
 
 :shift
   d:n   "교대근무 (Shift)" ;
+  d:tpl "event-calculated" ;
   d:cb  "교대근무 (Shift)" ;
   d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" ;
   d:mod "shift-schedule" ;
@@ -159,6 +163,7 @@
 
 :permission
   d:n   "권한 (Permission)" ;
+  d:tpl "hierarchy" ;
   d:cb  "권한 (Permission)" ;
   d:repo "flex-core-backend" , "flex-permission-backend" ;
   d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ,
@@ -175,6 +180,7 @@
 
 :account
   d:n   "계정/구성원 (Account / Member)" ;
+  d:tpl "hierarchy" ;
   d:cb  "계정/구성원 (Account / Member)" ;
   d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "user" , "Operation API" , "search" ;
@@ -226,6 +232,7 @@
 
 :department
   d:n   "조직 관리 (Department)" ;
+  d:tpl "hierarchy" ;
   d:cb  "조직 관리 (Department)" ;
   d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "department" , "department_time_series_segment" , "department_time_series_snapshot" ;
@@ -244,6 +251,7 @@
 
 :personnel-appointment
   d:n   "인사발령 (Personnel Appointment)" ;
+  d:tpl "hierarchy" ;
   d:cb  "인사발령 (Personnel Appointment)" ;
   d:repo "flex-core-backend" , "flex-raccoon" , "flex-frontend-apps-people" ;
   d:mod "personnel-appointment" , "user_position_time_series_segment" ;
@@ -258,6 +266,7 @@
 
 :checklist
   d:n   "체크리스트/온보딩 (Checklist / Onboarding)" ;
+  d:tpl "state-machine" ;
   d:cb  "체크리스트/온보딩 (Checklist / Onboarding)" ;
   d:repo "flex-core-backend" , "flex-frontend-apps-people" ;
   d:mod "checklist" ;
@@ -267,6 +276,7 @@
 
 :approval
   d:n   "승인 (Approval)" ;
+  d:tpl "state-machine" ;
   d:cb  "승인 (Approval)" ;
   d:repo "flex-timetracking-backend" , "flex-timetracking-frontend" , "flex-core-backend" ;
   d:mod "approval" , "cloud_event_entity" ;
@@ -352,6 +362,7 @@
 
 :contract
   d:n   "전자계약 (Digital Contract / Digicon)" ;
+  d:tpl "state-machine" ;
   d:cb  "전자계약 (Digital Contract / Digicon)" ;
   d:repo "flex-digicon-backend" ;
   d:mod "digicon" , "candidate" , "integration" , "kafka-consumer" , "kafka-producer" ;
@@ -405,6 +416,7 @@
 
 :payroll
   d:n   "급여 (Payroll)" ;
+  d:tpl "snapshot" ;
   d:cb  "급여 (Payroll)" ;
   d:repo "flex-payroll-backend" , "flex-pavement-backend" ;
   d:mod "payroll" , "settlement" , "payslip" ;
@@ -457,6 +469,7 @@
 
 :flow
   d:n   "협업/커뮤니케이션 (Flow)" ;
+  d:tpl "state-machine" ;
   d:repo "flex-flow-backend" ;
   d:mod "notice" , "thread" , "todo" , "meeting" , "issue" ,
         "summary" , "transcript" , "collaborative-document" , "sequence" ;
@@ -497,6 +510,7 @@
 
 :yearend
   d:n   "연말정산 (Year-End Tax Settlement)" ;
+  d:tpl "snapshot" ;
   d:repo "flex-yearend-backend" ;
   d:mod "yearend" , "deduction" , "deduction-aggregation" ,
         "settlement-core" , "settlement-report" , "retirement" ,
@@ -530,6 +544,11 @@ n:CI-4307
   d:st "C" ;
   d:ca "2026-04-02" ;
   d:s  "퇴직자 급여정산 주휴수당 대상자 미노출 — work_record_import=NONE 회사의 월 중도 퇴사자가 주휴수당 대상자에서 누락. Known issue, 워크어라운드로 해결" .
+
+n:CI-4304
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:s  "근태 대시보드 근무시간미달 고스트 periodicWorkSchedule 조회 미필터링 — 근무규칙 변경 시 boundary clamp로 생성된 고스트 periodic 문서가 조회 시 필터링되지 않아 잘못된 미달 표시. startDateOfPeriod.dayOfMonth 검증 부재" .
 
 n:CI-4301
   d:in :review ;
