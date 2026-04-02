@@ -26,7 +26,18 @@ $ARGUMENTS
 
 ## Execution
 
-### 1. domain-router 에이전트 호출
+### 1. 이슈 타입 분류
+
+domain-router 에이전트를 호출하기 전에, 입력 텍스트에서 이슈 타입을 판별한다.
+
+`brain/triage-signals.md` 의 키워드/판단 기준을 참조하여 5개 타입 중 하나로 분류:
+**Error**(오류형) / **Data**(데이터형) / **Perf**(성능형) / **Auth**(권한형) / **Spec**(스펙질문형)
+
+- 명확한 장애 신호(500, 타임아웃 등)가 있으면 해당 타입 우선
+- 모호하면 Spec으로 시작
+- 분류가 불가능하면 "미분류"로 표시하고 Fallback 전략 안내
+
+### 2. domain-router 에이전트 호출
 
 TTL 파싱과 매칭 알고리즘은 **domain-router 에이전트**에 위임한다.
 
@@ -40,12 +51,15 @@ Agent(
 
 에이전트는 compact JSON을 반환한다. TTL 원문은 에이전트 컨텍스트 안에서만 사용되고, 호출자(이 스킬)에게는 결과 JSON만 전달된다.
 
-### 2. 결과 렌더링
+### 3. 결과 렌더링
 
 에이전트가 반환한 JSON을 아래 마크다운 포맷으로 변환한다. **빈 섹션은 생략**한다.
 
 ```markdown
 ## 🔍 Domain Routing Result
+
+[분류] {타입 한국어} ({타입 영어})
+[첫 번째 액션] {triage-signals.md 해당 타입의 "첫 번째 액션"}
 
 ### Primary: :{domain-id} ({도메인 이름}) — score: {점수}
 - **repo**: {서브모듈 목록, 쉼표 구분}
@@ -53,6 +67,11 @@ Agent(
 - **cookbook**: "{COOKBOOK 섹션 이름}"
 - **context**: `cookbook/{domain-id}.md#도메인-컨텍스트` (존재하면)
 - **score breakdown**: {d:kw=N, g:q=N, phrase=N, ...}
+
+### 관련 API 패턴
+- {d:api 값들, 줄바꿈 구분}
+  → access log 검색 시 `request_uri` 필터로 바로 활용 가능
+  → OpenSearch 인덱스: `flex-app.be-*` (Error/Perf/Auth 타입일 때)
 
 ### Related
 - :{domain-id} ({도메인 이름}) — `d:x` 연결
@@ -69,7 +88,7 @@ Agent(
 | {ticket-id} | {summary} | {verdict} | active/archive |
 ```
 
-### 3. 다음 단계 안내
+### 4. 다음 단계 안내
 
 결과 출력 후, 사용자에게 다음 단계를 안내한다:
 

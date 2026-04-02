@@ -12,6 +12,7 @@
   d:cb  "알림 (Notification)" ;
   d:repo "flex-pavement-backend" , "flex-timetracking-backend" ;
   d:mod "notification-deliver" , "ses-feedback" , "notification-trigger" ;
+  d:api "/api/v2/notification" , "/api/v2/inbox" ;
   d:kw  "알림" , "notification" , "이메일" , "CTA" , "push" , "SES" ,
         "mail_send_history" , "notification_deliver" , "notification_type" ,
         "title_meta_map" , "Core알림" ,
@@ -48,6 +49,9 @@
   d:repo "flex-timetracking-backend" ;
   d:mod "work-record" , "time-off" , "work-clock" , "work-rule" ,
         "compensatory-time-off" , "holiday" ;
+  d:api "/api/v2/time-tracking" , "/api/v2/time-off" , "/api/v2/work-record" ,
+        "/api/v2/time-tracking/work-clock" ,
+        "/api/v3/time-tracking" , "/api/v3/time-off" ;
   d:kw  "휴가" , "연차" , "time-off" , "근태" , "출퇴근" , "휴일대체" ,
         "보상휴가" , "포괄임금" , "근로시간" , "휴직" , "휴게" ,
         "OpenSearch" , "holidayProps" , "v2_user_work_rule" ,
@@ -94,6 +98,7 @@
   d:cb  "스케줄링 (Scheduling)" ;
   d:repo "flex-timetracking-backend" ;
   d:mod "work-schedule" , "work-plan" ;
+  d:api "/api/v2/work-schedule" , "/api/v2/work-rule" ;
   d:kw  "스케줄" , "게시" , "정시전출근불가" , "연장근무" , "dry-run" ,
         "validationLevel" , "v2_user_non_repetitive_work_plan" ,
         "agreedWorkingMinutes" , "requiredWorkingMinutes" ,
@@ -112,6 +117,7 @@
   d:cb  "교대근무 (Shift)" ;
   d:repo "flex-timetracking-backend" ;
   d:mod "shift-schedule" ;
+  d:api "/api/v2/work-shift" ;
   d:kw  "교대근무" , "휴무일" , "퇴근자동조정" , "초단시간근로자" ,
         "baseAgreedDayWorkingMinutes" , "access-check" ,
         "filterIsInstance" , "DraftTimeOff" ,
@@ -157,6 +163,7 @@
   d:repo "flex-core-backend" , "flex-permission-backend" ;
   d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ,
         "authorization" , "permission" , "authorization-cache" , "pip-service" ;
+  d:api "/api/v2/permission" , "/api/v2/auth/tracing" ;
   d:kw  "권한" , "감사로그" , "audit_log" , "flex_grant_subject" ,
         "물리삭제" , "최고관리자" , "자동부여" ,
         "OpenFGA" , "DocumentDB" , "Redis캐시" , "분산락" ,
@@ -171,6 +178,7 @@
   d:cb  "계정/구성원 (Account / Member)" ;
   d:repo "flex-core-backend" , "flex-raccoon" ;
   d:mod "user" , "Operation API" , "search" ;
+  d:api "/api/v2/core" , "/api/v2/workspace" , "/api/v2/onboarding" ;
   d:kw  "이메일변경" , "관리자계정" , "퇴사자계정" , "primary_user_id" ,
         "UserEmailChange" , "다법인" , "계열사전환" , "로그인풀림" , "exchange" ,
         "자동로그아웃" , "입사일변경" , "company_join_date" , "삭제된구성원" ,
@@ -394,6 +402,7 @@
   d:cb  "급여 (Payroll)" ;
   d:repo "flex-payroll-backend" , "flex-pavement-backend" ;
   d:mod "payroll" , "settlement" , "payslip" ;
+  d:api "/api/v2/payroll" ;
   d:kw  "급여" , "정산" , "소득세" , "부양가족" ,
         "payroll_legal_payment_setting" , "work_income_settlement_payee" ,
         "dependent_families_count" , "올림" , "구독해지" , "명세서" ,

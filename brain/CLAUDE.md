@@ -55,9 +55,14 @@ brain/
 
 ```
 이슈 인입 (Linear/Slack)
+  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec)
   → domain-map.ttl에서 키워드 + 용어집(g:*)으로 도메인 특정 및 용어 변환
+  → d:api로 관련 API 패턴 확인 (있으면 즉시 사용, 없으면 코드 탐색)
+  → 타입별 첫 번째 액션:
+    - Error/Perf/Auth → access log 확인
+    - Data → DB 쿼리
+    - Spec → 도메인 스펙 문서 확인 (의도된 동작인지 판별)
   → COOKBOOK.md에서 진단 플로우 확인 (히트율 순)
-  → 필요한 서브모듈만 recursive update
   → 조사 수행 → 노트 기록
   → 해결 완료 시 → close-note로 전체 갱신
 ```
@@ -131,8 +136,11 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 ### 1. 티켓 확인
 
 - Linear 이슈 내용을 읽고 증상을 정리한다.
+- **이슈 타입 분류**: triage-signals.md를 참조하여 Error/Data/Perf/Auth/Spec 중 하나로 분류한다.
+  - 타입에 따라 첫 번째 조사 액션이 달라진다 (Error/Perf/Auth → access log, Data → DB 쿼리, Spec → 도메인 스펙 문서).
 - domain-map.ttl 키워드 매칭으로 도메인을 특정한다.
 - domain-map.ttl g:* 블록에서 사용자 표현을 시스템 용어로 변환한다.
+- d:api로 관련 API 패턴을 확인한다 (있으면 즉시 활용, 없으면 코드 탐색으로 진행).
 
 ### 2. 분석 기록
 

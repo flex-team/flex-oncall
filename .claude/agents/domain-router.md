@@ -82,6 +82,7 @@ Read: brain/domain-map.ttl
 
 primary + related 도메인에서 수집:
 - `d:repo` (서브모듈), `d:mod` (모듈), `d:cb` (쿡북 섹션)
+- `d:api` (API 엔드포인트 prefix — access log 검색용)
 - 매칭된 `g:*` (용어집 히트)
 - 매칭된 `n:*` (관련 노트 — ID, 요약, verdict, active/archive)
 
@@ -99,6 +100,7 @@ primary + related 도메인에서 수집:
       "score": 9,
       "repos": ["flex-timetracking-backend"],
       "modules": ["/work-record", "/time-off"],
+      "apis": ["/api/v2/time-tracking", "/api/v2/time-off"],
       "cookbook": "섹션 이름"
     }
   ],
