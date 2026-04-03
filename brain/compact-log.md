@@ -4,6 +4,11 @@
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
 |------|------|------|-----------|------|
+| 2026-04-03 | CI-4172 | R1 retire | — | integration: 세콤 퇴근 후 근무 확정 시 GPS null 검증 누락 버그. 코드 수정, COOKBOOK 미등록 |
+| 2026-04-03 | CI-4181 | R1 retire | — | approval: ApprovalPolicy.update() 교체 흐름 validateHasCustomerSuperAdmin 오류. 코드 수정, COOKBOOK 미등록 |
+| 2026-04-03 | CI-4208 | R1 retire | — | payroll: 원천징수확인서 발급번호 자동채번 미지원, 서식 수정. COOKBOOK 미등록 |
+| 2026-04-03 | MEMO-20260320 | compact | d:st "C" 설정 | annual-promotion: 연차촉진 크론 간헐적 OkHttp 타임아웃. 모니터링 메모 보존 |
+| 2026-04-03 | CI-4025, CI-4096, CI-4164 | compact | d:st "C" + d:ca | maintain-notes: 3건 아카이브 — CI-4025(expected-behavior), CI-4096(wont-fix), CI-4164(bug+code-fix) |
 | 2026-04-02 | CI-4197 | R1 retire | — | payroll: FE 포커스 버그, 핫픽스(#1708) 완료, COOKBOOK 미등록, 재현 불가 |
 | 2026-04-02 | CI-4165 | R3 retire | — | integration: CI-4207 동일 원인(checkWorkClockStatus PR #12058), COOKBOOK이 CI-4207 대표 등록 |
 | 2026-04-01 | CI-4178 | orphan-compact | d:v, d:st "C" 설정 | payroll: CI-4174 동일 원인 재정산 버그. 파일 없는 orphan 항목 정리 |

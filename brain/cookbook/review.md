@@ -37,6 +37,8 @@
 
 - **Vaadin admin**: 평가 관련 일부 관리 기능은 Vaadin 기반 어드민 화면을 사용한다. 일반 API와 다른 UI 스택.
 - **마이그레이션 스케줄러**: `MigrationScheduler`는 뉴성과관리 전환 시 구 리뷰를 자동 soft delete. OpenSearch 로그에서 `[migrate]` 태그로 추적 가능.
+- **EvaluationStep 크론 자동 복구**: `EvaluationStepScheduler`가 **매분 0초**에 실행되어 `RESERVED` 상태 단계를 `IN_PROGRESS`로 자동 전환한다. "지금 시작" 후 FE-BE 시간차로 RESERVED 상태가 된 경우 최대 1분 내 자동 복구. 고객 문의 시 "잠시 후 자동으로 해결됐습니다"라고 안내 가능. [CI-4164]
+- **"지금 시작" vs "예약" 구분**: `period.start`가 서버 현재 시각보다 미래이면 BE는 무조건 `RESERVED`로 판정한다(`now < period.start` strict 비교). FE-BE 시계 차이가 수 초 이상이면 "지금 시작"이 "예약"으로 저장될 수 있다. API 변경으로 근본 수정됨(2026-03). [CI-4164]
 
 ---
 

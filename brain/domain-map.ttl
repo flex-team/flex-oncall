@@ -928,7 +928,9 @@ n:CI-4159
 n:CI-4164
   d:in :review ;
   d:v  "bug" ;
-  d:s  "평가 '지금 시작' 클릭 시 예약 상태로 저장 — FE-BE 시간차 tolerance 부재" .
+  d:s  "평가 '지금 시작' 클릭 시 예약 상태로 저장 — FE-BE 시간차 tolerance 부재" ;
+  d:st "C" ;
+  d:ca "2026-04-03" .
 
 n:CI-4166
   d:in :account ;
@@ -978,8 +980,10 @@ n:CI-3970
 
 n:CI-4025
   d:in :time-tracking ;
-  d:v  "investigating" ;
-  d:s  "대체휴가 잔여 일수가 부여/사용 내역 없이 증가" .
+  d:v  "expected-behavior" ;
+  d:s  "대체휴가 잔여 일수가 부여/사용 내역 없이 증가" ;
+  d:st "C" ;
+  d:ca "2026-04-03" .
 
 n:CI-4049
   d:in :openapi ;
@@ -995,8 +999,10 @@ n:CI-4073
 
 n:CI-4096
   d:in :payroll ;
-  d:v  "investigating" ;
-  d:s  "급여정산 수정 시 정산이름 입력 오류" .
+  d:v  "wont-fix" ;
+  d:s  "급여정산 수정 시 정산이름 입력 오류" ;
+  d:st "C" ;
+  d:ca "2026-04-03" .
 
 n:CI-4169
   d:in :account ;
@@ -2409,6 +2415,17 @@ n:CI-4299
   d:st "C" ;
   d:ca "2026-04-02" ;
   d:s  "DEV 환경 승인 정책 관리 근무/휴가 미응답 — flex-approval-backend SB4 마이그레이션 임시 fallback으로 timetracking internal-api-client 연결 실패. DEV 한정 기능 저하" .
+
+# retired: CI-4172 (R1 — bug: work-schedule null GPS 검증 누락. 코드 수정 필요, COOKBOOK 미등록)
+# retired: CI-4181 (R1 — bug: ApprovalPolicy.update() 교체 흐름에서 validateHasCustomerSuperAdmin 오류. 코드 수정 필요, COOKBOOK 미등록)
+# retired: CI-4208 (R1 — 원천징수확인서 발급번호 자동채번 미지원, 서식 수정. COOKBOOK 미등록)
+
+n:MEMO-20260320
+  d:in :annual-promotion ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "스마트 연차 촉진 크론 간헐적 타임아웃 — 대량 회사 순회 중 OkHttp 네트워크 불안정. 특정 회사 문제 아님" .
 
 g:pay-10
   d:in :payroll ;
