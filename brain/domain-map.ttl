@@ -545,15 +545,6 @@ n:CI-4307
   d:ca "2026-04-02" ;
   d:s  "퇴직자 급여정산 주휴수당 대상자 미노출 — work_record_import=NONE 회사의 월 중도 퇴사자가 주휴수당 대상자에서 누락. Known issue, 워크어라운드로 해결" .
 
-n:CI-4304
-  d:in :time-tracking ;
-  d:v  "investigating" ;
-  d:s  "근태 대시보드 근무시간미달 고스트 periodicWorkSchedule 조회 미필터링 — 근무규칙 변경 시 boundary clamp로 생성된 고스트 periodic 문서가 조회 시 필터링되지 않아 잘못된 미달 표시. startDateOfPeriod.dayOfMonth 검증 부재" .
-
-n:CI-4301
-  d:in :review ;
-  d:v  "ops" ;
-  d:s  "평가지 생성 시 오류 — evaluation_reviewer.user_form_ids 빈 배열, CI-4188 동일 패턴 재발. Operation API initialize-user-form으로 수동 해결" .
 
 n:QNA-1972
   d:in :account ;
@@ -626,10 +617,6 @@ n:CI-4279
   d:ca "2026-04-02" ;
   d:s  "원천세 신고서 전월 미환급세액 미반영 — 2월 차월이월 환급세액이 3월 신고서 전월 미환급세액으로 자동 불러와지지 않음. 오피스디포코리아" .
 
-n:CI-4297
-  d:in :contract ;
-  d:v  "investigating" ;
-  d:s  "전자계약 연락처 placeholder 렌더링 미치환 — renderer(flex-html)가 USER_CONTACT_NUMBER 마커를 값으로 치환하지 않음. 디노티시아(207050)" .
 
 n:CI-4292
   d:in :payroll ;
@@ -637,10 +624,6 @@ n:CI-4292
   d:v  "investigating" ;
   d:s  "시급직 주휴수당 유/무급 반전 + 유급휴일시간 비례계산 오류 — TT 주간유급휴일 데이터 동기화 의심. 에디토컴퍼니" .
 
-n:CI-4307
-  d:in :payroll ;
-  d:v  "bug" ;
-  d:s  "퇴직자 급여정산 주휴수당 미노출 — work_record_import=NONE 회사에서 월 중도 퇴사자의 default item dateRange가 전체 정산 기간으로 설정되어 base payment 범위와 불일치. Known Issue, 워크어라운드(지급 항목 별도 추가)" .
 
 n:CI-4236
   d:in :notification ;
@@ -1058,6 +1041,49 @@ n:CI-4268
 # ============================================================
 # Notes — archive (brain/notes/archive/)
 # ============================================================
+
+n:CI-4304
+  d:in :time-tracking ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "근태 대시보드 근무시간미달 고스트 periodicWorkSchedule 조회 미필터링 — 근무규칙 변경 시 boundary clamp로 생성된 고스트 periodic 문서가 조회 시 필터링되지 않아 잘못된 미달 표시. 고스트 ES 직접 삭제로 즉시 조치, 근본 수정은 별도 이슈" .
+
+n:CI-4301
+  d:in :review ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-02" ;
+  d:s  "평가지 생성 시 오류 — evaluation_reviewer.user_form_ids 빈 배열, CI-4188 동일 패턴 재발. Operation API initialize-user-form으로 수동 해결" .
+
+n:CI-4297
+  d:in :contract ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "전자계약 연락처 placeholder 렌더링 미치환 — hyphen 포함 전화번호를 renderer(flex-html)가 유효하지 않은 값으로 처리. FE 핫픽스(hyphen 제거) + BE Operation API로 93건 데이터 수정. 디노티시아(207050)" .
+
+n:CI-4259
+  d:in :time-tracking ;
+  d:x  :scheduling ;
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "모바일앱 일정 휴가 이벤트 중복 표시 — all-day event를 UTC 자정으로 저장 후 KST 범위 overlap 비교 시 전날 이벤트 포함. CalendarEventQueryUseCase에 DATE 이벤트 후처리 필터 추가로 해결" .
+
+n:CI-4227
+  d:in :payroll ;
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "급여이관 후 명세서 지급금액 0원 — 2025-03-19 backfill 시 2023-11 이관 데이터 35건 누락. 신 item 테이블에 행 없음. PR #8691 LegacyPaymentDataReader 추가로 backfill 재실행 경로 확보" .
+
+n:CI-4117
+  d:in :review ;
+  d:v  "bug-fix" ;
+  d:st "C" ;
+  d:ca "2026-03-24" ;
+  d:s  "평가 등급 15개 초과 시 validation 오류 — DraftGradeItemCommandService.create()에 등급 개수 검증 누락. 15개까지만 허용하는 validation 추가 완료" .
 
 n:CI-4229
   d:in :fins ;
@@ -2301,13 +2327,6 @@ n:CI-4306
   d:st "C" ;
   d:ca "2026-04-02" .
 
-n:CI-4309
-  d:in :account ;
-  d:v  "ops" ;
-  d:s  "감사로그 장기간 다운로드 요청 — raccoon audit operation API로 이메일 발송, 7일 제한 스펙" ;
-  d:st "C" ;
-  d:ca "2026-04-02" .
-
 n:CI-4263
   d:in :time-tracking ;
   d:v  "spec" ;
@@ -2356,11 +2375,6 @@ n:CI-4252
   d:st "C" ;
   d:ca "2026-03-30" ;
   d:s  "glluga JAPAN 기본 휴일 정책에서 근로자의 날(LABOR_DAY) 삭제 요청 — Operation API로 당일 처리" .
-
-n:CI-4259 a d:Note ;
-    d:s "모바일앱 일정에서 휴가 이벤트 2건 중복 표시 — flex-mobile-bff getScheduleCalendarsEvents API 응답에 2건 포함" ;
-    d:in :time-tracking ;
-    d:verdict "investigating" .
 
 n:CI-4271
   d:in :account ;

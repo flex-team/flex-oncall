@@ -3,6 +3,13 @@
 > ops-compact 스킬이 자동으로 기록한다. 오판 발견 시 git revert로 복원 가능.
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
+| 2026-04-04 | CI-4304 | compact | COOKBOOK 대시보드-F2 신규 | time-tracking: 고스트 periodicWorkSchedule 조회 미필터링 패턴. 재동기화 불가 핵심 |
+| 2026-04-04 | CI-4301 | compact | COOKBOOK 평가-F2 히트+1 | review: CI-4188 동일 패턴 재발, 히트율 반영 |
+| 2026-04-04 | CI-4297 | compact | COOKBOOK 전자계약 체크리스트 8번 추가 | contract: hyphen 포함 전화번호 renderer 미치환 + placeholder 암호화 패턴 |
+| 2026-04-04 | CI-4117 | compact | COOKBOOK 평가-F3 히트+1 | review: 등급 validation 코드픽스, 히트율 반영 |
+| 2026-04-04 | CI-4259 | compact | — (code-fix, COOKBOOK 스킵) | time-tracking: all-day event UTC 타임존 버그. 코드 수정으로 해결 |
+| 2026-04-04 | CI-4227 | compact | — (code-fix, COOKBOOK 스킵) | payroll: backfill 누락. PR #8691 코드 수정으로 해결 |
+| 2026-04-04 | CI-4307,CI-4309,CI-4259(old) | dup-clean | — | domain-map.ttl 중복 항목 3건 제거 |
 |------|------|------|-----------|------|
 | 2026-04-03 | CI-4172 | R1 retire | — | integration: 세콤 퇴근 후 근무 확정 시 GPS null 검증 누락 버그. 코드 수정, COOKBOOK 미등록 |
 | 2026-04-03 | CI-4181 | R1 retire | — | approval: ApprovalPolicy.update() 교체 흐름 validateHasCustomerSuperAdmin 오류. 코드 수정, COOKBOOK 미등록 |

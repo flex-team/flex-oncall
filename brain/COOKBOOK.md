@@ -10,7 +10,7 @@
 > 타입 정의: **Error**(오류/버그/장애) · **Data**(데이터 누락/불일치/조회) · **Perf**(성능/타임아웃) · **Auth**(접근 차단/권한/인증) · **Spec**(스펙 확인/운영 절차)
 
 - **오류형 (Error)**: 알림-F3(이메일 CTA 이동 불일치), 알림-F4(메일 중복 발신), 근태-F4(휴일대체 취소 불가), 교대근무-F2(스케줄 게시 확인 필요), 외부연동-F3(세콤 출근 미반영), 외부연동-F4(ODBC 연결 실패), 전자계약-F2(일괄 다운로드 링크 미생성), 평가-F3(등급 배분 validation 오류), 평가-F2(UserForm 미초기화), 조직관리-F2(발령+조직 데드락), 캘린더-F1(구글 캘린더 동기화 실패), Kafka-F1(컨슘 실패), Kafka-F2(사용자 변경 이벤트 실패), Kafka-F3(Rebalance 무한 루프)
-- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 워크플로우-F1(임시저장 문서 소실)
+- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 워크플로우-F1(임시저장 문서 소실)
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
 - **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동)
@@ -967,6 +967,9 @@
 5. 선택 발송 후 임시저장 계약서 삭제 문의 → **현재 스펙**. CandidateSet = 한 번의 발송 단위로 설계되어, 선택 발송 시 미선택 CandidateUnit은 물리 삭제됨. 복구 불가. VOC-2410으로 개선 요청 등록됨 [CI-4257]
 6. 계열사에 전자계약 서식 복제 요청 → raccoon prod `POST /api/operation/v2/digicon/duplicate-templates` 실행. `originalCustomerId`(주법인) + `targetCustomerIds`(계열사 목록) + `postfix`("" = 원본 제목 유지) [CI-4283]
 7. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
+8. 연락처/placeholder 필드가 공란으로 발송 → renderer(flex-html)의 값 치환 실패 가능성 확인. hyphen(-)이 포함된 전화번호는 renderer가 유효하지 않은 값으로 처리하여 placeholder 미치환 [CI-4297]
+   - `placeholder_values`는 `{cipher}` 암호화 → DB 직접 UPDATE 불가. 수정 필요 시 애플리케이션 레벨 Operation API 사용
+   - PDF는 실시간 렌더링 구조 (저장 X) → DB 값 수정 시 재발송 없이 즉시 반영됨
 
 #### 조사 플로우
 
@@ -1221,7 +1224,7 @@
    → 고객에게 복구 확인 요청
 ```
 
-**F3: 평가 등급 배분 완료 시 validation 오류** · 타입: Error · 히트: 1 · [CI-4204]
+**F3: 평가 등급 배분 완료 시 validation 오류** · 타입: Error · 히트: 2 · [CI-4204] [CI-4117]
 > 트리거: "등급 배분 완료 시 알 수 없는 오류", "EvaluationValidationException at assertToComplete" — 과거 버그 데이터가 평가 복제로 전파된 경우
 
 ```
@@ -1557,6 +1560,31 @@ WHERE id IN (?);
    └─ 휴가: POST /action/operation/v2/time-tracking/time-off/time-off-uses/produce-delete
    ⚠️ ES document가 잔존하는데 원본이 삭제된 경우 → sync가 아닌 delete 처리 필요
 ```
+
+**F2: 근무시간미달 대시보드 — 고스트 periodicWorkSchedule 노출** · 타입: Data · 히트: 1 · [CI-4304]
+> 트리거: "근무시간미달에 실제 미달 없는 구성원이 표시돼요" / "주기 단위 근무시간미달이 잘못 나와요"
+
+```
+① 해당 유저의 ES periodicWorkSchedule 조회
+   prod-v2-tracking-work-schedules, routing: {customerId}_{userId}
+   → startDateOfPeriod 목록 확인
+   ↓
+② dayOfMonth 불일치 확인
+   startDateOfPeriod의 dayOfMonth vs 규칙 beginDate.dayOfMonth
+   ├─ 일치 → 정상 문서
+   └─ 불일치 → 고스트 후보, ③으로
+   ↓
+③ 고스트 판별
+   workingMinutes=0 + lackOfWorkingMinutes > 0 이면 고스트 확정
+   DB 초과근무 API (DB 기반)로 해당 주기 실제 존재 여부 교차 확인
+   ↓
+④ ES에서 직접 삭제
+   ⚠️ 재동기화(sync)로는 해결 불가 — 문서 ID 기반 upsert이므로 고스트를 덮어쓰지 않음
+   고스트 문서 ID로 DELETE 직접 실행
+```
+
+> 💡 **발생 패턴**: 근무규칙을 짧은 시간 내 여러 번 변경(변경→원복) 시, boundary clamp로 생성된 중간 주기 문서가 클린업되지 않고 잔존. `startDateOfPeriod`가 1일이 아닌 날짜(예: 3/23)이면 고스트.
+> ⚠️ **재동기화 불가**: 재동기화는 정상 문서만 갱신, 고스트 ID는 다르므로 삭제 안 됨
 
 ---
 
