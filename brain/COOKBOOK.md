@@ -13,7 +13,7 @@
 - **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 워크플로우-F1(임시저장 문서 소실)
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
-- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동)
+- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류
 
 ## 도메인별 진단 가이드
 
@@ -125,6 +125,9 @@
 3. 관리자에 의해 종료된 이력이 있는지 확인 → 히든 스펙: 종료 이력 있으면 기한 지난 건은 목록에서 필터링, 단 알림은 필터링 안 됨 [CI-3777]
 4. MONTHLY/MONTHLY_FINAL 간 연동 여부 확인 → 1차/2차는 독립 동작, 2차 완료해도 1차 알림 지속 가능 [CI-3809]
 5. 사용자의 연차 정책이 변경되었는지 확인 → `v2_user_customer_annual_time_off_policy_mapping`의 `modified_at`과 촉진 이력의 `created_date` 비교. 정책이 `enabled_annual_time_off_policy = false`인데 PENDING_WRITE 이력이 있으면 정책 변경 전 잔존 이력 → TODO/알림 수동 정리 필요 [CI-3932]
+6. **연차촉진 연도 경계 누락 (UTC/KST)** → 고객이 특정 연도(예: 2026년)로 조회 시 촉진이 안 보이는 경우: 배치가 오전 8시(KST) 동작하여 `boosted_at`이 UTC 기준 전년도 12/31 23:xx로 저장됨 → 연도 단위 쿼리에서 누락. "이전 연도로 조회하면 확인 가능"으로 안내. 월차 촉진도 동일 패턴 [CI-3809] [CI-3907]
+7. **대표이사 연차촉진 결과 없음** → 등기임원이면 연차 지급 대상 아님 → 촉진 조회 결과 없음이 정상. 정책 변경 이전 생성된 이력은 당시 연차량으로 남아있을 수 있음 [CI-3932]
+8. **연차촉진 관리자 작성 기간 필터** → 완료된 촉진이 있으면 "관리자 작성 기간 필터"가 작동하여 PENDING_WRITE 상태 촉진이 목록에서 누락될 수 있음 — 스펙 (버그 아님). 관리자가 직접 해당 구성원에게 안내 후 종결 [CI-3777]
 
 → 상세: [cookbook/annual-promotion.md](cookbook/annual-promotion.md)
 
@@ -169,6 +172,13 @@
      ◦ 여유 있는 경우: Operation API `DELETE /api/v2/work-rule/users/{userId}/work-rules/{userWorkRuleId}` 반복 호출 (검증 유/무 분리된 operation API 존재, PR flex-timetracking-backend#7800)
 18. **휴일대체 취소 불가** ("대체 휴일을 찾을 수 없습니다") → 휴일대체 수정(CANCEL+재등록) 후 OpenSearch sync 지연으로 FE에 구 eventId가 전달되는 케이스. access log에서 `search/by-departments` 응답의 `alteredHoliday.eventId` 확인 → DB(`v2_time_tracking_user_alternative_holiday_event`)의 유효 이벤트 ID와 비교 → 불일치 시 `/sync-os-work-schedule-advanced`로 재동기화 [CI-4217]
 19. **근무유형 변경 예약 취소 불가** ("근무 유형을 취소할 수 없어요" / WORKRULE_400_005) → `UserWorkRuleAllowCancelMappingCalculator` 조건3이 `distributePeriodOverToDay`만 확인하고 `applyStartDateForDistributePeriodOver`를 미고려 → 실질 주기연장일귀속을 false로 오판. PR flex-timetracking-backend#12027 — **버그** [CI-4148]
+20. **근무유형 적용일 `1970-01-01` = 입사일** → 적용일이 `1970-01-01`로 표시되는 경우 "입사일부터 적용"을 의미하는 특수값. PR#8593 이후 `dateFrom` 기준 입사일만 보도록 변경. 그룹 입사일 기준 근무 조회는 지원하지 않음(스펙) [CI-3773] [CI-3902]
+21. **IP 제한 + 자동퇴근** → 자동퇴근(예약 퇴근) 시에는 근무지/IP 체크 없이 근무지 안에서 퇴근한 것으로 판단 — 스펙 (`UserWorkClockStopByReserveRequestServiceImpl.kt#L142-L143`). IP 제한이 있어도 자동퇴근은 통과 [CI-3501]
+22. **교대근무 스케줄 게시 시 기존 휴가 있는 날 오류** → draft의 `time_off_deletion` 필드에 이미 편집 불가능한 날의 연차 삭제가 포함된 경우 오류 발생. 해당 구성원 draft의 `time_off_deletion = '[]'`로 UPDATE 후 재게시 [CI-3997]
+23. **external_provider_event 재처리** → 세콤 등 외부 이벤트 재전송 시 이미 처리된 이벤트는 중복으로 skip. 재처리가 필요하면 `external_provider_event` 테이블에서 해당 이벤트 상태 변경 필요 [CI-3793] [CI-3861]
+24. **휴가 코드 삭제 시 등록된 휴가 취소** → 교대근무 관리에서 기사용 휴가 코드를 삭제하면 등록된 휴가가 모두 취소됨 — 의도된 스펙 [CI-4047]
+25. **연차 조정 일괄 취소** → side peek의 `...` 아이콘에서 일괄 취소 가능 (개별 취소만 가능하다는 오해 多) [CI-3923]
+26. **dry-run WARN vs ERROR** → 스케줄 게시 전 dry-run 응답: `ERROR`는 게시 차단, `WARN`은 게시 허용. FE 파서 버그로 WARN이 ERROR로 처리되어 게시 차단된 사례 있음(PR: flex-frontend-apps-time-tracking/pull/2101 hotfix 완료) [CI-3862]
 
 #### 조사 플로우
 
@@ -330,7 +340,7 @@
    └─ 범위 같은데 누락 → 코드 버그, 조직 필터 로직(교집합/합집합) 확인
 ```
 
-**F2: 교대근무 게시 시 여러날 휴가 "확인 필요" — draft timeOffDeletion 잔존** · 타입: Error · 히트: 1 · [CI-4268]
+**F2: 교대근무 게시 시 여러날 휴가 "확인 필요" — draft timeOffDeletion 잔존** · 타입: Error · 히트: 2 · [CI-4268] [CI-3997]
 > 트리거: "교대근무 스케줄 게시 시 확인 필요 오류" + 여러날 휴가 등록 구성원
 
 ```
@@ -343,7 +353,12 @@
    └─ 없음 → 다른 validator 원인 조사
    ↓
 ③ draft에서 timeOffDeletion 제거
-   해당 draft의 timeOffDeletion을 비우고 재게시
+   UPDATE flex.v2_user_shift_schedule_draft
+   SET time_off_deletion = '[]'
+   WHERE id in ({draftIds})
+     and customer_id = {customerId}
+     and user_id = {userId};
+   → 재게시 시도
 ```
 
 → 상세: [cookbook/shift.md](cookbook/shift.md)
@@ -371,6 +386,8 @@
 13. 연동 이벤트 미반영 (이벤트 지연 + 수동 START 충돌) → `v2_user_external_provider_event`에서 이벤트 수신 시각 확인 (발생 시각 vs DB 저장 시각) → 이벤트 지연이 있으면 사용자가 그 사이 수동 START 했는지 컨슈머 로그 확인 → `v2_user_work_clock_draft_event`에서 해당 이벤트 기준 start 레코드 유무 확인 [CI-4237]
 14. 세콤 수동전송 시 중복 START 이벤트 → PC·모바일 표시 불일치로 나타남. `v2_user_work_clock_event`에서 해당 유저/날짜 CANCEL 대상 이벤트 탐색. 잘못된 START 이벤트를 CANCEL 처리 [CI-4246]
 15. 캡스 기기 변경 후 동기화 불량 → 캡스 프로그램 근태처리옵션 계정 재설정 여부 확인. 원본선택 항목이 가이드와 다르면 캡스 버전 차이일 수 있음 (캡스 담당자에게 확인) [CI-4249]
+16. **세콘 `syntax error at or near "DUPLICATE"` 오류** → 세콘 프로그램 내부 쿼리 오류 (flex 책임 아님). 세콘 프로그램 쿼리 관리 화면에서 기존 쿼리와 새 쿼리가 중복 입력된 것이 원인. 대응: "저희가 가이드하는 쿼리가 아닌 것으로 보입니다. 세콘 쿼리 관리에서 확인 필요" 안내 [CI-3953]
+17. **캡스 수동 전송 중복 데이터 무시** → 캡스 수동 전송 시 이미 flex에서 처리한 START 데이터는 중복으로 무시됨 — 스펙. 재처리가 필요하면 `external_provider_event` 테이블에서 상태 변경 필요 [CI-3965]
 
 #### 조사 플로우
 
@@ -777,6 +794,13 @@
    - 대응: `cloud_event_entity`에서 문제 이벤트 ID 조회 → `/action/operation/v2/approval/re-produce-messages` Operation API로 이벤트 재발행
    - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
 
+문의: "승인 프로세스가 시작됐는데 TT에서 400 오류 / 승인 항목이 비정상 상태"
+1. **신승인 start-approval-process / produce-event 2PC 패턴** → 신승인 처리는 2단계:
+   - Step 1: `startWithoutEventProduce` → `/start-approval-process`
+   - Step 2: `produceStartEvent` → `/start-approval-process/produce-event`
+   - produce-event 실패 시 반드시 rollback: `/rollback-started` 호출 (`ApprovalProcessCommandInternalService.rollbackStarted`)
+2. **비정상 상태 데이터 복구** → `approval_process` 테이블에서 해당 건 soft delete + `approval_replacement_target` 테이블에서 soft delete + TT 보상 처리 [CI-3951]
+
 #### 조사 플로우
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
@@ -837,6 +861,14 @@
 문의: "엑셀 다운로드가 안 돼요" / "다운로드 실패해요"
 1. 근무 기록 다운로드 실패 → consumer → core-api 내부 호출 시 OkHttp 소켓 타임아웃(3초) 확인. 대규모 데이터(수백 명) 다운로드 시 타임아웃 발생 가능 [CI-4121]
 2. 특정 구성원만 누락 → "근태/휴가" 도메인의 퇴사자 휴가 데이터 추출 항목 참조 [CI-3976]
+3. **퇴직자 포함 휴가 데이터 추출** (삭제된 조직 소속 구성원 포함) → 웹 UI에서 "퇴직자 포함" 옵션으로 먼저 시도. 삭제된 조직 소속 구성원은 웹 UI에서 추출 불가 → Operation API 사용:
+   ```
+   POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
+   { "queryUserId": {adminUserId}, "departmentIds": null,
+     "dateFrom": "YYYY-MM-DD", "dateTo": "YYYY-MM-DD",
+     "includeResignatedUsers": true }
+   ```
+   [CI-3976]
 
 → 상세: [cookbook/data-export.md](cookbook/data-export.md)
 
@@ -2174,6 +2206,7 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-05 | knowledge-cards-yj-kim + squad-tracking-2024H2 | ops-learn 일괄 갱신. 연차촉진: UTC/KST 연도 경계 누락(#6), 대표이사 등기임원(#7), 관리자 작성 기간 필터(#8) 체크리스트 추가. 근태/휴가: 1970-01-01=입사일(#20), IP제한+자동퇴근(#21), 교대근무 timeOffDeletion(#22), external_provider_event 재처리(#23), 휴가코드 삭제 스펙(#24), 연차조정 일괄취소(#25), dry-run WARN vs ERROR(#26) 추가. 교대근무-F2 SQL + 히트+1. 외부연동: 세콘 쿼리오류(#16), 캡스 중복skip(#17) 추가. 승인: 신승인 2PC 패턴 추가. 데이터추출: 퇴직자 포함 Operation API 추가. domain-map.ttl 키워드/동의어 보강 + 지식카드 소스 항목 등록 |
 | 2026-04-03 | CI-4025 | 맞춤휴가: 소정근로시간 변경 후 잔여 일수 변동 — 체크리스트#6 + F2 플로우(Spec) 추가. cookbook/custom-time-off.md 도메인 컨텍스트 + 과거 사례 추가 |
 | 2026-04-03 | CI-4164 | 평가: cookbook/review.md 구현 특이사항에 EvaluationStep 크론 자동 복구 + "지금 시작" vs "예약" 구분 메커니즘 추가 |
 | 2026-04-02 | CI-4307 | 급여: 퇴직자 정산 주휴수당 미노출(work_record_import=NONE + 월 중도 퇴사자 dateRange 불일치) — 체크리스트#16 + F-pay-4 플로우 추가, 과거 사례 추가, glossary g:pay-16 추가. domain-map.ttl d:kw/d:syn 보강 |
