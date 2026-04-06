@@ -991,7 +991,7 @@
 ### 전자계약 (Contract/Digicon)
 
 #### 진단 체크리스트
-문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요" / "임시저장한 계약서가 사라졌어요" / "전자계약 서식 계열사에 복사해달라"
+문의: "서명된 계약서 삭제해주세요" / "계약서 서식이 삭제됐어요" / "서식 삭제자를 알고 싶어요" / "일괄 다운로드 링크가 안 나와요" / "임시저장한 계약서가 사라졌어요" / "전자계약 서식 계열사에 복사해달라" / "계약서 필드가 비어있어요" / "연락처가 공란이에요"
 1. 서명 완료(SUCCEED) 계약서 삭제/취소 요청 → **삭제 불가(스펙)**. `DigiconProgressStatus.cancelable()` = `this === IN_PROGRESS`만 허용. 올바른 내용으로 새 계약서 재발송 안내 [CI-4152]
 2. 서식(template) 삭제자 추적 → access log에서 `DELETE /api/v2/digicon/templates` 검색 → traceId로 호출 체인 추적 → permission-api 호출에서 userId 확인 → view_user 테이블로 이메일 매핑. 감사로그에 서식 삭제 미기록 [CI-4168]
 3. 양식 개수 제한 여부 → 제한 없음 [CI-4168]
@@ -999,9 +999,7 @@
 5. 선택 발송 후 임시저장 계약서 삭제 문의 → **현재 스펙**. CandidateSet = 한 번의 발송 단위로 설계되어, 선택 발송 시 미선택 CandidateUnit은 물리 삭제됨. 복구 불가. VOC-2410으로 개선 요청 등록됨 [CI-4257]
 6. 계열사에 전자계약 서식 복제 요청 → raccoon prod `POST /api/operation/v2/digicon/duplicate-templates` 실행. `originalCustomerId`(주법인) + `targetCustomerIds`(계열사 목록) + `postfix`("" = 원본 제목 유지) [CI-4283]
 7. 일괄 다운로드 링크 미생성 → 비동기 처리 구조이므로 API 자체는 정상 응답. app log에서 `[DIGICON UPLOAD]` + `[File Merge]` 확인. 임시 파일 TTL=600초이므로 merge 큐 지연 시 실패. 파일 서비스 장애 여부 확인 후 **재시도** [CI-4248]
-8. 연락처/placeholder 필드가 공란으로 발송 → renderer(flex-html)의 값 치환 실패 가능성 확인. hyphen(-)이 포함된 전화번호는 renderer가 유효하지 않은 값으로 처리하여 placeholder 미치환 [CI-4297]
-   - `placeholder_values`는 `{cipher}` 암호화 → DB 직접 UPDATE 불가. 수정 필요 시 애플리케이션 레벨 Operation API 사용
-   - PDF는 실시간 렌더링 구조 (저장 X) → DB 값 수정 시 재발송 없이 즉시 반영됨
+8. 계약서 필드 공란 / placeholder 미치환 → `digicon` 테이블에서 `placeholder_values` 확인. 값 자체가 정상이면 **renderer(flex-html)의 유효성 검증 문제** — hyphen 등 특수문자 포함 시 미치환. `sanitize-placeholder-values` Operation API로 특수문자 제거 (멱등성 보장) [CI-4297]
 
 #### 조사 플로우
 
@@ -1228,6 +1226,12 @@
 2. 0건이면 → `evaluation_reviewee`의 `evaluate_step_and_factors`에 COMPETENCY factor가 있는지, `competency_group_mappings`가 `[]`인지 확인
 3. `evaluation.use_competency_item = 0` + COMPETENCY factor 존재 + `competency_group_mappings = []` 세 조건 모두 해당 시 → 이 버그에 해당 (PR#5199로 수정됨) [CI-4238]
 4. 버그 해당 시 조치: ① 항목 요청 초기화 → ② 대상자 전원 제외 → ③ 대상자 재추가 → ④ 항목 요청 재실행
+
+문의: "평가지 질문을 필수에서 선택으로 변경했는데 제출이 안 돼요" / "제출에 실패했어요"
+1. `form_question` 테이블에서 해당 질문의 `required` 값 확인 → `0`(선택)인데 제출 실패이면 ②로 [CI-4314]
+2. `form_user_answer` 테이블에서 같은 질문의 `required` 값 확인 → `1`(필수)이면 이 버그에 해당 [CI-4314]
+3. 조치: `form_user_answer.required = 0` UPDATE (결재 필요). 답변이 비어있는 경우 status도 확인 [CI-4314]
+4. 근본 원인: `RequiredChangeInfo`가 필수→선택(turned OFF) 변경을 추적하지 않음. EPBE-336에서 코드 수정 예정 [CI-4314], [CI-4238]
 
 #### 조사 플로우
 
@@ -2222,6 +2226,7 @@ ORDER BY last_modified_date DESC;
 | 2026-04-01 | CI-4260 | 급여: 급여정산 실행 시 인가 타임아웃 → 대상자 0명 stuck — 체크리스트#15 추가. flex-permission v3.58.3(6초→10초) + hotfix #8714 수정. domain-map.ttl verdict bug-fix + closed |
 | 2026-04-01 | CI-4049, CI-4270 | 외부 API(OpenAPI) 섹션 신규 추가. 부서 null(조직 코드 미등록) + 403(grantConfigurationId granular 권한 체크). domain-map.ttl :openapi d:kw 보강 + verdicts closed |
 | 2026-04-02 | CI-4306 | 캘린더 연동: F1 히트 +1 (구캘 미연동 349건 재동기화, 이노바이드 199157) |
+| 2026-04-03 | CI-4297 | 전자계약: placeholder 미치환(연락처 공란) — 체크리스트#8 추가, Tier-2 과거 사례/SQL 템플릿/도메인 컨텍스트 추가. domain-map.ttl d:kw 8개(placeholder/sanitize/flex-html/렌더링 등) + d:syn 3개 + d:api 추가. verdict bug + closed |
 | 2026-04-01 | CI-4212, CI-4241, CI-4257, CI-4256 | domain-map.ttl d:st "C" + d:ca 일괄 설정 (이미 COOKBOOK 반영 완료된 이슈 마감 처리) |
 | 2026-03-31 | CI-4270 | OpenAPI: 403 권한 세분화 진단 — 체크리스트 + F1 플로우 신설. Tier-2 openapi.md 생성 (도메인 컨텍스트 + 과거 사례 + SQL). d:kw/glossary 추가 |
 | 2026-03-31 | CI-4237, CI-4246, CI-4249 | 외부 연동: 이벤트 지연+수동START 충돌 진단(#13), 수동전송 중복 START 진단(#14), 캡스 기기 변경 후 근태처리옵션 계정 재설정(#15) 체크리스트 추가. domain-map.ttl 키워드·사용자 표현 추가 |

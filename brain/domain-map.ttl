@@ -380,7 +380,8 @@
         "평가지 생성 중이에요" , "평가지가 안 보여요" ,
         "등급 배분 완료 시 오류" ,
         "삭제된 평가 복구해주세요" ,
-        "뉴성과관리 업데이트 후 평가가 사라졌어요" ;
+        "뉴성과관리 업데이트 후 평가가 사라졌어요" ,
+        "필수에서 선택으로 변경했는데 제출이 안 돼요" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -393,14 +394,21 @@
         "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ,
         "대량 다운로드" , "bulk-download" , "fileMergeId" ,
         "임시저장" , "선택발송" , "CandidateSet" , "CandidateUnit" ,
-        "복제" , "duplicateTemplates" , "duplicate-templates" ;
+        "복제" , "duplicateTemplates" , "duplicate-templates" ,
+        "placeholder" , "placeholder_values" , "sanitize" ,
+        "sanitize-placeholder-values" , "렌더링" , "flex-html" ,
+        "엑셀 업로드" , "{cipher}" ;
+  d:api "/api/v2/digicon" , "/api/operation/v2/digicon" ;
   d:syn "전자계약 서식이 안 보여요" , "계약서 발송이 안 돼요" ,
         "서명 완료된 계약서 삭제 가능한가요" ,
         "전자계약 일괄 다운로드 링크가 안 나와요" ,
         "대량 다운로드 실패" ,
         "임시저장한 계약서가 사라졌어요" ,
         "일부만 발송했더니 나머지가 삭제됐어요" ,
-        "전자계약 서식 계열사에 복사해달라" ;
+        "전자계약 서식 계열사에 복사해달라" ,
+        "전자계약 연락처가 공란이에요" ,
+        "계약서 발송했는데 필드가 비어있어요" ,
+        "엑셀 업로드로 계약서 보냈는데 데이터가 안 나와요" ;
   d:x   :account , :notification .
 
 :insurance
@@ -640,13 +648,18 @@ n:CI-4279
   d:ca "2026-04-02" ;
   d:s  "원천세 신고서 전월 미환급세액 미반영 — 2월 차월이월 환급세액이 3월 신고서 전월 미환급세액으로 자동 불러와지지 않음. 오피스디포코리아" .
 
+n:CI-4297
+  d:in :contract ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "전자계약 연락처 placeholder 렌더링 미치환 — renderer(flex-html)가 hyphen 포함 전화번호를 유효하지 않은 데이터로 판단. FE 핫픽스 + BE sanitize Operation API로 해결. 디노티시아(207050)" .
 
 n:CI-4292
   d:in :payroll ;
   d:x  :time-tracking ;
   d:v  "investigating" ;
   d:s  "시급직 주휴수당 유/무급 반전 + 유급휴일시간 비례계산 오류 — TT 주간유급휴일 데이터 동기화 의심. 에디토컴퍼니" .
-
 
 n:CI-4236
   d:in :notification ;
@@ -2274,6 +2287,11 @@ g:review-09
   d:q  "평가 대상자가 없어요" ;
   d:a  "평가 항목 화면에서 대상자 미표시 — reviewee_evaluation_item 미생성 확인. g:review-08 동일 원인" .
 
+g:review-10
+  d:in :review ;
+  d:q  "필수에서 선택으로 변경했는데 제출이 안 돼요" ;
+  d:a  "form_user_answer.required 미갱신 — form_question.required vs form_user_answer.required 비교 확인. DML 보정 후 EPBE-336 코드 수정" .
+
 g:fins-02
   d:in :fins ;
   d:q  "이전 카드 내역 연동해주세요" ;
@@ -2353,10 +2371,10 @@ n:CI-4306
 
 n:CI-4263
   d:in :time-tracking ;
-  d:v  "spec" ;
+  d:v  "bug" ;
   d:st "C" ;
-  d:ca "2026-04-02" ;
-  d:s  "세콤 퇴근 타각 시 연장근무 최소시간 제한(minimumInputMinutes=30, FLOOR)으로 자동 퇴근 중단 — 설정에 의한 정상 동작" .
+  d:ca "2026-04-03" ;
+  d:s  "세콤 퇴근 타각 시 연장근무 조정 실패 — CI-4119 수정(v3.119.0)에서 overWorkStartTime 계산 기준을 baseAgreedDayWorkingMinutes→legalBaseWorkingMinutesPerDay로 변경하여 소정근로<8시간 유저의 candidate 미생성" .
 
 n:CI-4245
   d:in :account ;
@@ -2803,6 +2821,32 @@ g:fins-05
 # ============================================================
 # Glossary — GLOSSARY.md migration (insurance)
 # ============================================================
+
+n:CI-4312
+  d:in :fins ;
+  d:v  "investigating" ;
+  d:s  "지출결의서 반려 후 재작성 시 영수증 소실 — spending_evidence_electronic_approval_document 상태 미동기화 (CI-1078 재발)" .
+
+n:CI-4313
+  d:in :personnel-appointment ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "엑셀 인사발령 기능 오픈 요청 — 테크타카(3718), Flagsmith segment에 customer_id 추가로 해결. 반복 운영 요청" .
+
+n:CI-4314
+  d:in :review ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "평가지 질문 필수→선택 변경 후에도 미작성 시 제출 불가 — RequiredChangeInfo가 turned OFF 미추적, form_user_answer.required 미갱신. 데이터 보정으로 즉시 해결, 코드 수정 EPBE-336. CI-4238과 동일 패턴" .
+
+n:CI-4315
+  d:in :fins ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-03" ;
+  d:s  "금융기관 연동 전 카드 내역 수집 요청 — 림피드(66365), 신한카드 2026년 1월 과거 사용내역. 어드민 쉘 수동 동기화로 해결" .
 
 g:ins-04
   d:in :insurance ;
