@@ -58,7 +58,8 @@
         "compensatory-time-off" , "holiday" ;
   d:api "/api/v2/time-tracking" , "/api/v2/time-off" , "/api/v2/work-record" ,
         "/api/v2/time-tracking/work-clock" ,
-        "/api/v3/time-tracking" , "/api/v3/time-off" ;
+        "/api/v3/time-tracking" , "/api/v3/time-off" ,
+        "/api/operation/v2/calendar/customers/{customerId}/events/cleansing" ;
   d:kw  "휴가" , "연차" , "time-off" , "근태" , "출퇴근" , "휴일대체" ,
         "보상휴가" , "포괄임금" , "근로시간" , "휴직" , "휴게" ,
         "OpenSearch" , "holidayProps" , "v2_user_work_rule" ,
@@ -75,6 +76,8 @@
         "캘린더" , "구글캘린더" , "FlexCalendarEventAdapter" ,
         "v2_external_calendar_connection" , "v2_oauth_user_token" ,
         "insufficientPermissions" , "FlexCalendarSyncEventConsumer" ,
+        "google_calendar_event_sync" , "calendarConnectionHistoryId" ,
+        "v2_external_calendar_connection_history" , "cleansing" ,
         "쉬는 날" , "LABOR_DAY" , "v2_customer_holiday_group" ,
         "CommitFailedException" , "CooperativeStickyAssignor" ,
         "partition.assignment.strategy" , "PREPARING_REBALANCE" ,
@@ -99,6 +102,8 @@
         "월별 잔여연차가 달라요" ,
         "대휴 기간 설정해주세요" ,
         "구글 캘린더 미연동 일정 재연동" ,
+        "그룹 구글캘린더 연동 해제 후 기존 이벤트 삭제해주세요" ,
+        "연동 해제했는데 구글캘린더에 일정이 남아있어요" ,
         "휴일대체 취소가 안 돼요" , "보상휴가 회수했는데 수정이 안 돼요" ,
         "출근 시간이 다르게 찍혀요" ,
         "테스트 근무기록 삭제해주세요" ,
@@ -225,7 +230,9 @@
         "문서함" , "UserDocument" , "UserDocumentFile" , "user_document_aud" ,
         "login_history" , "z_last_login_at" , "감사로그" , "마지막접속" ,
         "audit_operation" , "감사로그다운로드" , "PersonalInformationType" ,
-        "AuditEventCategory" ;
+        "AuditEventCategory" ,
+        "문서변경참조" , "CORE_USER_ATTACHMENT_UPDATE" , "CORE_USER_PERSONAL_UPDATE" ,
+        "구성원정보변경알림" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -248,7 +255,9 @@
         "문서함 삭제 복구 가능한가요" , "삭제한 문서함 복구해주세요" ,
         "마지막 접속 기록 추출해주세요" , "접속 기록 데이터 제공 가능한가요" ,
         "감사로그 다운로드 요청드립니다" , "감사로그 데이터 추출해주세요" ,
-        "장기간 감사로그가 필요합니다" ;
+        "장기간 감사로그가 필요합니다" ,
+        "문서변경 참조에 없는데 알림이 와요" , "개인정보 등록 알림이 가요" ,
+        "신규입사자 가입 시 다른 분들에게 알림이 가요" ;
   d:x   :permission , :department .
 
 :department
@@ -371,7 +380,10 @@
         "등급 배분" , "grades_to_calculate" , "factor_grade_calculations" ,
         "마이그레이션" , "MigrationScheduler" , "review_set" ,
         "ReviewMigration" , "뉴성과관리" ,
-        "reviewee_evaluation_item" , "할일" , "평가 항목 작성 요청" ;
+        "reviewee_evaluation_item" , "할일" , "평가 항목 작성 요청" ,
+        "evaluation_grade_distribution" , "allow_submission_if_exceed" , "등급 배분율" ,
+        "구리뷰" , "ANSWER_NOT_OPEN" , "progress_status" , "flag" , "구리뷰원복" ,
+        "잔존고객사" ;
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
@@ -381,7 +393,11 @@
         "등급 배분 완료 시 오류" ,
         "삭제된 평가 복구해주세요" ,
         "뉴성과관리 업데이트 후 평가가 사라졌어요" ,
-        "필수에서 선택으로 변경했는데 제출이 안 돼요" ;
+        "필수에서 선택으로 변경했는데 제출이 안 돼요" ,
+        "배분율 초과 시 제출이 안 돼요" ,
+        "인원 초과 시 제출 제한 비활성화하고 싶어요" ,
+        "구리뷰로 원복 가능한가요" , "구리뷰 메뉴가 안 보여요" ,
+        "평가에서 구리뷰로 전환해주세요" , "리뷰 작성기간 수정이 안 돼요" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -437,12 +453,15 @@
         "codef" , "비용정책" , "일괄변경" , "암호화" , "spending" ,
         "journalizing" , "merchant" , "stakeholder" ,
         "세금계산서" , "국세청" , "스크래핑" , "홈택스" ,
-        "transactedTime" , "시간정책" ;
+        "transactedTime" , "시간정책" ,
+        "지출결의" , "영수증" , "Vespa" , "fins_spending_entire_v1" ;
   d:syn "카드 내역이 안 들어와요" , "법인카드 등록이 안 돼요" ,
         "비용 승인이 안 돼요" , "가맹점 정보가 안 맞아요" ,
         "경비 정산이 이상해요" ,
         "세금계산서가 안 들어와요" , "이전 카드 내역 연동해주세요" ,
-        "시간 정책 위반이 아닌데 위반으로 보여요" ;
+        "시간 정책 위반이 아닌데 위반으로 보여요" ,
+        "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" ,
+        "반려된 지출결의가 영수증 쪽에서 진행중으로 나와요" ;
   d:x   :approval , :payroll .
 
 :payroll
@@ -477,7 +496,9 @@
         "statutory_leisure_payment_v2" , "StatutoryLeisurePaymentService" ,
         "work_income_base_payment_calculation_basis" , "StatutoryLeisureSettingTypeSelector" ,
         "work_record_import" , "statutory_leisure_payment_item" ,
-        "createRecipients" , "RETIREE_YEAR_END" , "퇴직자급여정산" ;
+        "createRecipients" , "RETIREE_YEAR_END" , "퇴직자급여정산" ,
+        "work_income_payment_settlement_payee_result_item" , "backfill" ,
+        "migrate-ci4227" , "LegacyPaymentDataReader" , "legacy fallback" ;
   d:syn "초과근무 계산이 이상해요" , "정산 수정했는데 소득세가 바뀌었어요" ,
         "급여정산 해지하면 명세서 공개가 되나요?" ,
         "건강보험 제외 대상인데 중도정산 시 사회보험 금액이 들어가요" ,
@@ -494,6 +515,7 @@
         "급여정산 실행 시 알 수 없는 오류" , "정산 대상자가 0명이에요" ,
         "전월미환급세액이 안불러와져요" , "연말정산이후 전월미환급세액이 자동으로 안불러와요" ,
         "주휴수당 대상자로 나오지 않습니다" , "주휴수당 대상자 리스트에 없어" ,
+        "정산 상세 지급액이 0원이에요" , "명세서 지급금액 0원" ,
         "퇴직주 전액 지급" ,
         "퇴직자 급여정산 주휴수당이 안 나와요" , "주휴수당 대상자에 안 불러와져요" ;
   d:x   :time-tracking , :scheduling , :notification .
@@ -535,7 +557,8 @@
         "급여 전기 전송이 실패했어요" , "SAP 연결이 안 돼요" ,
         "OpenAPI로 부서 조회 시 null이 나와요" ,
         "OpenAPI 호출하면 403 에러가 나요" ,
-        "Open API 부서 조회 시 null이 나와요" , "API에서 부서 정보가 안 내려와요" ;
+        "Open API 부서 조회 시 null이 나와요" , "API에서 부서 정보가 안 내려와요" ,
+        "토큰 생성시 접근오류" , "토큰 생성이 안 돼요" ;
   d:cb  "외부 API / 데이터 통합 (OpenAPI)" ;
   d:x   :payroll , :account , :permission .
 
@@ -1061,6 +1084,13 @@ n:CI-4268
 # Notes — archive (brain/notes/archive/)
 # ============================================================
 
+n:CI-4325
+  d:in :openapi ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "GS에너지 OpenAPI 토큰 생성시 접근오류 — 설정 조회에 불필요한 권한 요구 버그, hotfix로 해결" .
+
 n:CI-4304
   d:in :time-tracking ;
   d:v  "ops" ;
@@ -1089,6 +1119,13 @@ n:CI-4259
   d:st "C" ;
   d:ca "2026-04-03" ;
   d:s  "모바일앱 일정 휴가 이벤트 중복 표시 — all-day event를 UTC 자정으로 저장 후 KST 범위 overlap 비교 시 전날 이벤트 포함. CalendarEventQueryUseCase에 DATE 이벤트 후처리 필터 추가로 해결" .
+
+n:CI-4265
+  d:in :payroll ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "정산 상세 지급액 0원 — CI-4227 동일 원인(backfill 누락). customer_id=37424 녹십자수의약품 460건 미마이그레이션. migrate-ci4227 Operation API wetRun으로 425건 복구 완료" .
 
 n:CI-4227
   d:in :payroll ;
@@ -2292,6 +2329,11 @@ g:review-10
   d:q  "필수에서 선택으로 변경했는데 제출이 안 돼요" ;
   d:a  "form_user_answer.required 미갱신 — form_question.required vs form_user_answer.required 비교 확인. DML 보정 후 EPBE-336 코드 수정" .
 
+g:review-11
+  d:in :review ;
+  d:q  "배분율 초과 시 제출이 안 돼요" , "인원 초과 시 제출 제한 비활성화하고 싶어요" ;
+  d:a  "evaluation_grade_distribution.allow_submission_if_exceed = 0 확인. 평가 진행 중 UI 편집 잠김 → DML 보정 필요 (allow_submission_if_exceed = 1)" .
+
 g:fins-02
   d:in :fins ;
   d:q  "이전 카드 내역 연동해주세요" ;
@@ -2827,6 +2869,30 @@ n:CI-4312
   d:v  "investigating" ;
   d:s  "지출결의서 반려 후 재작성 시 영수증 소실 — spending_evidence_electronic_approval_document 상태 미동기화 (CI-1078 재발)" .
 
+n:CI-4324
+  d:in :fins ;
+  d:v  "resolved" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "지출결의 영수증 업데이트 시 선택 초기화 + 무한 업데이트 요구 — Bullseye 매트릭스 색인 누락, 전체 고객사 재동기화로 해결" .
+
+n:CI-4335
+  d:in :account ;
+  d:v  "spec" ;
+  d:s  "구성원 문서/개인정보 변경 알림은 '문서변경 참조' 설정이 아닌 CORE_USER_ATTACHMENT_UPDATE / CORE_USER_PERSONAL_UPDATE 권한 기반 발송 — 스펙 확인 완료. 주식회사 에스엘즈(34792)" .
+
+n:CI-4332
+  d:in :fins ;
+  d:v  "investigating" ;
+  d:s  "지출결의 반려 후 영수증 제출 화면 진행중 표시 — Vespa 인덱스 impact→fins 동기화 실패, operation API로 수동 동기화 완료" .
+
+n:CI-4331
+  d:in :review ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "평가→구리뷰 전환 가능 여부 — flag 설정으로 구리뷰 메뉴 재노출, review_set progress_status=IN_PROGRESS로 변경하여 관리자가 작성기간 수정 가능하게 처리. 골든플래닛(175870)" .
+
 n:CI-4313
   d:in :personnel-appointment ;
   d:v  "ops" ;
@@ -2847,6 +2913,31 @@ n:CI-4315
   d:st "C" ;
   d:ca "2026-04-03" ;
   d:s  "금융기관 연동 전 카드 내역 수집 요청 — 림피드(66365), 신한카드 2026년 1월 과거 사용내역. 어드민 쉘 수동 동기화로 해결" .
+
+n:CI-4326
+  d:in :approval ;
+  d:x  :employee ;
+  d:v  "investigating" ;
+  d:s  "프로필 정보 변경 요청 승인 완료했으나 반영 안 되고 할일에 진행중 유지 — CI-4182 동일 패턴 의심 (UserDataApproval)" .
+
+n:CI-4330
+  d:in :time-tracking ;
+  d:v  "resolved" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "그룹 구글캘린더 연동 해제 후 휴가 일정 124건 잔존 — 연동 해제≠이벤트 삭제 스펙. cleansing API로 수동 삭제 완료 (유모스원 221855)" .
+
+n:CI-4327
+  d:in :review ;
+  d:v  "resolved" ;
+  d:st "C" ;
+  d:ca "2026-04-06" ;
+  d:s  "평가 진행 중 등급 배분율 설정 변경 불가 — evaluation_grade_distribution.allow_submission_if_exceed = 0. DML 보정으로 해결 (라라스윗)" .
+
+n:CI-4338
+  d:in :review ;
+  d:v  "investigating" ;
+  d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 수정 요청 — 레브잇(194054). 진행 중 리뷰 오퍼레이션 수정 가능 여부 확인 필요" .
 
 g:ins-04
   d:in :insurance ;
