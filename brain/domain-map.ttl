@@ -719,11 +719,6 @@ n:CI-4212
   d:ca "2026-04-01" ;
   d:s  "이관 회사 중도정산 보험료 불일치 — recipient 생성 시점 보수총액 기반 1회 계산, 이관 후 자동 재계산 없음. 리셋 워크어라운드 존재" .
 
-n:CI-4227
-  d:in :payroll ;
-  d:v  "bug-fix" ;
-  d:s  "23년11월 급여이관 후 명세서 지급금액 0원 — 2025-03 backfill 시 검증 로직 실패로 일부 귀속월 누락. PR #8691로 LegacyPaymentDataReader fallback + validation 스킵 추가" .
-
 n:CI-4213
   d:in :account ;
   d:v  "spec" ;
@@ -777,11 +772,6 @@ n:CI-4048
   d:in :time-tracking ;
   d:v  "investigating" ;
   d:s  "초단시간 근로자 연장근무 9시간" .
-
-n:CI-4117
-  d:in :review ;
-  d:v  "bug" ;
-  d:s  "평가 등급 체계 — 등급 15개 생성 후 validation 에러" .
 
 n:CI-4126
   d:in :goal ;
@@ -1046,13 +1036,6 @@ n:CI-4182
   d:s  "2단계 승인 완료 문서가 진행중으로 표시 — approval-workflow 이벤트 동기화 실패, sync-with-approval로 보정. CI-4019 동일 패턴" ;
   d:st "C" ;
   d:ca "2026-03-31" .
-
-n:CI-4256
-  d:in :account ;
-  d:v  "not-a-bug" ;
-  d:st "C" ;
-  d:ca "2026-04-02" ;
-  d:s  "삭제된 문서함 복구 가능 여부 — hard delete, 복구 불가. UserDocument에 soft delete 없음" .
 
 n:CI-4268
   d:in :shift ;

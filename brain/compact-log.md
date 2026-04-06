@@ -3,6 +3,7 @@
 > ops-compact 스킬이 자동으로 기록한다. 오판 발견 시 git revert로 복원 가능.
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
+| 2026-04-06 | CI-4117, CI-4227, CI-4256 | dup-clean | — | domain-map.ttl 중복 항목 3건 제거 (이전 compact 시 구 항목 미삭제 잔존) |
 | 2026-04-04 | CI-4304 | compact | COOKBOOK 대시보드-F2 신규 | time-tracking: 고스트 periodicWorkSchedule 조회 미필터링 패턴. 재동기화 불가 핵심 |
 | 2026-04-04 | CI-4301 | compact | COOKBOOK 평가-F2 히트+1 | review: CI-4188 동일 패턴 재발, 히트율 반영 |
 | 2026-04-04 | CI-4297 | compact | COOKBOOK 전자계약 체크리스트 8번 추가 | contract: hyphen 포함 전화번호 renderer 미치환 + placeholder 암호화 패턴 |
