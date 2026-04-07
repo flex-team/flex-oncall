@@ -1233,6 +1233,12 @@
 3. **주의**: 기간 수정은 반드시 리뷰관리자(고객)가 직접 수행해야 할일 발송됨. 데이터 보정으로 날짜를 직접 변경하면 할일 미발송 [CI-4331]
 4. 구리뷰 잔존 고객사는 Notion 리스트에 추가 필요 [CI-4331]
 
+문의: "진행 중인 구리뷰 질문을 수정해주세요" / "리뷰 질문 문구를 바꿔주세요" / "섹션명 수정 요청"
+1. **제품 비지원**: 진행 중인 리뷰의 질문지 수정은 제품에서 지원하지 않음. 단, **질문 제목/설명 텍스트 수정만** 예외적으로 오퍼레이션 가능 [CI-4338]
+2. 섹션명도 `review_question.question_type = 'SUBTITLE'` 행의 `question` 값이므로 동일 방법으로 수정 가능
+3. **불가 범위**: 질문 추가/삭제/타입 변경, 선택형 문항 수정
+4. 조치: template_id + question ID 확인 → `review_question.question` UPDATE → `question_log.content` 동기화 (결재 필요, SQL은 cookbook/review.md 참조) [CI-4338]
+
 문의: "평가지 생성 중" / "평가지가 안 보여요"
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
 2. 빈 배열이면 `created_at`을 일괄 생성 레코드와 비교하여 후발 추가 여부 확인 [CI-4188]
@@ -2351,6 +2357,8 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
+| 2026-04-07 | CI-4335 | 계정/구성원: 문서/개인정보 변경 알림 수신자 스펙 확인 — 기존 COOKBOOK 체크리스트(권한 기반 발송) domain-map.ttl d:st "C" 완료 처리 |
 | 2026-04-06 | CI-4330 | 캘린더 연동: 그룹 구글캘린더 연동 해제 후 잔존 이벤트 수동 삭제 — F2 플로우 신설 (cleansing API 패턴), 문의 유형 추가. cookbook/calendar.md 비즈니스 규칙(연동 해제≠이벤트 삭제) + SQL 템플릿(잔존 이벤트 조회) + 과거 사례 추가. domain-map.ttl d:kw/d:syn 추가 |
 | 2026-04-06 | CI-4331 | 평가: 구리뷰 원복 및 리뷰 작성기간 수정 — 진단 체크리스트 추가(flag 설정으로 구리뷰 메뉴 재노출, review_set progress_status=IN_PROGRESS 보정). domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-06 | CI-4327 | 평가: 등급 배분율 초과 시 제출 차단 설정 보정 — 진단 체크리스트 추가, F5 플로우 신설, SQL 템플릿 추가, 과거 사례 추가. cookbook/review.md 비즈니스 규칙 보강. domain-map.ttl d:kw/d:syn 추가 |

@@ -2879,7 +2879,9 @@ n:CI-4324
 n:CI-4335
   d:in :account ;
   d:v  "spec" ;
-  d:s  "구성원 문서/개인정보 변경 알림은 '문서변경 참조' 설정이 아닌 CORE_USER_ATTACHMENT_UPDATE / CORE_USER_PERSONAL_UPDATE 권한 기반 발송 — 스펙 확인 완료. 주식회사 에스엘즈(34792)" .
+  d:st "C" ;
+  d:ca "2026-04-07" ;
+  d:s  "구성원 문서/개인정보 변경 알림은 '문서변경 참조' 설정이 아닌 CORE_USER_ATTACHMENT_UPDATE / CORE_USER_PERSONAL_UPDATE 권한 기반 발송 — Not a Bug(스펙). 주식회사 에스엘즈(34792)" .
 
 n:CI-4332
   d:in :fins ;
@@ -2936,8 +2938,10 @@ n:CI-4327
 
 n:CI-4338
   d:in :review ;
-  d:v  "investigating" ;
-  d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 수정 요청 — 레브잇(194054). 진행 중 리뷰 오퍼레이션 수정 가능 여부 확인 필요" .
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-07" ;
+  d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 텍스트 수정 오퍼레이션 — review_question UPDATE + question_log 동기화. 레브잇(194054)" .
 
 g:ins-04
   d:in :insurance ;

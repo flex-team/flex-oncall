@@ -92,6 +92,29 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 -- WHERE id = ?;
 ```
 
+```sql
+-- 구리뷰 진행 중 질문 텍스트/섹션명 수정 (결재 필요)
+-- Step 1: 백업 — 변경 전 반드시 보관
+SELECT rq.id, rq.template_id, rq.question_type, rq.question, rq.description
+FROM flex_review.review_question rq
+WHERE rq.template_id = ?
+  AND rq.question_type IN ('SUBTITLE', 'LONG_TEXT', 'RATING');
+
+-- Step 2: 질문 텍스트 수정
+UPDATE flex_review.review_question
+SET question = '수정할 텍스트'
+WHERE id = ?
+  AND template_id = ?;
+
+-- Step 3: question_log 동기화 (필수 — 누락 시 리뷰어 화면 미반영)
+UPDATE flex_review.question_log ql
+JOIN flex_review.review_question rq ON ql.question_id = rq.id
+SET ql.content = rq.question,
+    ql.description = rq.description
+WHERE rq.template_id = ?
+  AND (rq.question != ql.content OR rq.description != ql.description);
+```
+
 ## 과거 사례
 
 - **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
@@ -101,3 +124,4 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 - **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
 - **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
 - **등급 배분율 초과 시 제출 차단 설정 보정**: 평가 진행 중 `evaluation_grade_distribution.allow_submission_if_exceed = 0` 상태에서 배분율 초과 시 제출 불가. 평가 단계 시작 후 UI 편집 잠김 — DML로만 보정 가능. `evaluation_id`와 레코드 `id` 모두 WHERE 조건 필요 — **운영 대응** [CI-4327]
+- **진행 중 구리뷰 질문 텍스트 수정**: 리뷰 게시 후 질문 수정은 제품 비지원(스펙). 단, 질문 제목/설명 텍스트 수정만 예외 오퍼레이션 가능. `review_question.question` UPDATE 후 반드시 `question_log.content` 동기화 필요 — 섹션명도 `question_type='SUBTITLE'` 행으로 동일 처리. **불가 범위**: 질문 추가/삭제/타입 변경, 선택형 수정 — **운영 대응** [CI-4338]
