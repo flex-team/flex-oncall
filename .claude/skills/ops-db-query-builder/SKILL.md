@@ -257,3 +257,4 @@ db_query(env={env}, sql={Step 4에서 구성한 SQL}, caller_id={세션 caller_i
 4. **기존 패턴 재활용** — `domain-routing.md` 인라인 수행, `db_show_indexes`/`db_describe` 조합.
 5. **구성부터 실행까지** — SQL 구성 후 env를 결정하여 직접 실행한다. `db:db-query` 스킬의 실행 규칙(database 명시, view_ prefix, LIMIT, 시간대 등)을 준수한다.
 6. **단건 보장 서브쿼리는 IN으로 일괄화 금지** — `= (단건 서브쿼리)` 패턴이 필요한 경우, 여러 입력값을 `IN`으로 묶어 처리하지 않는다. 서브쿼리가 여러 행을 반환하면 상위 쿼리 결과가 교차오염된다. 사용자가 보여준 쿼리 패턴을 임의로 최적화(일괄화)하지 않는다. [CI-4271 — member_user_mapping 기반 겸직 매핑 조회 시 IN 일괄 처리로 잘못된 매핑 반환]
+7. **`db_query` 실행은 반드시 메인 세션에서 직접 수행한다.**
