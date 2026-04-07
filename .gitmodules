@@ -1,0 +1,10 @@
+[submodule "flex-fe"]
+	path = flex-fe
+	url = git@github.com:flex-haena/flex-fe.git
+	branch = main
+	ignore = dirty
+[submodule "flex-support-oncall"]
+	path = flex-support-oncall
+	url = git@github.com:flex-team/flex-support-oncall.git
+	branch = main
+	ignore = dirty
