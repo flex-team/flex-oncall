@@ -34,22 +34,45 @@ UserAnnualTimeOffBuckets.getRemainingDays()
 - `usedTime` (분) = 사용된 시간
 - `remainingTimeOffMinutes` = `assignedTime - usedTime` (단순 차감)
 
-### ADJUST 버킷의 assignedTime 계산
+### 연차 조정(Adjust) 스펙
 
-관리자가 "5시간" 또는 "0.833일"을 조정할 때, 내부에 저장되는 `assignedTime`(분)은 다음 공식으로 계산된다:
+#### 조정 목적 타입 (`adjustType`)
+
+`v2_user_annual_time_off_adjust_assign.adjust_type` 컬럼.
+버킷 타입(`AnnualTimeOffAssignType`)과 별개의 enum이다.
+
+```kotlin
+enum class AnnualTimeOffAdjustType {
+    NORMAL,    // 관리자 수동 +/- 조정
+    EMPLOYED,  // 재직자 미사용 수당 정산
+    RESIGNED,  // 퇴직자 정산
+}
+```
+
+#### 조정량 저장 구조
+
+DB `adjusted_time` 컬럼은 JSON으로 3개의 독립 단위를 저장한다:
+
+```json
+{"days": 0, "hours": 5, "minutes": 0}
+```
+
+- `days`: 일 단위 조정량 (정수)
+- `hours`: 시간 단위 조정량 (정수)
+- `minutes`: 분 단위 조정량 (정수)
+
+이 세 값을 분(minutes)으로 변환하는 공식:
 
 ```
 assignedTime = days × sojeong_at_assignedAt + hours × 60 + minutes
 ```
 
 - `sojeong_at_assignedAt` = **조정 날짜(`assignedAt`) 기준의 소정근로시간**
-- `days`는 DB의 `adjusted_days` (소수점 가능, 예: 0.833)
-- `hours`, `minutes`는 DB의 `adjusted_time` JSON 필드
 
 코드:
 ```kotlin
-// AnnualTimeOffAdjustAssignProps.getMinutes()
-fun getMinutes(workRuleModel): Minutes =
+// AnnualTimeOffAdjustAssignPropsExtensions.kt
+fun AnnualTimeOffAdjustAssignProps.getMinutes(workRuleModel): Minutes =
     (adjustedAmount.days * workRuleModel.getAverageDailyTimeOffMinutesPerWeekAtDate(assignedAt)) +
     (adjustedAmount.hours * 60) +
     adjustedAmount.minutes
@@ -59,6 +82,41 @@ fun getMinutes(workRuleModel): Minutes =
 ```
 assignedTime = 0 × 360 + 5 × 60 + 0 = 300분
 ```
+
+#### 관리자 입력 방식
+
+두 가지 방식으로 입력 가능하며, 내부 저장 형식은 동일하다:
+
+1. **일시분 복합 입력** → `adjusted_time = {days, hours, minutes}` 그대로 저장
+2. **소수점 일 단위** (예: 0.833일) → 내부에서 `toAmount(avgMinutes)`로 `{days, hours, minutes}`로 역변환
+
+`adjusted_days` 컬럼은 일 단위 환산 합계로, **표시 목적**으로 별도 저장된다. 실제 분 계산은 `adjusted_time` JSON에서 `getMinutes()`로 수행한다.
+
+#### 양수 조정 vs 음수 조정 처리
+
+| 구분 | 조건 | 처리 방식 |
+|------|------|-----------|
+| 양수 조정 | `adjustedDays > 0` | **ADJUST 버킷** 신규 생성 → 잔여일 계산에 포함 |
+| 음수 조정 | `adjustedDays ≤ 0` | 기존 버킷에서 차감 → 소진 초과분은 **FOR_MINUS 버킷** 자동 생성 |
+
+**FOR_MINUS 버킷**: 음수 조정·사용이 기존 버킷 잔여를 모두 소진하고도 남을 때 `AnnualTimeOffBucketResolverV1.createMinusBucket()`이 자동 생성. 잔여일 계산(`getDetailRemainingDays`)에서 `type !== FOR_MINUS` 필터로 **완전 제외**된다.
+
+```kotlin
+// AnnualTimeOffBucketResolverV1.kt
+// 아직도 리졸브할 사용, 조정(-)이 남았으면, 마이너스 버킷을 만든다.
+val minusBucket = createMinusBucket(
+    remains = resolvedDailyUsesAndV2NegativeAdjusts + resolvedNegativeAdjusts,
+    calculationBaseDate = calculationBaseDate,
+)
+```
+
+#### ADJUST 버킷의 `agreedDayWorkingMinutes`
+
+ADJUST 버킷도 생성 시점(`assignedAt`)의 소정근로시간을 `agreedDayWorkingMinutes`로 저장한다.
+소정근로시간이 변경된 유저는 REGULAR 버킷과 ADJUST 버킷의 `agreedDayWorkingMinutes`가 달라
+합산 시 소수점이 발생할 수 있다. (→ [소정근로시간이 쓰이는 시점 정리](#소정근로시간이-쓰이는-시점-정리) 참조)
+
+**주의**: `minutes` 필드를 직접 사용한 조정(-1분 등)은 소정근로시간과 무관하게 분 단위로 그대로 적용된다.
 
 ### 소정근로시간이 쓰이는 시점 정리
 
