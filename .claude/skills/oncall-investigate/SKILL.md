@@ -28,7 +28,8 @@ $ARGUMENTS — `/oncall-triage`의 Output 또는 직접 입력. 아래 정보가
 
 ## 코드베이스 위치
 
-- **FE 코드**: `~/Projects/flex-fe/` 하위 각 레포
+- **FE 코드 탐색 (읽기 전용)**: `~/Desktop/PROJECTS/flex-oncall/flex-fe/` 하위 각 레포 (submodule — 탐색/grep 전용)
+- **FE 코드 수정**: `~/Projects/flex-fe/{repo}--{ticket}` worktree — **수정은 반드시 여기서만**
 - **BE 코드 + opensearch**: `~/Desktop/PROJECTS/flex-support-oncall/` (BE 서브모듈 + brain/ 디렉토리)
 
 ## 진행 상황 표시 규칙
@@ -127,33 +128,23 @@ opensearch MCP(`os-query-log` 스킬)를 활용하여 로그를 검색한다.
 
 ## FE 이슈 조사
 
-FE 이슈로 판단되면 `~/Projects/flex-fe/` 하위 해당 레포에서 조사한다.
+FE 이슈로 판단되면 `~/Desktop/PROJECTS/flex-oncall/flex-fe/` 하위 해당 레포에서 탐색한다.
 
 **triage에서 특정된 대상 레포 내에서만 탐색한다.** 대상 레포가 없으면 `/oncall-triage`를 먼저 실행하도록 안내한다.
 
-### 작업 환경 설정 (코드 수정이 필요한 경우)
+### ⚡ FE 이슈 확정 즉시 — worktree 생성 (vscode 스킬)
 
-FE 코드 수정이 필요하다고 판단되면, **코드 수정 전에** worktree를 생성하고 VSCode를 열어 유저가 dev server에서 변경사항을 직접 확인할 수 있게 한다:
+**FE 이슈로 판단되는 즉시** (코드 수정 여부와 무관하게) `/vscode` 스킬로 worktree를 생성한다.
+worktree가 있어야 개발자가 코드 diff 확인, dev server 재현, 수정 작업을 즉시 시작할 수 있다.
 
-1. **Linear 이슈에서 브랜치명 확인** (이슈 URL이 있는 경우)
-2. **Worktree 생성**:
-   ```bash
-   cd ~/Projects/flex-fe/{대상-레포} && git checkout develop && git pull origin develop
-   git worktree add ~/Projects/flex-fe/{대상-레포}--{ticket-suffix} -b {branch} develop
-   ```
-   - hotfix인 경우 `main` 기준으로 생성
-3. **환경 초기화**:
-   ```bash
-   cd ~/Projects/flex-fe/{대상-레포}--{ticket-suffix} && direnv allow && yarn install
-   ```
-4. **VSCode workspace 생성 + 열기**:
-   ```bash
-   node ~/.claude/skills/vscode/scripts/generate-workspace.mjs {ticket}
-   code ~/Projects/flex-fe/workspaces/{ticket}.code-workspace
-   ```
-5. 유저에게 `yarn dev` 또는 `yarn dev:standalone`으로 dev server를 띄워 확인할 수 있음을 안내
+```
+/vscode {ticket-id}
+```
 
-이후 worktree 내에서 코드 수정 및 커밋을 진행한다.
+- `/vscode` 스킬이 worktree 생성 + 환경 초기화 + VSCode 열기를 모두 처리한다
+- 유저에게 `yarn dev:standalone`으로 dev server를 띄워 재현 확인할 수 있음을 안내
+- **코드 수정은 반드시 생성된 worktree(`~/Projects/flex-fe/{repo}--{ticket}`) 안에서만 한다**
+  - `~/Desktop/PROJECTS/flex-oncall/flex-fe/`(submodule)에서 직접 수정하면 안 됨
 
 ### 재현 시도 순서
 

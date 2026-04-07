@@ -65,6 +65,8 @@ Triage 결과의 **[판정]** 에 따라 다음 단계를 결정한다:
 **Input**: Phase 1의 triage 결과 (이슈 유형, FE/BE 판정, 대상 레포, 회사 ID, 증상)
 **Output**: 원인 분류, 근거, 관련 파일, 가설 테이블
 
+> **FE 이슈 진입 즉시**: `/vscode {ticket-id}` 스킬로 worktree를 생성한다. 코드 조사와 병행하여 개발자가 즉시 dev server 재현/작업을 시작할 수 있도록 한다.
+
 ### Phase 3: Summarize
 
 `/oncall-summarize` 스킬의 전체 지침을 따라 실행한다.
