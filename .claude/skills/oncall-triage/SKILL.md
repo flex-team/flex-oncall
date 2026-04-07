@@ -11,6 +11,33 @@ argument-hint: <Slack URL 또는 Linear 티켓 ID> (예: https://flex-team.slack
 이슈를 접수하고 맥락을 파악하여 **유형 분류 + FE/BE 판별 + 대상 레포 특정**까지 수행하는 진입 스킬.
 조사(investigation)와 슬랙 메시지 작성은 이 스킬의 범위가 아니다.
 
+## Input
+
+$ARGUMENTS — 다음 중 하나:
+- **Slack URL**: CS 이슈 스레드 링크 → Slack MCP로 스레드 내용 읽어 맥락 파악
+- **Linear 티켓 ID**: (예: CI-4500) → Linear MCP로 이슈 상세 조회
+- **자유 텍스트**: 이슈 상황 직접 설명
+
+## Output
+
+```
+## Triage 결과
+
+- **이슈**: {티켓번호 또는 슬랙 링크} — {이슈 요약 1줄}
+- **회사**: {회사명} (ID: {id})
+- **서비스 영역**: {영역}
+- **긴급도**: {긴급/상/중}
+
+[분류] {유형} ({영문}) — {근거 한 줄}
+[판정] {FE 이슈 / BE 이슈 / FE-BE 교차 / 스펙 이슈 / 판단 불가} — {근거 한 줄}
+[대상 레포] {레포명 또는 "BE 라우팅 필요"}
+
+### 다음 단계
+- 조사가 필요하면: `/oncall-investigate`
+- 스펙 이슈/Not a bug로 바로 결론 가능하면: `/oncall-summarize`
+- BE 이슈로 라우팅만 하면: BE 담당팀에 전달
+```
+
 ## 코드베이스 위치
 
 - **FE 코드**: `~/Projects/flex-fe/` 하위 각 레포 (flex-frontend-apps-performance-management, flex-frontend-apps-time-tracking 등)
@@ -134,27 +161,32 @@ CS팀이 슬랙에 올린 이슈 메시지에서 다음 정보를 추출한다:
 - 해당 PR/커밋의 변경 내용을 우선 분석 — 사이드이펙트인지 확인
 - 이미 수정 배포된 건이면 → "이미 해결됨 (Not a bug)" 경로로 빠르게 결론
 
-## Output
+## Step 4: 대상 레포 특정 (FE 이슈인 경우)
 
-Triage 완료 시 아래 구조화된 결과를 출력한다:
+FE 이슈로 판정되면 서비스 영역을 기반으로 대상 레포를 특정한다.
 
-```
-## Triage 결과
+### 서비스 영역 → 레포 매핑
 
-- **이슈**: {티켓번호 또는 슬랙 링크} — {이슈 요약 1줄}
-- **회사**: {회사명} (ID: {id})
-- **서비스 영역**: {영역}
-- **긴급도**: {긴급/상/중}
+CS 메시지에서 backtick으로 감싼 서비스 영역 태그(예: \`비용관리\`, \`근태관리\`)를 확인하고, 아래 매핑 테이블로 후보 레포를 선정한다:
 
-[분류] {유형} ({영문}) — {근거 한 줄}
-[판정] {FE 이슈 / BE 이슈 / FE-BE 교차 / 스펙 이슈 / 판단 불가} — {근거 한 줄}
-[대상 레포] {레포명 또는 "BE 라우팅 필요"}
+| 서비스 영역 태그 | 대상 레포 |
+|------------------|-----------|
+| 비용관리, 지출결의, 영수증, 법인카드 | `flex-frontend-apps-fins` |
+| 근태관리, 출퇴근, 휴가, 초과근무 | `flex-frontend-apps-time-tracking` |
+| 평가, 리뷰, 목표 | `flex-frontend-apps-performance-management` |
+| 급여, 정산 | `flex-frontend-apps-payroll` |
+| 채용, 지원자 | `flex-frontend-apps-recruiting` |
+| 전자결재, 워크플로우 | `flex-frontend-apps-workflow` |
+| 인사정보, 조직 | `flex-frontend-apps-people` |
+| 로그인, 인증 | `flex-frontend-apps-auth` |
+| GNB, 홈, 설정, 문서 | `flex-frontend` |
 
-### 다음 단계
-- 조사가 필요하면: `/oncall-investigate`
-- 스펙 이슈/Not a bug로 바로 결론 가능하면: `/oncall-summarize`
-- BE 이슈로 라우팅만 하면: BE 담당팀에 전달
-```
+### grep으로 후보 레포 검증
+
+후보 레포가 맞는지 확인하기 위해, 이슈 맥락에서 추출한 핵심 키워드(API 경로, UI 텍스트, 기능명 등)로 후보 레포에서 grep을 1회 실행한다.
+
+- **히트 있음** → 후보 레포 확정
+- **히트 없음** → 매핑이 잘못된 것. 다른 후보 레포로 확장하여 재검색
 
 ## 주의사항
 
