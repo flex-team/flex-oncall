@@ -1,3 +1,9 @@
 {"ts":"2026-04-07T12:00:00+09:00","type":"investigation","user":"juwon","model":"claude-sonnet-4-6","env":"local","ticket":"CI-4337","domain":"time-tracking","context_loaded":true,"steps":3,"wrong_hypotheses":0,"stale_found":null,"session":"ops-investigate-resolve"}
 {"ts":"2026-04-07T12:09:05+0900","epoch":1775531345,"date":"2026-04-07","user":"juwon","skill":"ops-learn","args":"brain/notes/archive/CI-4334.md","session":"b8cb87c1-2872-4001-bc7c-2616944fc655"}
 {"ts":"2026-04-07T12:14:34+09:00","type":"close-note","user":"juwon","model":"claude-sonnet-4-6","env":"local","ticket":"CI-4338","domain":"review","session":"8bac8039-fc94-48dc-b301-f4ac0f9e3e4a","artifacts":{"cookbook":"F6 플로우 추가 + 구리뷰 질문 수정 진단 항목","context":"cookbook/review.md 구리뷰 특이사항 섹션 + 사례","domain_map":"d:kw +7, d:syn +3, d:st C"}}
+{"ts":"2026-04-07T13:58:43+0900","epoch":1775537923,"date":"2026-04-07","user":"juwon","skill":"ops-investigate-issue","args":"CI-4350","session":"0c0c40df-9cbd-4465-9798-4c619c0a2690"}
+{"ts":"2026-04-07T14:11:35+0900","epoch":1775538695,"date":"2026-04-07","user":"juwon","skill":"kafka:kafka-query","args":"","session":"0c0c40df-9cbd-4465-9798-4c619c0a2690"}
+{"ts":"2026-04-07T14:24:18+0900","epoch":1775539458,"date":"2026-04-07","user":"juwon","skill":"ops-note-issue","args":"CI-4352","session":"c274db9c-1ca2-4136-8a49-085d44090e86"}
+{"ts":"2026-04-07T14:26:15+0900","epoch":1775539575,"date":"2026-04-07","user":"juwon","skill":"ops-note-issue","args":"CI-4351","session":"8762811e-2475-429a-bb94-f7895d7eedb4"}
+{"ts":"2026-04-07T14:42:52+0900","epoch":1775540572,"date":"2026-04-07","user":"juwon","skill":"operation-api:ops-api","args":"","session":"0c0c40df-9cbd-4465-9798-4c619c0a2690"}
+{"ts":"2026-04-07T14:49:10+0900","epoch":1775540950,"date":"2026-04-07","user":"juwon","skill":"update-config","args":"","session":"eee89947-d637-44f3-826b-9fe0dd2be373"}

@@ -2962,6 +2962,11 @@ n:CI-4338
   d:ca "2026-04-07" ;
   d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 수정 — 레브잇(194054). review_question 3건 + question_log 3건 DML 보정 완료 (김보라, 2026-04-06)" .
 
+n:CI-4351
+  d:in :shift ;
+  d:v  "investigating" ;
+  d:s  "시몬스(77952) 갤러리F 교대근무 스케줄 삭제 이력 조회 요청 — 삭제 시점·삭제자 이메일 확인 필요. raccoon audit API 활용 예정" .
+
 g:ins-04
   d:in :insurance ;
   d:q  "청약이 뭐예요?" ;
