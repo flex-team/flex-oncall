@@ -148,13 +148,17 @@
         "filterIsInstance" , "DraftTimeOff" ,
         "DailyShiftUserWorkScheduleExportDataNightType5Converter" , "timeBlockGroups" ,
         "MultiDayTimeOffCancellationValidator" , "timeOffDeletion" ,
-        "여러날휴가" , "확인필요" , "UserShiftScheduleDraftEntity" ;
+        "여러날휴가" , "확인필요" , "UserShiftScheduleDraftEntity" ,
+        "v2_customer_work_plan_template" , "shift_schedule_template" ;
   d:syn "교대근무 관리 화면에서 일부 구성원만 조회됩니다" ,
         "퇴근 자동 조정이 안 돼요" ,
         "교대근무 엑셀 업로드 시 연차가 안 들어가요" ,
         "교대근무 리포트 시간이 다릅니다" ,
         "교대근무 스케줄 게시 시 확인 필요 오류" ,
-        "여러날 휴가 등록했는데 게시가 안 돼요" ;
+        "여러날 휴가 등록했는데 게시가 안 돼요" ,
+        "교대근무 스케줄이 안 보여요" ,
+        "스케줄 삭제 이력 확인해주세요" ,
+        "스케줄이 사라졌어요" ;
   d:x   :time-tracking , :permission , :payroll .
 
 :integration
@@ -2506,6 +2510,13 @@ n:CI-4309
   d:st "C" ;
   d:ca "2026-04-02" ;
   d:s  "감사로그 다운로드 요청 — raccoon audit operation API로 메일 발송 처리. customerId 25546, 기간 2025-09-22~2026-01-30" .
+
+n:CI-4351
+  d:in :shift ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-07" ;
+  d:s  "시몬스(77952) 갤러리F 교대근무 스케줄 '삭제' 문의 — v2_customer_work_plan_template 조회 결과 삭제 이력 없음. 스코프 변경으로 안 보인 것, 고객이 4/7 재생성 확인. 초기 라우팅 미스: 감사로그(:account) → :shift DB 직접 조회 패턴으로 전환" .
 
 n:CI-4244
   d:in :approval ;

@@ -316,6 +316,10 @@
 4. 초단시간 근로자 연장근무 계산 이상 → `baseAgreedDayWorkingMinutes`가 휴무일에 법적 소정근로시간(예: 168분)으로 사용되어 일연장이 과소 계산. 주휴일은 480분(8시간) 고정인데 휴무일만 비대칭 — **버그 추정** [CI-4048]
 5. 교대근무 일별 리포트 스케줄 시간 불일치 → `DailyShiftUserWorkScheduleExportDataNightType5Converter`에서 `timeBlockGroups` 미정렬 + `associateBy` 덮어쓰기 2중 결함. 2개 이상 교대배치 시 잘못된 블록의 시간 출력 — **버그** [CI-4132]
 6. 여러날 휴가 등록 구성원에 스케줄 게시 시 "확인 필요" 오류 → draft에 `timeOffDeletion` 잔존 여부 확인. `MultiDayTimeOffCancellationValidator`가 여러날 휴가 삭제를 감지하여 ERROR 반환. 해당 구성원의 draft에서 `timeOffDeletion` 제거로 해결 [CI-4268]
+7. 교대근무 스케줄이 안 보인다 / 삭제된 것 같다 → `v2_customer_work_plan_template` 에서 `name + customer_id` 로 직접 조회 [CI-4351]
+   - 존재하면 → 삭제 안됨. 스코프 변경으로 안 보인 것 가능성 높음. 고객에게 스코프 설정 확인 안내
+   - 없으면 → 실제 삭제됨. 별도 삭제 이력 저장 없으므로 access log에서 DELETE 주체 확인
+   - ⚠️ raccoon audit API(감사로그)는 이 케이스 미적용 — 계정/구성원 정보 전용
 
 **고객 안내 예시 (구성원 누락):**
 > 교대근무 관리 화면에서는 **근무 권한**과 **휴가 권한**을 **모두** 보유한 조직의 구성원만 표시됩니다.
@@ -629,6 +633,7 @@
 
 #### 진단 체크리스트 (감사로그 다운로드)
 문의: "감사로그 다운로드 요청드립니다" / "감사로그 데이터 추출해주세요" / "장기간 감사로그가 필요합니다"
+> ⚠️ **도메인 특화 삭제 이력 요청** (교대근무 스케줄 삭제 이력 등)은 이 체크리스트 아님 → 해당 도메인 DB 직접 조회 먼저. 교대근무 스케줄이면 `:shift` 체크리스트 #7 참조 [CI-4351]
 1. **제품 내 기능**: 감사로그 다운로드는 **7일 기간 제한** — 장기간 요청 시 Operation API 필요 [CI-4309]
 2. **법적 대응 목적**: 법적 요건으로 협조 필요 — 엔터프라이즈 유도 목적 제한이지만 거부 불가 [CI-4309]
 3. **Operation API 실행**: raccoon Swagger `https://flex-raccoon.grapeisfruit.com/swagger/audit` → "audit operation" [CI-4309]
@@ -2451,6 +2456,7 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-07 | CI-4351 | 교대근무: 스케줄 미노출/삭제 오해 체크리스트(#7) 추가 — `v2_customer_work_plan_template` 직접 조회 + 스코프 확인 패턴. 계정/구성원 감사로그 체크리스트에 도메인 특화 삭제 이력 cross-ref 추가. domain-map.ttl d:kw/d:syn 보강, n:CI-4351 `:shift` 등록 |
 | 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
 | 2026-04-07 | CI-4335 | 계정/구성원: 문서/개인정보 변경 알림 수신자 스펙 확인 — 기존 COOKBOOK 체크리스트(권한 기반 발송) domain-map.ttl d:st "C" 완료 처리 |
 | 2026-04-07 | CI-4334 | 비용관리: 지출결의 수정 팝업 영수증 건수 초과 미표시 — 체크리스트#8 + F4 플로우 추가. Bullseye(`fins_spending_entire_v1`) MatrixQL continuation 미지원, FE size 1000 limit 구조 추가. cookbook/fins.md 구현 특이사항 + 과거 사례 + SQL 템플릿(영수증 건수 조회) 추가 |
