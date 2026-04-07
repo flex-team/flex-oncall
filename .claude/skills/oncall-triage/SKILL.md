@@ -1,7 +1,7 @@
 ---
 name: oncall-triage
 description: 온콜 이슈 접수 및 Triage 스킬. Slack URL이나 Linear 티켓을 받아 맥락을 파악하고, 이슈 유형 분류(오류/데이터/성능/권한/스펙/화면형) 및 FE/BE 판별을 수행한다. "온콜", "triage", "이슈 분류", "FE야 BE야", "이거 봐줘" 등의 표현이나, Slack/Linear URL을 공유하며 분석을 요청할 때 사용한다.
-argument-hint: <Slack URL 또는 Linear 티켓 ID> (예: https://flex-team.slack.com/archives/... 또는 CI-4500)
+argument-hint: "<Slack URL 또는 Linear 티켓 ID> (예: https://flex-team.slack.com/archives/... 또는 CI-4500)"
 ---
 
 # 온콜 Triage

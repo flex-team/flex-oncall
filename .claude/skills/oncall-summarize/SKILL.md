@@ -1,7 +1,7 @@
 ---
 name: oncall-summarize
 description: 온콜 조사 결과를 슬랙 공유용 포맷으로 변환하는 스킬. FE 분석 결과, BE 제보, 스펙 이슈, Won't fix 등 상황에 맞는 슬랙 메시지를 생성한다. "슬랙 메시지 작성", "요약해줘", "공유용으로 정리", "슬랙에 올릴 거" 등의 표현이나, 조사 완료 후 결과를 공유해야 할 때 사용한다. 이미 원인을 알고 있을 때 직접 호출해도 된다.
-argument-hint: <조사 결과 요약 또는 직접 원인 설명> (예: "CI-4500 BE 이슈, API endDate=null")
+argument-hint: "<조사 결과 요약 또는 직접 원인 설명> (예: CI-4500 BE 이슈, API endDate=null)"
 ---
 
 # 온콜 슬랙 요약 (Summarize)

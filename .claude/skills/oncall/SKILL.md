@@ -1,7 +1,7 @@
 ---
 name: oncall
 description: 온콜 이슈 분석 및 디버깅 스킬. CS팀이 슬랙에 올린 이슈나 QA가 보고한 버그의 원인을 체계적으로 분석하고, 슬랙 공유용 한글 요약을 생성한다. "온콜", "QA 이슈", "버그 분석", "이슈 분석", "원인 파악", "왜 안 되는지", "에러가 난다", "안 된다고 해", "CS 이슈" 등의 표현을 사용하거나, 특정 기능의 오류/장애 상황을 설명할 때 이 스킬을 사용한다. Linear 티켓이나 슬랙 메시지 URL을 공유하며 분석을 요청하는 경우에도 사용한다.
-argument-hint: <Slack URL 또는 Linear 티켓 ID> (예: https://flex-team.slack.com/archives/... 또는 CI-4500)
+argument-hint: "<Slack URL 또는 Linear 티켓 ID> (예: https://flex-team.slack.com/archives/... 또는 CI-4500)"
 ---
 
 # 온콜 이슈 분석 (Orchestrator)

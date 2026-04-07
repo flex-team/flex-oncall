@@ -1,7 +1,7 @@
 ---
 name: oncall-investigate
 description: 온콜 이슈 FE 코드 조사 및 FE↔BE 교차 조사 스킬. triage 결과를 받아 코드를 추적하고, 가설 소거 루프로 원인을 분석한다. "조사해줘", "코드 추적", "원인 파악", "왜 이런 거야" 등의 표현이나, triage 완료 후 심층 조사가 필요할 때 사용한다.
-argument-hint: <triage 결과 요약 또는 직접 이슈 설명> (예: "CI-4500 FE 이슈, flex-frontend-apps-fins, 데이터형")
+argument-hint: "<triage 결과 요약 또는 직접 이슈 설명> (예: CI-4500 FE 이슈, flex-frontend-apps-fins, 데이터형)"
 ---
 
 # 온콜 조사 (Investigate)
