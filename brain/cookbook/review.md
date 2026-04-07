@@ -26,6 +26,7 @@
 - **title=null DRAFT 평가**: 과거 버그로 title이 null인 DRAFT 평가가 존재할 수 있다. FE에서 목록 필터링으로 비노출 처리했으나, FE 핫픽스 이후 정상 노출되면서 고객이 "삭제했던 것이 복원됐다"고 오인하는 패턴.
 - **삭제된 평가 복구**: soft delete이므로 `deleted_at = NULL` DML로 복구 가능. Operation API(PR #5181) 머지 후에는 API로도 복구 가능.
 - **raccoon 환경 불일치**: 리뷰 마이그레이션 시 dev raccoon에 prod 해시를 사용하면 Hashids salt 불일치로 디코딩 실패. 반드시 prod raccoon 사용.
+- **평가 단계 시작 후 설정 변경 불가**: 평가 진행 중에는 등급 배분율(`evaluation_grade_distribution`) 설정 UI 편집이 잠긴다. 변경이 필요하면 DML 보정으로만 가능하다. `allow_submission_if_exceed`: 0=초과 시 제출 차단, 1=초과해도 제출 허용. [CI-4327]
 
 ### 자주 혼동되는 것들
 
@@ -74,6 +75,23 @@ SELECT id, created_at FROM form_user_form
 WHERE id IN (?);
 ```
 
+```sql
+-- 등급 배분율 설정 확인
+SELECT id, evaluation_id, grade_factor_id, allow_submission_if_exceed
+FROM flex_review.evaluation_grade_distribution
+WHERE customer_id = ? AND evaluation_id = ?;
+
+-- 등급 배분율 제출 제한 해제 (결재 필요)
+UPDATE flex_review.evaluation_grade_distribution
+SET allow_submission_if_exceed = 1
+WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
+
+-- 롤백
+-- UPDATE flex_review.evaluation_grade_distribution
+-- SET allow_submission_if_exceed = 0
+-- WHERE id = ?;
+```
+
 ## 과거 사례
 
 - **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
@@ -82,3 +100,4 @@ WHERE id IN (?);
 - **리뷰 마이그레이션 "Failed requirement." 에러**: dev raccoon에서 prod 해시 사용 → Hashids salt 불일치로 디코딩 실패(`INVALID_NUMBER`). prod raccoon에서 재시도하면 구체적 에러 정상 출력 — **운영 오류** [QNA-1936]
 - **후발 추가 reviewer 평가지 미생성**: finalize 이후 추가된 reviewer의 UserForm이 메시지 큐 실패로 초기화 안 됨. admin 화면에서 "생성 중" 표시. Operation API `initialize-user-form`으로 수동 해결 — **운영 대응** [CI-4188]
 - **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
+- **등급 배분율 초과 시 제출 차단 설정 보정**: 평가 진행 중 `evaluation_grade_distribution.allow_submission_if_exceed = 0` 상태에서 배분율 초과 시 제출 불가. 평가 단계 시작 후 UI 편집 잠김 — DML로만 보정 가능. `evaluation_id`와 레코드 `id` 모두 WHERE 조건 필요 — **운영 대응** [CI-4327]

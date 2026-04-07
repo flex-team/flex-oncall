@@ -44,6 +44,7 @@ WHERE primary_recipient = ? ORDER BY requested_at DESC;
 
 ## 과거 사례
 
+- **문서/개인정보 변경 알림 — 권한 기반 발송**: 수신자 결정은 "문서변경 참조" 설정이 아닌 권한(`CORE_USER_ATTACHMENT_UPDATE`, `CORE_USER_PERSONAL_UPDATE`) 보유 여부. 알림을 끄려면 해당 권한 제거 안내. 개인정보 변경은 대상자 본인에게도 알림, 관리자 직접 수정 시엔 2단계 알림 스킵 — **스펙** [CI-4335]
 - **승인자=참조자 중복 알림 제거**: 동일 사용자가 승인자이면서 참조자일 때 승인 알림 1건으로 통합. 참조 알림 미수신은 정상 — **스펙** [CI-3910]
 - **이메일 CTA 이동 대상 차이**: `approve.refer` → 할 일, `approved.refer` → 홈피드. 클릭 시점에 승인 완료된 건은 홈피드로 리다이렉트 — **스펙** [CI-3914]
 - **en/ko 템플릿 CTA URL 불일치**: 3건 발견 (`approve.refer.cta-web`, `remind.work-record.missing.one.cta-web`, `workflow.task.request-view.request.cta-web`) — **별도 버그** [CI-3914]

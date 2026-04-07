@@ -35,6 +35,8 @@
 
 - **어드민쉘 수동 동기화**: 수집 범위 내의 과거 데이터는 어드민쉘에서 수동으로 동기화 실행 가능. 범위 밖은 코드 수정이 필요하므로 담당 개발자에게 요청.
 - **독립 서비스**: `flex-fins-backend`는 별도 서비스 + 별도 모듈 구조. 다른 flex 백엔드와 API 경계가 분리되어 있다.
+- **Vespa 인덱스 (`fins_spending_entire_v1`)**: 영수증 > 제출 화면의 데이터 소스. 전자결재 상태 변경 시 impact → fins 구간에서 Vespa 인덱스가 갱신되어야 하며, 실패 시 화면 표시 불일치 발생. 수동 재동기화 API: `POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish` [CI-4332]
+- **`spending_evidence_electronic_approval_document` 테이블**: 전자결재 문서 상태를 DB에 저장하는 테이블. 전자결재 반려 이벤트 Kafka 수신 실패 시 `status = IN_PROGRESS` 잔존 → 영수증 유효성 검증 실패("진행중인 문서가 있어" 오류) [CI-4312]
 
 ---
 
@@ -43,3 +45,5 @@
 - **국세청 세금계산서 소급 연동**: 최근 12개월까지 수집 가능. 어드민쉘 수동 동기화로 즉시 처리. 카드 데이터는 승인/매입 API별 조회 기간이 상이하여 특정 기간 이전은 별도 코드 작업 필요 — **운영 대응** [CI-4179]
 - **카드 부분 취소가 전체 취소로 표시**: 하나카드 부분취소 시 취소금액 필드 미사용 버그. hotfix + 영수증 재생성 — **버그** [CI-4071]
 - **수동 증빙 시간 정책 위반 오표시**: 수동 추가 증빙(ETC spending)의 `transactedTime=null`이 RANGE 평가에서 FAIL 처리되어 위반으로 표시. 카드 증빙은 영향 없음. EP팀 수정 예정 — **버그** [CI-4229]
+- **지출결의 반려 후 영수증 > 제출 화면 진행중 표시**: Vespa 인덱스(`fins_spending_entire_v1`)에 전자결재 반려 상태가 미반영(impact→fins 동기화 실패). operation API로 수동 동기화 완료 — **운영 대응** [CI-4332]
+- **지출결의 반려 후 재작성 시 영수증 소실**: `spending_evidence_electronic_approval_document.status = IN_PROGRESS` 잔존으로 "진행중인 문서가 있어" 오류 발생. 동일 고객사(무하유) 반복 발생, Kafka 이벤트 소비 실패 근본 원인 — **운영 대응** [CI-4312]

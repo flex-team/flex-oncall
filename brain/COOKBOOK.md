@@ -596,6 +596,15 @@
    ├─ 쿼리 승인자 필요 (보안 규정)
    └─ 실행 후 고객 로그인 확인 요청
 
+#### 진단 체크리스트 (문서/개인정보 변경 알림)
+문의: "문서변경 참조에 없는데 알림이 와요" / "개인정보 등록 알림이 가요" / "신규입사자 가입 시 다른 분들에게 알림이 가요"
+1. **핵심**: 문서/개인정보 변경 알림 수신자는 "문서변경 참조" 설정이 아닌 **권한** 기반 [CI-4335]
+   - 문서 변경 알림: `CORE_USER_ATTACHMENT_UPDATE` 권한 보유자 전원에게 발송
+   - 개인정보 변경 알림: `CORE_USER_PERSONAL_UPDATE` 권한 보유자 전원에게 발송
+   - 승인정책관리 > 구성원정보 > 문서변경 참조 설정과는 **무관**
+2. 알림을 받지 않으려면 → 수신자의 해당 권한을 제거하도록 안내 (스펙이므로 버그 아님)
+3. 개인정보 변경 시 추가 패턴: 대상자 본인에게도 1단계 알림 발송. 단, 권한 보유자(관리자)가 직접 수정한 경우엔 2단계 알림 스킵
+
 #### 진단 체크리스트 (문서함/서류)
 문의: "삭제한 문서함 복구 가능한가요" / "실수로 문서함을 삭제했어요"
 1. **즉시 답변 가능**: 문서함 삭제는 **hard delete** — 복구 불가 [CI-4256]
@@ -1097,7 +1106,9 @@
 
 15. **정산 실행 시 "알 수 없는 오류" + 대상자 0명** → 대규모 회사(1,000명+)에서 사업장 담당자 계정으로 정산 실행 시 인가 타임아웃(`resolveAccessibleUsers`) 발생 가능. settlement은 커밋되지만 payee 초기화 실패 → 0명 IN_PROGRESS stuck. 깨진 정산 CANCELED 처리 필요 [CI-4260]
 
-16. **퇴직자 급여정산 주휴수당 미노출** → 정산 템플릿의 `work_record_import` 확인. `NONE`이면 TT 주휴수당 미조회 → default recipient 생성 시 dateRange가 전체 기간으로 설정됨 → 월 중도 퇴사자는 base payment dateRange와 불일치 → items:[] 반환 (Known Issue). 워크어라운드: 지급 항목 별도 추가로 수동 반영 [CI-4307]
+16. **정산 상세 지급액 0원 (실지급액은 정상)** → `work_income_payment_settlement_payee_result_item` 테이블에 해당 payee result 항목이 존재하는지 확인. 0건이면 2025-03-19 backfill 누락. customer_id 기준 미마이그레이션 payee 수 조회 → 다수이면 Operation API `migrate-ci4227/{customerId}?dryRun=true`로 확인 후 `dryRun=false`로 실행 — 히트: 2 (CI-4227, CI-4265) [CI-4265]
+
+17. **퇴직자 급여정산 주휴수당 미노출** → 정산 템플릿의 `work_record_import` 확인. `NONE`이면 TT 주휴수당 미조회 → default recipient 생성 시 dateRange가 전체 기간으로 설정됨 → 월 중도 퇴사자는 base payment dateRange와 불일치 → items:[] 반환 (Known Issue). 워크어라운드: 지급 항목 별도 추가로 수동 반영 [CI-4307]
 
 #### 조사 플로우
 
@@ -1216,6 +1227,12 @@
 3. 복구 필요 시 `review_set` 테이블의 `deleted = 0, deletedAt = NULL`로 복구 가능. 단, 뉴성과관리 전환 완료 상태에서 구 리뷰 복구 적절성은 담당자 확인 필요 [CI-4210]
 4. `evaluation` 테이블(뉴 성과관리)은 마이그레이션에 영향받지 않음 — `evaluation` soft delete와 혼동 주의 [CI-4210]
 
+문의: "구리뷰로 원복 가능한가요?" / "구리뷰 메뉴가 안 보여요" / "평가 → 구리뷰 전환 요청"
+1. flag 설정으로 구리뷰 메뉴 재노출 가능 여부 확인 — 담당자(김보라님)에게 flag 설정 요청 [CI-4331]
+2. 마감된 리뷰의 작성기간 수정이 필요한 경우 → `flex_review.review_set.progress_status`가 `ANSWER_NOT_OPEN`이면 `IN_PROGRESS`로 변경해야 관리자가 기간 수정 가능 [CI-4331]
+3. **주의**: 기간 수정은 반드시 리뷰관리자(고객)가 직접 수행해야 할일 발송됨. 데이터 보정으로 날짜를 직접 변경하면 할일 미발송 [CI-4331]
+4. 구리뷰 잔존 고객사는 Notion 리스트에 추가 필요 [CI-4331]
+
 문의: "평가지 생성 중" / "평가지가 안 보여요"
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
 2. 빈 배열이면 `created_at`을 일괄 생성 레코드와 비교하여 후발 추가 여부 확인 [CI-4188]
@@ -1226,6 +1243,11 @@
 2. 0건이면 → `evaluation_reviewee`의 `evaluate_step_and_factors`에 COMPETENCY factor가 있는지, `competency_group_mappings`가 `[]`인지 확인
 3. `evaluation.use_competency_item = 0` + COMPETENCY factor 존재 + `competency_group_mappings = []` 세 조건 모두 해당 시 → 이 버그에 해당 (PR#5199로 수정됨) [CI-4238]
 4. 버그 해당 시 조치: ① 항목 요청 초기화 → ② 대상자 전원 제외 → ③ 대상자 재추가 → ④ 항목 요청 재실행
+
+문의: "배분율 초과 시 제출이 안 돼요" / "등급 배분율 설정 변경이 안 돼요" / "인원 초과 시 제출 제한 비활성화하고 싶어요"
+1. `flex_review.evaluation_grade_distribution`에서 해당 evaluation의 `allow_submission_if_exceed` 값 확인 → `0`이면 배분율 초과 시 제출 차단 설정 [CI-4327]
+2. 평가가 이미 시작된 경우 UI에서 변경 불가 (시스템 스펙) → DML 보정 필요 [CI-4327]
+3. 조치: 결재 후 `allow_submission_if_exceed = 1` UPDATE (`evaluation_id`와 레코드 `id` 모두 WHERE 조건으로 사용)
 
 문의: "평가지 질문을 필수에서 선택으로 변경했는데 제출이 안 돼요" / "제출에 실패했어요"
 1. `form_question` 테이블에서 해당 질문의 `required` 값 확인 → `0`(선택)인데 제출 실패이면 ②로 [CI-4314]
@@ -1307,6 +1329,29 @@
    WHERE id = ?
 ```
 
+**F5: 등급 배분율 초과 시 제출 차단 설정 보정** · 타입: Spec · 히트: 1 · [CI-4327]
+> 트리거: "배분율 초과인데 제출이 안 돼요", "등급 배분율 설정을 바꾸고 싶어요" — 평가 진행 중 `allow_submission_if_exceed` 보정 필요
+
+```
+① evaluation_grade_distribution 현재 설정 확인
+   SELECT id, evaluation_id, grade_factor_id, allow_submission_if_exceed
+   FROM flex_review.evaluation_grade_distribution
+   WHERE customer_id = ? AND evaluation_id = ?
+   ├─ allow_submission_if_exceed = 0 → 배분율 초과 시 제출 차단 상태, ②로
+   └─ allow_submission_if_exceed = 1 → 이미 허용 상태, 다른 원인 조사
+   ↓
+② 평가 단계 시작 여부 확인
+   UI에서 설정 변경 불가 상태인지 고객 확인 (진행 중이면 UI 잠김)
+   → DML 보정 필요, ③으로
+   ↓
+③ DML 보정 (결재 필요)
+   -- 적용
+   UPDATE flex_review.evaluation_grade_distribution
+   SET allow_submission_if_exceed = 1
+   WHERE customer_id = ? AND evaluation_id = ? AND id = ?
+   → 고객에게 제출 재시도 요청
+```
+
 **F2: 후발 추가 reviewer UserForm 미초기화** · 히트: 2 · [CI-4188] [CI-4301]
 > 트리거: "특정 구성원 평가지가 생성 중", "평가지가 안 보여요" — finalize 이후 추가된 reviewer에서 발생
 
@@ -1385,6 +1430,23 @@ SELECT id, created_at FROM form_user_form
 WHERE id IN (?);
 ```
 
+```sql
+-- 등급 배분율 설정 확인
+SELECT id, evaluation_id, grade_factor_id, allow_submission_if_exceed
+FROM flex_review.evaluation_grade_distribution
+WHERE customer_id = ? AND evaluation_id = ?;
+
+-- 등급 배분율 제출 제한 해제 (결재 필요)
+UPDATE flex_review.evaluation_grade_distribution
+SET allow_submission_if_exceed = 1
+WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
+
+-- 롤백
+-- UPDATE flex_review.evaluation_grade_distribution
+-- SET allow_submission_if_exceed = 0
+-- WHERE id = ?;
+```
+
 #### 과거 사례
 - **삭제한 평가가 다시 노출**: 실제로는 삭제된 적 없는 title=null DRAFT 평가가 FE 핫픽스로 정상 노출된 것. 고객이 "이전에 안 보이던 것이 보임"을 "삭제 복원"으로 오해 — **스펙** [CI-4158]
 - **평가 공동편집자 아닌데 메뉴 노출**: title=null인 DRAFT 평가를 FE에서 필터링하여 노출 문제 — **버그 (FE)** [CI-4129]
@@ -1394,6 +1456,7 @@ WHERE id IN (?);
 - **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
 - **평가 등급 배분 완료 시 validation 오류**: 과거 버그 수정 전 평가를 복제하여 `grades_to_calculate`가 비어있는 상태로 전파. `draft_evaluation` DML 보정으로 해결 — **운영 대응** [CI-4204]
 - **뉴성과관리 전환 후 진행 중 평가 사라짐**: `MigrationScheduler`가 구 리뷰 → 뉴 성과관리 전환 시 진행 중 리뷰셋을 의도적으로 soft delete. `review_set` 테이블 `deleted=0, deletedAt=NULL` 복구 가능 — **스펙** [CI-4210]
+- **등급 배분율 초과 시 제출 차단 설정 보정**: 평가 진행 중 `evaluation_grade_distribution.allow_submission_if_exceed = 0` 상태. UI 편집이 잠겨있어 DML로만 보정 가능 — **운영 대응** [CI-4327]
 
 ---
 
@@ -1842,6 +1905,46 @@ WHERE id IN (?);
 1. 유저가 캘린더 쓰기권한 없는 토큰으로 연동한 경우
 2. 기존 연동 해제 후 **쓰기 권한 포함**하여 재연동 가이드
 
+문의: "그룹 구글캘린더 연동 해제했는데 기존 일정이 아직 떠요" / "연동 해제 후 구글캘린더에 휴가 일정이 남아있어요"
+1. **스펙 안내**: 연동 해제는 앞으로의 동기화만 차단. 기존 이벤트는 자동 삭제되지 않음 — 의도된 동작
+2. **수동 삭제 요청 시**: cleansing API 사용 (F2 참조)
+
+**F2: 그룹 구글캘린더 연동 해제 후 잔존 이벤트 수동 삭제** · 타입: Spec · 히트: 1 · [CI-4330]
+> 트리거: "그룹 캘린더 연동 해제 후에도 구글캘린더에 휴가 일정이 남아있어요"
+
+```
+① 스펙 확인
+   연동 해제 = 앞으로의 동기화 차단. 기존 이벤트 삭제 없음이 현재 스펙
+   → 고객에게 스펙 안내. 수동 삭제를 원하면 ②로
+
+② 연동 이력 조회 (calendarConnectionHistoryId 확인)
+   DB: flex.v2_external_calendar_connection_history
+   WHERE customer_id = ? AND connection_type = 'GROUP' AND connection_state = 'DISCONNECTED'
+   → id = calendarConnectionHistoryId
+
+③ OAuth 토큰 조회 (oauthTokenId 확인)
+   DB: flex.v2_oauth_user_token
+   WHERE customer_id = ? AND email = '{그룹캘린더 소유 계정 이메일}'
+   → id = oauthTokenId
+
+④ 잔존 이벤트 ID 목록 조회
+   Metabase 사용 필수 (flex_calendar DB는 MCP 화이트리스트 미허용)
+   DB: flex_calendar.google_calendar_event_sync
+   WHERE query_key LIKE '{customerId}%' AND google_calendar_id = '{그룹캘린더ID}'
+   → google_event_id 목록 추출
+
+⑤ raccoon 브라우저 세션에서 cleansing API 호출
+   POST /proxy/calendar/api/operation/v2/calendar/customers/{customerId}/events/cleansing
+   {
+     "oauthTokenId": <③>,
+     "calendarConnectionHistoryId": <②>,
+     "googleEventIds": [<④ 목록>]
+   }
+   ⚠️ 300건 이상 시 20건씩 배치 + 2초 delay (Google Calendar API rate limit)
+```
+
+<!-- TODO: 시나리오 테스트 추가 권장 -->
+
 → 상세: [cookbook/calendar.md](cookbook/calendar.md)
 
 ---
@@ -2026,12 +2129,14 @@ Kibana 참고:
 → 도메인 이해: [cookbook/fins.md#도메인-컨텍스트](cookbook/fins.md#도메인-컨텍스트)
 
 #### 진단 체크리스트
-문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요"
+문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요" / "영수증 업데이트하기 클릭 시 선택 초기화돼요" / "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요"
 1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
 2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
 3. 연동 완료 상태이면 → 어드민쉘 수동 동기화로 희망 기간 데이터 동기화 가능 [CI-4179]
 4. 카드 데이터 특정 기간 이전 동기화 실패 → 승인/매입 API별 조회 가능 기간이 상이. 범위 초과 시 담당 개발자에게 별도 코드 작업 요청 필요 [CI-4179]
 5. **수동 증빙 시간 정책 위반 표시** → 수동 추가 증빙(ETC spending)은 `transactedTime=null`로 전달되어 RANGE 평가에서 무조건 FAIL 처리됨 — **버그**(EP팀 수정 예정). 카드 증빙은 영향 없음(transactedTime 존재). 정책 생성 시점 이전 증빙에는 위반 미발생(활성 정책 없음) [CI-4229]
+6. **지출결의 영수증 "업데이트 하기" 클릭 시 선택 초기화** → access log에서 compare API(`/api/v2/electronic-approval/documents/receipts/compare`) 응답 `list`가 빈 배열인지 확인. 빈 배열이면 Bullseye 매트릭스(`fins_spending_entire_v1`) 색인 누락 — 임형태에게 전체 고객사 재동기화 요청 [CI-4324]
+7. **지출결의 반려 후 영수증 > 제출 화면에서 진행중 표시** → impact → fins Vespa 인덱스(`fins_spending_entire_v1`) 동기화 오류. DB에서 `document_id` 확인 후 operation API로 재동기화: `POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish` [CI-4332]
 
 #### 조사 플로우
 
@@ -2059,6 +2164,42 @@ Kibana 참고:
    ├─ 성공 → 고객에게 확인 요청
    └─ 실패 (API 기간 제한) → 담당 개발자에게 별도 코드 작업 요청
 ```
+
+**F2: 지출결의 영수증 선택 초기화 (Bullseye 색인 누락)** · 타입: Error · 히트: 1 · [CI-4324]
+> 트리거: "영수증 업데이트 하기 클릭 시 선택 영수증 전부 사라짐" / "업데이트 후 다시 업데이트 하라고 함" / 다수 고객사 동시 인입
+
+```
+① access log에서 compare API 응답 확인
+   대상 사용자 + ipath=receipts/compare 필터
+   ├─ list 비어있지 않음 → modified/needCheck 확인 (정상 동작 여부 판별)
+   └─ list=[] (빈 배열) → ②로
+   ↓
+② Bullseye 매트릭스 색인 이슈 확정
+   임형태에게 Slack으로 연락: 해당 고객사 + "매트릭스 색인 이슈" 키워드
+   ↓
+③ 재동기화 요청
+   임형태: fins_spending_entire_v1 재색인 + 전체 고객사 재동기화
+   완료 후 고객사에 재발 여부 확인 요청
+```
+
+**F3: 지출결의 전자결재 반려 후 영수증 > 제출 화면 상태 불일치** · 타입: Data · 히트: 1 · [CI-4332]
+> 트리거: "지출결의를 반려했는데 영수증 제출 화면에서 진행중으로 보여요" / 비용관리 진행상태는 반려인데 영수증 > 제출 화면만 진행중 표시
+
+```
+① DB에서 전자결재 문서 ID 확인
+   SELECT document_id FROM flex_fins.spending_evidence_electronic_approval_document
+   WHERE customer_id = ? AND evidence_id = ?
+   ↓
+② impact → fins Vespa 인덱스 동기화 오류 확정
+   electronicApprovalSubmissionStatus = IN_PROGRESS 잔존 (실제 상태는 REJECTED)
+   ↓
+③ operation API로 수동 동기화
+   POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish
+   ↓
+④ 고객 확인
+   영수증 > 제출 화면 새로고침 후 상태 정상 여부 확인
+```
+> ⚠️ DB 테이블(`spending_evidence_electronic_approval_document`)도 IN_PROGRESS 잔존 시 → CI-4312 패턴 (Kafka 소비 실패, 별도 조사 필요)
 
 → 상세: [cookbook/fins.md](cookbook/fins.md)
 
@@ -2210,6 +2351,10 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-06 | CI-4330 | 캘린더 연동: 그룹 구글캘린더 연동 해제 후 잔존 이벤트 수동 삭제 — F2 플로우 신설 (cleansing API 패턴), 문의 유형 추가. cookbook/calendar.md 비즈니스 규칙(연동 해제≠이벤트 삭제) + SQL 템플릿(잔존 이벤트 조회) + 과거 사례 추가. domain-map.ttl d:kw/d:syn 추가 |
+| 2026-04-06 | CI-4331 | 평가: 구리뷰 원복 및 리뷰 작성기간 수정 — 진단 체크리스트 추가(flag 설정으로 구리뷰 메뉴 재노출, review_set progress_status=IN_PROGRESS 보정). domain-map.ttl d:kw/d:syn 보강 |
+| 2026-04-06 | CI-4327 | 평가: 등급 배분율 초과 시 제출 차단 설정 보정 — 진단 체크리스트 추가, F5 플로우 신설, SQL 템플릿 추가, 과거 사례 추가. cookbook/review.md 비즈니스 규칙 보강. domain-map.ttl d:kw/d:syn 추가 |
+| 2026-04-06 | CI-4325 | OpenAPI: 토큰 생성 접근오류 — 설정 조회 불필요 권한 요구 버그, hotfix로 해결. 코드 수정 해결이므로 COOKBOOK 플로우 추가 없음 |
 | 2026-04-05 | knowledge-cards-yj-kim + squad-tracking-2024H2 | ops-learn 일괄 갱신. 연차촉진: UTC/KST 연도 경계 누락(#6), 대표이사 등기임원(#7), 관리자 작성 기간 필터(#8) 체크리스트 추가. 근태/휴가: 1970-01-01=입사일(#20), IP제한+자동퇴근(#21), 교대근무 timeOffDeletion(#22), external_provider_event 재처리(#23), 휴가코드 삭제 스펙(#24), 연차조정 일괄취소(#25), dry-run WARN vs ERROR(#26) 추가. 교대근무-F2 SQL + 히트+1. 외부연동: 세콘 쿼리오류(#16), 캡스 중복skip(#17) 추가. 승인: 신승인 2PC 패턴 추가. 데이터추출: 퇴직자 포함 Operation API 추가. domain-map.ttl 키워드/동의어 보강 + 지식카드 소스 항목 등록 |
 | 2026-04-03 | CI-4025 | 맞춤휴가: 소정근로시간 변경 후 잔여 일수 변동 — 체크리스트#6 + F2 플로우(Spec) 추가. cookbook/custom-time-off.md 도메인 컨텍스트 + 과거 사례 추가 |
 | 2026-04-03 | CI-4164 | 평가: cookbook/review.md 구현 특이사항에 EvaluationStep 크론 자동 복구 + "지금 시작" vs "예약" 구분 메커니즘 추가 |
@@ -2240,6 +2385,8 @@ ORDER BY last_modified_date DESC;
 | 2026-03-30 | CI-4247 | 급여: 원천세 신고 과거 연도 선택 불가 — Not a Bug(스펙)로 verdict 변경. Tier-2 과거 사례 갱신, domain-map.ttl verdict `"spec"` + `d:st "C"` 완료 |
 | 2026-03-30 | Notion | 빌링 섹션 신규 추가. 알림 suppress list 케이스 추가. 계정 OTP 잠김(10번 제한) + 겸직 주법인 변경 진단 추가. 승인 요승설 확인/정책 복구 기조 추가. 캘린더 rate limit 경고 + 퇴사자 연동 해제 + insufficientPermissions 케이스 추가 |
 | 2026-03-30 | CI-4238 | 평가: 역량 항목 미사용 시 할일 미발송 — 진단 체크리스트 추가. `useCompetencyItem=false` + COMPETENCY factor + `competencyGroupMappings=[]` → createAll 필터 버그. PR#5199 수정됨 |
+| 2026-04-06 | CI-4332 | 비용관리: 지출결의 반려 후 영수증 제출 화면 상태 불일치 — 체크리스트#7 + F3 플로우 추가. impact→fins Vespa 인덱스 동기화 오류, operation API로 수동 재동기화 |
+| 2026-04-06 | CI-4324 | 비용관리: 지출결의 영수증 선택 초기화 — 체크리스트#6 + F2 플로우 추가. Bullseye `fins_spending_entire_v1` 색인 누락 → compare API 빈 배열 → 전체 고객사 재동기화로 해결 |
 | 2026-03-30 | CI-4226 | 계정/구성원: 정보 일괄 변경 엑셀 미리보기 중복 로우 — 진단 체크리스트 추가. 프론트엔드가 이메일 컬럼을 사번으로 잘못 파싱, 두 번 검색 결과 합산 |
 | 2026-03-29 | CI-4217 | 근태/휴가: 휴일대체 취소 불가(OpenSearch sync 지연) — 체크리스트#18 + F4 플로우 + 과거 사례 추가. CANCEL+재등록 시 `NON_NULL` partial update로 구 eventId 잔존, 재동기화로 해결 |
 | 2026-03-29 | CI-4229 | 비용관리: 수동 증빙 시간 정책 위반 오표시 — 체크리스트#5 + 과거 사례 추가. `transactedTime=null` → RANGE FAIL 버그, EP팀 수정 예정 |
