@@ -108,6 +108,7 @@
         "출근 시간이 다르게 찍혀요" ,
         "테스트 근무기록 삭제해주세요" ,
         "퇴사자 캘린더 연동 끊어주세요" , "구글 캘린더 연동이 안 돼요" ,
+        "취소 승인 완료됐는데 구글 캘린더에 일정이 남아있어요" ,
         "쉬는 날 휴일 삭제해주세요" , "근로자의 날 삭제해주세요" ,
         "자동퇴근 시 IP 제한이 적용 안 돼요" ,
         "근무유형 적용일이 1970년으로 나와요" ,
@@ -2961,6 +2962,11 @@ n:CI-4330
   d:ca "2026-04-06" ;
   d:s  "그룹 구글캘린더 연동 해제 후 휴가 일정 124건 잔존 — 연동 해제≠이벤트 삭제 스펙. cleansing API로 수동 삭제 완료 (유모스원 221855)" .
 
+n:CI-4350
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "취소 승인 완료 후 calendar_event.deleted_at 미업데이트로 구글 캘린더 삭제 이벤트 미발행 — cleansing API로 즉시 대응 완료, 취소 승인 플로우 버그 근본 수정 미완 (아보엠디코리아 113613)" .
+
 n:CI-4337
   d:in :time-tracking ; d:v "investigating" ;
   d:sy "휴가 취소 후 사용 내역 상태 미갱신" ;
@@ -2984,6 +2990,11 @@ n:CI-4351
   d:in :shift ;
   d:v  "investigating" ;
   d:s  "시몬스(77952) 갤러리F 교대근무 스케줄 삭제 이력 조회 요청 — 삭제 시점·삭제자 이메일 확인 필요. raccoon audit API 활용 예정" .
+
+n:CI-4355
+  d:in :account ;
+  d:v  "investigating" ;
+  d:s  "케이유엠(217253) 구성원 일괄 업로드 후 조직·직5·주민번호·계좌 누락 — FE 정상 확인, BE task 비동기 처리에서 personnelAppointment/basic 저장 스킵 추정. taskId=14869" .
 
 g:ins-04
   d:in :insurance ;

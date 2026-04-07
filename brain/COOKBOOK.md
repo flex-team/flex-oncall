@@ -2031,6 +2031,41 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 
 <!-- TODO: 시나리오 테스트 추가 권장 -->
 
+**F3: 휴가 취소 승인 후 구글 캘린더 이벤트 미회수 (버그)** · 타입: Error · 히트: 1 · [CI-4350]
+> 트리거: "취소 승인 완료됐는데 구글 캘린더에 일정이 남아있어요" + Metabase에서 미연동 없음으로 표시됨
+
+```
+① calendar_event 상태 확인 (F1과 구분 포인트)
+   Metabase dashboard/244 → "연동됨" 표시 = deleted_at=NULL + sync row 존재
+   DB: flex_calendar.calendar_event
+   WHERE id = '{event_id}'
+   → deleted_at=NULL + status=CONFIRMED → 취소 승인 플로우 버그 확정
+   → delete_sync 테이블에 event_id 없음도 함께 확인
+
+② google_calendar_event_id 조회
+   DB: flex_calendar.google_calendar_event_sync
+   WHERE event_id IN ('{id1}', '{id2}', ...)
+   → google_calendar_event_id 목록 추출
+
+③ calendarConnectionId 조회
+   DB: flex.v2_external_calendar_connection
+   WHERE customer_id = ? AND calendar_type = 'GROUP'
+   → id = calendarConnectionId
+
+④ cleansing API 호출 (raccoon 브라우저 세션)
+   POST /proxy/calendar/api/operation/v2/calendar/customers/{customerId}/events/cleansing
+   {
+     "oauthTokenId": 1,
+     "calendarConnectionId": <③>,
+     "calendarConnectionHistoryId": null,
+     "googleEventIds": [<② 목록>]
+   }
+   ⚠️ oauthTokenId는 API 내부에서 사용되지 않음 — 임의값(1) 가능
+   ⚠️ 300건 이상 시 20건씩 배치 + 2초 delay
+```
+
+근본 원인: 취소 승인 플로우에서 `calendar_event.deleted_at` 업데이트 로직 누락 버그 — 별도 코드 수정 필요
+
 → 상세: [cookbook/calendar.md](cookbook/calendar.md)
 
 ---
