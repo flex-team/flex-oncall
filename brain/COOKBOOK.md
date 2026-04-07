@@ -170,7 +170,13 @@
    - **운영 대응**:
      ◦ 급한 경우: DB에서 `v2_user_work_rule` row 삭제 → ES sync
      ◦ 여유 있는 경우: Operation API `DELETE /api/v2/work-rule/users/{userId}/work-rules/{userWorkRuleId}` 반복 호출 (검증 유/무 분리된 operation API 존재, PR flex-timetracking-backend#7800)
-18. **휴일대체 취소 불가** ("대체 휴일을 찾을 수 없습니다") → 휴일대체 수정(CANCEL+재등록) 후 OpenSearch sync 지연으로 FE에 구 eventId가 전달되는 케이스. access log에서 `search/by-departments` 응답의 `alteredHoliday.eventId` 확인 → DB(`v2_time_tracking_user_alternative_holiday_event`)의 유효 이벤트 ID와 비교 → 불일치 시 `/sync-os-work-schedule-advanced`로 재동기화 [CI-4217]
+18. **"실시간 기록을 사용할 수 없어요" (WORKCLOCK_400_005)** → 아래 순서로 조사
+   1. access log에서 실제 에러 시각·API path 확인 (`json.responseStatus >= 400`, `json.authentication.userId`)
+   2. `v2_user_work_rule` WHERE user_id={id} ORDER BY event_time_stamp — 에러 시점에 적용된 근무유형 특정 (date_from/apply_time_stamp_from 기준)
+   3. 특정된 `customer_work_rule_id` → `v2_customer_work_rule.customer_work_record_rule_id` → `v2_customer_work_record_rule.real_time_record_enabled` 확인
+   4. **핵심**: 실시간 기록 가능 여부는 **대상 날짜의 근무스케줄**에 적용된 근무유형으로 결정됨. 전일 근무 종료 시 전일 날짜 기준 규칙이 적용됨
+   5. 근무유형 재배정 시 두 규칙이 순차 등록되며 `apply_from`이 다를 수 있음 — 날짜별로 다른 규칙 적용 주의 [CI-4278]
+19. **휴일대체 취소 불가** ("대체 휴일을 찾을 수 없습니다") → 휴일대체 수정(CANCEL+재등록) 후 OpenSearch sync 지연으로 FE에 구 eventId가 전달되는 케이스. access log에서 `search/by-departments` 응답의 `alteredHoliday.eventId` 확인 → DB(`v2_time_tracking_user_alternative_holiday_event`)의 유효 이벤트 ID와 비교 → 불일치 시 `/sync-os-work-schedule-advanced`로 재동기화 [CI-4217]
 19. **근무유형 변경 예약 취소 불가** ("근무 유형을 취소할 수 없어요" / WORKRULE_400_005) → `UserWorkRuleAllowCancelMappingCalculator` 조건3이 `distributePeriodOverToDay`만 확인하고 `applyStartDateForDistributePeriodOver`를 미고려 → 실질 주기연장일귀속을 false로 오판. PR flex-timetracking-backend#12027 — **버그** [CI-4148]
 20. **근무유형 적용일 `1970-01-01` = 입사일** → 적용일이 `1970-01-01`로 표시되는 경우 "입사일부터 적용"을 의미하는 특수값. PR#8593 이후 `dateFrom` 기준 입사일만 보도록 변경. 그룹 입사일 기준 근무 조회는 지원하지 않음(스펙) [CI-3773] [CI-3902]
 21. **IP 제한 + 자동퇴근** → 자동퇴근(예약 퇴근) 시에는 근무지/IP 체크 없이 근무지 안에서 퇴근한 것으로 판단 — 스펙 (`UserWorkClockStopByReserveRequestServiceImpl.kt#L142-L143`). IP 제한이 있어도 자동퇴근은 통과 [CI-3501]
@@ -1746,7 +1752,7 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 > 출처: [Notion 온콜 가이드](https://www.notion.so/flexnotion/4e9ee4da0cf44dc0ba9542df30ca976c)
 
 #### 진단 체크리스트
-문의: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요" / "사용일수가 0일이에요"
+문의: "잔여 연차가 이상해요" / "연차 소멸이 안 맞아요" / "사용일수가 0일이에요" / "잔여일에 소수점이 있어요"
 1. operation API에서 annual-time-off bucket 확인
 2. 연차 사용 순서: (1) 유효기간 종료일 이른 것 우선 (2) 종료일 같으면 시작일 이른 것 우선
 3. 사용일수 0일 → 해당일에 다음 항목 겹침 확인:
@@ -1758,6 +1764,7 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 4. 월차는 입사 후 1년간 사용 가능, 막달 받은 연차는 그 다음달에 소멸
 5. Metabase에서 조회 후 jsongrid.com에서 가독성 확인
 6. ⚠️ 연차는 **분(minutes) 단위**로 관리됨: 7200분=15일, 4320분=9일 (1일=480분=8시간). bucket 값 해석 시 주의
+7. 잔여일 소수점이 예상보다 크거나 이상한 경우 → 버킷별 `agreedDayWorkingMinutes` 확인 → **소정근로시간 변경 여부 확인** → F3 참조 [CI-4349]
 
 #### 조사 플로우
 
@@ -1774,6 +1781,7 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 ③ 불일치 원인 분류
    ├─ 조정 이력 누락 → v2_user_annual_time_off_adjust_assign 확인
    ├─ 소멸 시점 차이 → 월차 소멸 규칙 확인 (입사 1년 기준)
+   ├─ 잔여일 소수점 이상 → F3 시도
    └─ 겹침으로 인한 0일 사용 → F2 시도
 ```
 
@@ -1787,6 +1795,25 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
    ├─ v2_time_tracking_user_alternative_holiday_event → 휴일대체
    ├─ v2_customer_work_rule → 해당 요일이 주휴일/쉬는날
    └─ 위 항목 중 하나라도 해당 → 사용일수 0일은 스펙
+```
+
+**F3: 잔여일 소수점 이상 — 소정근로시간 혼재 확인** · 타입: Spec · [CI-4349]
+> 트리거: "잔여 연차에 이상한 소수점이 있어요" / "0.002일이 어디서 났어요"
+
+```
+① operation API로 버킷 전체 조회
+   GET /api/operation/v2/time-tracking/time-off/customers/{customerId}/users/{userId}
+       /annual-time-off-buckets/by-time-stamp/{timeStamp}?zoneId=Asia%2FSeoul
+   ↓
+② 버킷별 agreedDayWorkingMinutes 값 비교
+   → 값이 서로 다르면 소정근로시간 변경 이력 있음
+   ↓
+③ 수기 검증: 버킷별 (assignedTime ÷ agreedDayWorkingMinutes) 합산 → setScale(3, HALF_UP)
+   → 화면 표시값과 일치하면 정상 동작 (스펙)
+   ↓
+④ 고객 안내
+   "소정근로시간 변경으로 인해 연차 버킷 간 계산 단위가 달라져 소수점이 발생한 정상 동작"
+   ⚠️ TT-6441: 혼재 상황 처리 개선 예정 (미해결)
 ```
 
 → 상세: [cookbook/annual-time-off.md](cookbook/annual-time-off.md)
