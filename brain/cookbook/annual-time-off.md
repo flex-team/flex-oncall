@@ -24,10 +24,72 @@ UserAnnualTimeOffBuckets.getRemainingDays()
 ```
 
 버킷 타입 (`AnnualTimeOffAssignType`):
-- `REGULAR` — 정기 부여
+- `REGULAR` — 정기 부여 (연간/월별)
 - `ADDITIONAL` — 추가 부여
-- `ADJUST` — 관리자 조정 (양수/음수 모두 가능)
-- `FOR_MINUS` — 음수 조정용 특수 버킷 (잔여일 계산에서 제외)
+- `ADJUST` — 관리자 조정 (양수 조정만. 음수 조정은 `FOR_MINUS`와 쌍으로 생성)
+- `FOR_MINUS` — 음수 조정용 특수 버킷. **잔여일 계산(`getDetailRemainingDays`)에서 제외**됨
+
+버킷 내부 값:
+- `assignedTime` (분) = 부여된 총 시간
+- `usedTime` (분) = 사용된 시간
+- `remainingTimeOffMinutes` = `assignedTime - usedTime` (단순 차감)
+
+### ADJUST 버킷의 assignedTime 계산
+
+관리자가 "5시간" 또는 "0.833일"을 조정할 때, 내부에 저장되는 `assignedTime`(분)은 다음 공식으로 계산된다:
+
+```
+assignedTime = days × sojeong_at_assignedAt + hours × 60 + minutes
+```
+
+- `sojeong_at_assignedAt` = **조정 날짜(`assignedAt`) 기준의 소정근로시간**
+- `days`는 DB의 `adjusted_days` (소수점 가능, 예: 0.833)
+- `hours`, `minutes`는 DB의 `adjusted_time` JSON 필드
+
+코드:
+```kotlin
+// AnnualTimeOffAdjustAssignProps.getMinutes()
+fun getMinutes(workRuleModel): Minutes =
+    (adjustedAmount.days * workRuleModel.getAverageDailyTimeOffMinutesPerWeekAtDate(assignedAt)) +
+    (adjustedAmount.hours * 60) +
+    adjustedAmount.minutes
+```
+
+**예시**: 2026-02-28(소정 360분) 에 5시간 조정
+```
+assignedTime = 0 × 360 + 5 × 60 + 0 = 300분
+```
+
+### 소정근로시간이 쓰이는 시점 정리
+
+| 계산 항목 | 기준 시점 | 비고 |
+|----------|----------|------|
+| `agreedDayWorkingMinutes` (버킷 저장값) | `assignedAt` (버킷 생성일) | 변경되어도 기존 버킷값 불변 |
+| ADJUST `assignedTime` 계산 | `assignedAt` (조정일) | `getMinutes()` 참조 |
+| REGULAR `assignedTime` 계산 | `assignedAt` (부여일) | |
+| `getRemainingMinutes()` (분 단위 잔여) | 요청 시점(`requestTime`) | 소정근로시간 변경 시 일수 환산값이 달라짐 |
+
+→ 소정근로시간이 변경되면 **기존 버킷의 `agreedDayWorkingMinutes`는 고정**, 새 버킷부터 새 소정근로시간 적용.
+
+### 잔여일 계산 전체 흐름 (`getDetailRemainingDays`)
+
+```
+① 버킷 필터링
+   YEARLY 버킷: FOR_MINUS 제외, isUsableAt(요청날짜) 통과한 것만
+   MONTHLY 버킷: 동일 조건
+   ↓
+② 버킷별 잔여일 합산 (setScale 3자리)
+   usableYearlyTimeOffDays = YEARLY 버킷 합산
+   usableMonthlyTimeOffDays = MONTHLY 버킷 합산
+   ↓
+③ 선사용(advance) 공제
+   overUsedTimeOffDays = daysToUseInAdvance + daysToUseInEarly
+   → MONTHLY에서 먼저 차감, 남으면 YEARLY에서 차감
+   ↓
+④ 최종 잔여일 = usableYearlyTimeOffDays + usableMonthlyTimeOffDays
+```
+
+> 잔여일이 버킷 합산과 미세하게 다르면 ③의 선사용 공제를 의심한다.
 
 ### Operation API로 버킷 조회
 
@@ -56,7 +118,7 @@ ADJUST 버킷 (2026-02-28 조정, 소정 360분/일로 변경 후)
 이는 **버그가 아닌 설계된 동작**이다. 소수점 발생 원인이 소정근로시간 혼재인지 확인하려면:
 1. Operation API로 버킷 전체 조회
 2. 버킷별 `agreedDayWorkingMinutes` 값이 서로 다른지 확인
-3. `assignedTime ÷ agreedDayWorkingMinutes` 를 버킷마다 계산 → 합산 검증
+3. 버킷마다 `assignedTime ÷ agreedDayWorkingMinutes` 계산 → 합산 검증
 
 > ⚠️ TT-6441: 버킷 간 `agreedDayWorkingMinutes` 혼재 상황 처리 개선 FIXME (현재 미해결)
 
