@@ -34,6 +34,14 @@
 - **"평가 공동편집자 아닌데 메뉴가 보여요"**: title=null DRAFT 평가의 FE 필터링 이슈. 실제 권한 문제가 아니라 데이터 이상.
 - **"평가지 생성 중"**: `user_form_ids`가 `[]`이면 UserForm 초기화가 실패한 것. `initialize-user-form` Operation API로 수동 해결.
 
+### 구리뷰(Legacy Review) 특이사항
+
+- **구리뷰 섹션명 저장**: `review_question` 테이블에 `question_type = 'SUBTITLE'` 행으로 저장. 별도 섹션 테이블(`review_question_section`)에는 name 컬럼 없음.
+- **진행 중 구리뷰 질문 수정**: 제품 UI 미지원. `review_question.question` UPDATE + `question_log.content` 동기화 DML로만 가능. 텍스트 수정만 허용, 추가/삭제/타입 변경 불가. (선례: FT-12322, FT-2557)
+- **question_log 동기화 필수**: `review_question.question` 변경 후 반드시 `question_log.content`도 UPDATE해야 리뷰어 화면에 반영됨.
+- **review_set ↔ template 연결**: `review_model` 테이블이 중간 연결자. `review_model.review_set_id` + `review_model.onetime_template_id`로 각 단계(셀프/하향/상향)의 템플릿을 찾는다.
+- **오퍼레이션 허용 범위** (FT-12322 선례 기준): 질문 제목/설명 텍스트 수정 → 가능. 질문 추가/삭제/선택형 수정/타입 변경 → 불가.
+
 ### 구현 특이사항
 
 - **Vaadin admin**: 평가 관련 일부 관리 기능은 Vaadin 기반 어드민 화면을 사용한다. 일반 API와 다른 UI 스택.

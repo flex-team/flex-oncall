@@ -383,7 +383,9 @@
         "reviewee_evaluation_item" , "할일" , "평가 항목 작성 요청" ,
         "evaluation_grade_distribution" , "allow_submission_if_exceed" , "등급 배분율" ,
         "구리뷰" , "ANSWER_NOT_OPEN" , "progress_status" , "flag" , "구리뷰원복" ,
-        "잔존고객사" ;
+        "잔존고객사" ,
+        "review_question" , "question_log" , "SUBTITLE" , "question_type" ,
+        "onetime_template_id" , "구리뷰질문수정" , "review_template" ;
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
@@ -397,7 +399,9 @@
         "배분율 초과 시 제출이 안 돼요" ,
         "인원 초과 시 제출 제한 비활성화하고 싶어요" ,
         "구리뷰로 원복 가능한가요" , "구리뷰 메뉴가 안 보여요" ,
-        "평가에서 구리뷰로 전환해주세요" , "리뷰 작성기간 수정이 안 돼요" ;
+        "평가에서 구리뷰로 전환해주세요" , "리뷰 작성기간 수정이 안 돼요" ,
+        "구리뷰 질문 수정해주세요" , "리뷰 섹션명 변경해주세요" ,
+        "진행 중 리뷰 문항 텍스트가 잘못됐어요" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -454,14 +458,17 @@
         "journalizing" , "merchant" , "stakeholder" ,
         "세금계산서" , "국세청" , "스크래핑" , "홈택스" ,
         "transactedTime" , "시간정책" ,
-        "지출결의" , "영수증" , "Vespa" , "fins_spending_entire_v1" ;
+        "지출결의" , "영수증" , "Vespa" , "fins_spending_entire_v1" ,
+        "MatrixQL" , "Bullseye" , "continuation" ;
   d:syn "카드 내역이 안 들어와요" , "법인카드 등록이 안 돼요" ,
         "비용 승인이 안 돼요" , "가맹점 정보가 안 맞아요" ,
         "경비 정산이 이상해요" ,
         "세금계산서가 안 들어와요" , "이전 카드 내역 연동해주세요" ,
         "시간 정책 위반이 아닌데 위반으로 보여요" ,
         "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" ,
-        "반려된 지출결의가 영수증 쪽에서 진행중으로 나와요" ;
+        "반려된 지출결의가 영수증 쪽에서 진행중으로 나와요" ,
+        "지출결의 수정하면 이전 영수증이 안 보여요" ,
+        "지출결의서 수정 시 특정 날짜 이전 영수증이 없어요" ;
   d:x   :approval , :payroll .
 
 :payroll
@@ -2883,6 +2890,13 @@ n:CI-4335
   d:ca "2026-04-07" ;
   d:s  "구성원 문서/개인정보 변경 알림은 '문서변경 참조' 설정이 아닌 CORE_USER_ATTACHMENT_UPDATE / CORE_USER_PERSONAL_UPDATE 권한 기반 발송 — Not a Bug(스펙). 주식회사 에스엘즈(34792)" .
 
+n:CI-4334
+  d:in :fins ;
+  d:v  "resolved" ;
+  d:st "C" ;
+  d:ca "2026-04-07" ;
+  d:s  "지출결의서 수정 팝업에서 3/5 이전 영수증 미표시 — FE size=500 limit 초과(사용자 영수증 500건+). FE size 1000으로 증가 핫픽스. 법무법인 별(194051)" .
+
 n:CI-4332
   d:in :fins ;
   d:v  "investigating" ;
@@ -2929,6 +2943,11 @@ n:CI-4330
   d:ca "2026-04-06" ;
   d:s  "그룹 구글캘린더 연동 해제 후 휴가 일정 124건 잔존 — 연동 해제≠이벤트 삭제 스펙. cleansing API로 수동 삭제 완료 (유모스원 221855)" .
 
+n:CI-4337
+  d:in :time-tracking ; d:v "investigating" ;
+  d:sy "휴가 취소 후 사용 내역 상태 미갱신" ;
+  d:kw "time-off-cancel", "휴가취소", "승인완료", "UserTimeOffEvent" .
+
 n:CI-4327
   d:in :review ;
   d:v  "resolved" ;
@@ -2938,10 +2957,10 @@ n:CI-4327
 
 n:CI-4338
   d:in :review ;
-  d:v  "ops" ;
+  d:v  "resolved" ;
   d:st "C" ;
   d:ca "2026-04-07" ;
-  d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 텍스트 수정 오퍼레이션 — review_question UPDATE + question_log 동기화. 레브잇(194054)" .
+  d:s  "구리뷰 진행 중 하향평가 섹션명·질문지 수정 — 레브잇(194054). review_question 3건 + question_log 3건 DML 보정 완료 (김보라, 2026-04-06)" .
 
 g:ins-04
   d:in :insurance ;

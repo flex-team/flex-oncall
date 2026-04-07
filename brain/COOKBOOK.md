@@ -10,7 +10,7 @@
 > 타입 정의: **Error**(오류/버그/장애) · **Data**(데이터 누락/불일치/조회) · **Perf**(성능/타임아웃) · **Auth**(접근 차단/권한/인증) · **Spec**(스펙 확인/운영 절차)
 
 - **오류형 (Error)**: 알림-F3(이메일 CTA 이동 불일치), 알림-F4(메일 중복 발신), 근태-F4(휴일대체 취소 불가), 교대근무-F2(스케줄 게시 확인 필요), 외부연동-F3(세콤 출근 미반영), 외부연동-F4(ODBC 연결 실패), 전자계약-F2(일괄 다운로드 링크 미생성), 평가-F3(등급 배분 validation 오류), 평가-F2(UserForm 미초기화), 조직관리-F2(발령+조직 데드락), 캘린더-F1(구글 캘린더 동기화 실패), Kafka-F1(컨슘 실패), Kafka-F2(사용자 변경 이벤트 실패), Kafka-F3(Rebalance 무한 루프)
-- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 워크플로우-F1(임시저장 문서 소실)
+- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 비용관리-F4(수정 팝업 영수증 건수 초과), 워크플로우-F1(임시저장 문서 소실)
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
 - **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류
@@ -1227,6 +1227,14 @@
 3. 복구 필요 시 `review_set` 테이블의 `deleted = 0, deletedAt = NULL`로 복구 가능. 단, 뉴성과관리 전환 완료 상태에서 구 리뷰 복구 적절성은 담당자 확인 필요 [CI-4210]
 4. `evaluation` 테이블(뉴 성과관리)은 마이그레이션에 영향받지 않음 — `evaluation` soft delete와 혼동 주의 [CI-4210]
 
+문의: "구리뷰 진행 중 질문 문구 수정해주세요" / "리뷰 섹션명 변경해주세요" / "리뷰 문항 텍스트가 잘못됐어요"
+1. "질문 추가/삭제/타입 변경"인지 "텍스트 오타/문구 수정"인지 먼저 구분
+   - 추가/삭제/타입 변경 → **불가능** (제품 정책상 미지원, 고객 안내 후 종료) [CI-4338]
+   - 텍스트 수정만 → ②로 [CI-4338]
+2. `review_model` 테이블에서 해당 review_set_id로 하향/셀프/상향 단계의 `onetime_template_id` 조회 [CI-4338]
+3. `review_question` 테이블에서 해당 template_id로 수정 대상 question_id 특정 (섹션명은 `question_type='SUBTITLE'`) [CI-4338]
+4. 기안 후 `review_question` UPDATE 3건 + `question_log` 동기화 UPDATE 실행 [CI-4338]
+
 문의: "구리뷰로 원복 가능한가요?" / "구리뷰 메뉴가 안 보여요" / "평가 → 구리뷰 전환 요청"
 1. flag 설정으로 구리뷰 메뉴 재노출 가능 여부 확인 — 담당자(김보라님)에게 flag 설정 요청 [CI-4331]
 2. 마감된 리뷰의 작성기간 수정이 필요한 경우 → `flex_review.review_set.progress_status`가 `ANSWER_NOT_OPEN`이면 `IN_PROGRESS`로 변경해야 관리자가 기간 수정 가능 [CI-4331]
@@ -1356,6 +1364,46 @@
    SET allow_submission_if_exceed = 1
    WHERE customer_id = ? AND evaluation_id = ? AND id = ?
    → 고객에게 제출 재시도 요청
+```
+
+**F6: 구리뷰 진행 중 질문 텍스트 수정** · 타입: Spec · 히트: 1 · [CI-4338]
+> 트리거: "진행 중 리뷰 섹션명/질문 문구 수정 요청" — 텍스트 오타·표현 변경 한정 (추가/삭제 불가)
+
+```
+① 수정 유형 판별
+   텍스트 수정(오타·문구 변경) vs 질문 추가/삭제/타입 변경
+   ├─ 추가/삭제/타입 변경 → 정책상 불가. 고객 안내 후 종료
+   └─ 텍스트 수정만 → ②로
+   ↓
+② review_set 확인 + 단계별 template_id 조회
+   SELECT id, onetime_template_id, review_type
+   FROM flex_review.review_model
+   WHERE review_set_id = ? AND deleted = 0
+   → 하향/셀프/상향 단계 중 수정 대상 단계의 onetime_template_id 확인
+   ↓
+③ 수정 대상 question_id 조회
+   SELECT id, question_type, question, display_order
+   FROM flex_review.review_question
+   WHERE template_id = ? ORDER BY display_order
+   - 섹션명: question_type = 'SUBTITLE'
+   - 일반 질문: question_type = 'LONG_TEXT' / 'RATING' 등
+   ↓
+④ 백업 SELECT 실행 후 결과 보관
+   SELECT id, template_id, question_type, question, description
+   FROM flex_review.review_question WHERE id IN (?, ?, ?)
+   + SELECT ql.* FROM flex_review.question_log ql WHERE ql.question_id IN (?, ?, ?)
+   ↓
+⑤ review_question UPDATE (결재 필요)
+   UPDATE flex_review.review_question SET question = '새 문구' WHERE id = ?
+   — 수정 대상 행 수만큼 반복
+   ↓
+⑥ question_log 동기화 (필수, 결재 필요)
+   UPDATE flex_review.question_log ql
+   JOIN flex_review.review_question rq ON ql.question_id = rq.id
+   SET ql.content = rq.question, ql.description = rq.description
+   WHERE rq.template_id = ?
+     AND (rq.question != ql.content OR rq.description != ql.description)
+   → 영향 행 수 확인 (수정 건수와 일치해야 함)
 ```
 
 **F2: 후발 추가 reviewer UserForm 미초기화** · 히트: 2 · [CI-4188] [CI-4301]
@@ -2135,7 +2183,7 @@ Kibana 참고:
 → 도메인 이해: [cookbook/fins.md#도메인-컨텍스트](cookbook/fins.md#도메인-컨텍스트)
 
 #### 진단 체크리스트
-문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요" / "영수증 업데이트하기 클릭 시 선택 초기화돼요" / "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요"
+문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요" / "영수증 업데이트하기 클릭 시 선택 초기화돼요" / "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" / "지출결의 수정 시 특정 시점 이전 영수증이 목록에 없어요"
 1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
 2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
 3. 연동 완료 상태이면 → 어드민쉘 수동 동기화로 희망 기간 데이터 동기화 가능 [CI-4179]
@@ -2143,6 +2191,7 @@ Kibana 참고:
 5. **수동 증빙 시간 정책 위반 표시** → 수동 추가 증빙(ETC spending)은 `transactedTime=null`로 전달되어 RANGE 평가에서 무조건 FAIL 처리됨 — **버그**(EP팀 수정 예정). 카드 증빙은 영향 없음(transactedTime 존재). 정책 생성 시점 이전 증빙에는 위반 미발생(활성 정책 없음) [CI-4229]
 6. **지출결의 영수증 "업데이트 하기" 클릭 시 선택 초기화** → access log에서 compare API(`/api/v2/electronic-approval/documents/receipts/compare`) 응답 `list`가 빈 배열인지 확인. 빈 배열이면 Bullseye 매트릭스(`fins_spending_entire_v1`) 색인 누락 — 임형태에게 전체 고객사 재동기화 요청 [CI-4324]
 7. **지출결의 반려 후 영수증 > 제출 화면에서 진행중 표시** → impact → fins Vespa 인덱스(`fins_spending_entire_v1`) 동기화 오류. DB에서 `document_id` 확인 후 operation API로 재동기화: `POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish` [CI-4332]
+8. **지출결의 수정 팝업에서 특정 시점 이전 영수증 미표시** → 해당 사용자의 영수증 건수 확인. 현재 FE 조회 limit은 1000건으로, 1000건 초과 시 이전 영수증이 잘림 — **F4** [CI-4334]
 
 #### 조사 플로우
 
@@ -2206,6 +2255,24 @@ Kibana 참고:
    영수증 > 제출 화면 새로고침 후 상태 정상 여부 확인
 ```
 > ⚠️ DB 테이블(`spending_evidence_electronic_approval_document`)도 IN_PROGRESS 잔존 시 → CI-4312 패턴 (Kafka 소비 실패, 별도 조사 필요)
+
+**F4: 지출결의 수정 팝업 영수증 건수 초과로 이전 영수증 미표시** · 타입: Data · 히트: 1 · [CI-4334]
+> 트리거: "지출결의서 수정 시 특정 날짜 이전 영수증이 안 보여요" / 지출결의 수정 팝업에서 이전에 첨부한 영수증이 목록에 없음
+
+```
+① 해당 사용자(member_id)의 영수증 총 건수 확인
+   SELECT COUNT(*) FROM flex_fins.spending s
+   WHERE s.customer_id = ? AND s.member_id = ? AND s.deleted_at IS NULL
+   ↓ 1000건 초과면 F4 확정
+② FE 조회 limit 초과 확정
+   수정 팝업 영수증 조회 시 size=1000(Bullseye limit) → 초과 영수증은 잘림
+   Bullseye(`fins_spending_entire_v1`)는 MatrixQL 기반, continuation 토큰 미지원 → 페이징 불가
+   ↓
+③ 한도 내 영수증인지 확인
+   문제 영수증 생성일 기준으로 최신 1000건 안에 포함되는지 대조
+   ↓
+④ 조치: FE size 값 변경 코드 수정 필요 — 운영 수동 해결 불가
+```
 
 → 상세: [cookbook/fins.md](cookbook/fins.md)
 
@@ -2359,6 +2426,7 @@ ORDER BY last_modified_date DESC;
 |------|------|----------|
 | 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
 | 2026-04-07 | CI-4335 | 계정/구성원: 문서/개인정보 변경 알림 수신자 스펙 확인 — 기존 COOKBOOK 체크리스트(권한 기반 발송) domain-map.ttl d:st "C" 완료 처리 |
+| 2026-04-07 | CI-4334 | 비용관리: 지출결의 수정 팝업 영수증 건수 초과 미표시 — 체크리스트#8 + F4 플로우 추가. Bullseye(`fins_spending_entire_v1`) MatrixQL continuation 미지원, FE size 1000 limit 구조 추가. cookbook/fins.md 구현 특이사항 + 과거 사례 + SQL 템플릿(영수증 건수 조회) 추가 |
 | 2026-04-06 | CI-4330 | 캘린더 연동: 그룹 구글캘린더 연동 해제 후 잔존 이벤트 수동 삭제 — F2 플로우 신설 (cleansing API 패턴), 문의 유형 추가. cookbook/calendar.md 비즈니스 규칙(연동 해제≠이벤트 삭제) + SQL 템플릿(잔존 이벤트 조회) + 과거 사례 추가. domain-map.ttl d:kw/d:syn 추가 |
 | 2026-04-06 | CI-4331 | 평가: 구리뷰 원복 및 리뷰 작성기간 수정 — 진단 체크리스트 추가(flag 설정으로 구리뷰 메뉴 재노출, review_set progress_status=IN_PROGRESS 보정). domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-06 | CI-4327 | 평가: 등급 배분율 초과 시 제출 차단 설정 보정 — 진단 체크리스트 추가, F5 플로우 신설, SQL 템플릿 추가, 과거 사례 추가. cookbook/review.md 비즈니스 규칙 보강. domain-map.ttl d:kw/d:syn 추가 |
@@ -2466,4 +2534,5 @@ ORDER BY last_modified_date DESC;
 | 2026-02-26 | CI-3976 | 근태/휴가 도메인에 퇴사자 휴가 데이터 추출 진단 항목·API 템플릿·사례 추가 |
 | 2026-02-24 | CI-3949 | 근태/휴가 도메인에 휴일대체 탭 미표기 진단 패턴 2건 추가 |
 | 2026-02-20 | CI-3932 | 연차촉진 도메인에 정책 변경 후 PENDING_WRITE 잔존 진단 항목 추가 |
+| 2026-04-07 | CI-4338 | 평가 — 구리뷰 진행 중 질문 텍스트 수정 진단 항목 + F6 플로우 추가 |
 | 2026-02-15 | 전체 | 초기 버전 — 기존 14개 노트에서 전체 추출 |

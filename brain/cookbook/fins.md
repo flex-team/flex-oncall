@@ -37,6 +37,7 @@
 - **독립 서비스**: `flex-fins-backend`는 별도 서비스 + 별도 모듈 구조. 다른 flex 백엔드와 API 경계가 분리되어 있다.
 - **Vespa 인덱스 (`fins_spending_entire_v1`)**: 영수증 > 제출 화면의 데이터 소스. 전자결재 상태 변경 시 impact → fins 구간에서 Vespa 인덱스가 갱신되어야 하며, 실패 시 화면 표시 불일치 발생. 수동 재동기화 API: `POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish` [CI-4332]
 - **`spending_evidence_electronic_approval_document` 테이블**: 전자결재 문서 상태를 DB에 저장하는 테이블. 전자결재 반려 이벤트 Kafka 수신 실패 시 `status = IN_PROGRESS` 잔존 → 영수증 유효성 검증 실패("진행중인 문서가 있어" 오류) [CI-4312]
+- **Bullseye(`fins_spending_entire_v1`) 영수증 조회 구조**: 지출결의서 수정 팝업에서 FE가 `size` 파라미터로 최대 조회 건수를 지정한다(현재 1000). Bullseye는 MatrixQL 기반으로 `continuation` 토큰을 지원하지 않아 단일 `limit` 조회만 가능 — 비용관리 출시 초기 결정. 영수증 건수가 limit을 초과하면 이전 영수증이 잘려 보이지 않는다 [CI-4334]
 
 ---
 
@@ -47,3 +48,24 @@
 - **수동 증빙 시간 정책 위반 오표시**: 수동 추가 증빙(ETC spending)의 `transactedTime=null`이 RANGE 평가에서 FAIL 처리되어 위반으로 표시. 카드 증빙은 영향 없음. EP팀 수정 예정 — **버그** [CI-4229]
 - **지출결의 반려 후 영수증 > 제출 화면 진행중 표시**: Vespa 인덱스(`fins_spending_entire_v1`)에 전자결재 반려 상태가 미반영(impact→fins 동기화 실패). operation API로 수동 동기화 완료 — **운영 대응** [CI-4332]
 - **지출결의 반려 후 재작성 시 영수증 소실**: `spending_evidence_electronic_approval_document.status = IN_PROGRESS` 잔존으로 "진행중인 문서가 있어" 오류 발생. 동일 고객사(무하유) 반복 발생, Kafka 이벤트 소비 실패 근본 원인 — **운영 대응** [CI-4312]
+- **지출결의 수정 팝업 이전 영수증 미표시**: 특정 날짜 이전 영수증이 지출결의 수정 팝업에서 보이지 않음. FE size=1000 limit 초과(해당 사용자 영수증 500건+). FE PR #1986으로 size 1000→ 핫픽스 배포. Bullseye continuation 미지원으로 운영 대응 불가 — **버그(FE)** [CI-4334]
+
+---
+
+## SQL 템플릿
+
+### 영수증 건수 조회 (사용자별)
+
+```sql
+-- 지출결의 수정 팝업 영수증 건수 초과 여부 확인
+-- Bullseye limit(1000) 초과 시 이전 영수증 잘림
+SELECT
+  COUNT(*) AS total_count,
+  SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS recent_30d_count
+FROM flex_fins.spending s
+WHERE s.customer_id = ?
+  AND s.member_id = ?
+  AND s.deleted_at IS NULL;
+```
+
+> `total_count`가 1000 초과이면 F4 확정.
