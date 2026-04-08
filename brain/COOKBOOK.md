@@ -13,7 +13,8 @@
 - **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 비용관리-F4(수정 팝업 영수증 건수 초과), 워크플로우-F1(임시저장 문서 소실)
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
-- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류
+- **렌더형 (Render)**: 연차-F4(iOS 미리쓰기 매핑 실수)
+- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류, 인사발령-F1(Flagsmith 엑셀 발령 오픈)
 
 ## 도메인별 진단 가이드
 
@@ -185,6 +186,11 @@
 24. **휴가 코드 삭제 시 등록된 휴가 취소** → 교대근무 관리에서 기사용 휴가 코드를 삭제하면 등록된 휴가가 모두 취소됨 — 의도된 스펙 [CI-4047]
 25. **연차 조정 일괄 취소** → side peek의 `...` 아이콘에서 일괄 취소 가능 (개별 취소만 가능하다는 오해 多) [CI-3923]
 26. **dry-run WARN vs ERROR** → 스케줄 게시 전 dry-run 응답: `ERROR`는 게시 차단, `WARN`은 게시 허용. FE 파서 버그로 WARN이 ERROR로 처리되어 게시 차단된 사례 있음(PR: flex-frontend-apps-time-tracking/pull/2101 hotfix 완료) [CI-3862]
+27. **휴가 취소 후 사용 내역 상태가 "승인완료"로 유지** → DB에서 CANCEL 이벤트 존재 여부 먼저 확인 [CI-4337]
+    - `v2_user_time_off_event`에서 CANCEL 이벤트(reference_time_off_event_id로 REGISTER와 연결)가 정상 저장되어 있으면 취소 자체는 완료된 것
+    - "휴가 사용 내역" UI 상태는 Event Sourcing 기반 — `UserTimeOffUseLookUpMappingService`가 CANCEL 이벤트 존재 여부와 approval 레코드 상태를 결합하여 표시 상태 결정
+    - ⚠️ 근본 원인 미확정(조사 중): H1 CANCEL 이벤트 누락 감지 문제, H2 approval 레코드 상태 불일치, H3 직접 취소 시 cancelApproval() 별도 트랜잭션 문제
+    - 엑셀 다운로드에서도 동일 상태 표시이면 API 응답 레벨 문제. `v2_user_time_off_use`는 취소 시 물리 삭제되므로 0건이면 실제 계산 영향 없음
 
 #### 조사 플로우
 
@@ -547,6 +553,13 @@
 3. 고객에게 로그인 → 카드 등록 안내 [CI-4169]
 4. 카드 등록 완료 확인 후 `close-forced-open`으로 원복 [CI-4169]
 5. 체험 종료일 직접 변경은 불가 — 0원 구독 또는 청구 시작일 조정으로 대응 [CI-4169]
+
+문의: "등록한 구성원이 로그인이 안 돼요" / "초대했는데 로그인 오류가 나요" / "비밀번호를 설정 안 한 것 같아요"
+1. **온보딩 미완료(인증 계정 미생성)** → 구성원 등록(초대) 후 이메일 수락 + 비밀번호 설정까지 완료해야 인증 계정이 생성됨 [CI-4280]
+   - 초대 메일 수락은 했으나 비밀번호 설정 단계를 건너뛰면 로그인 불가
+   - 조치: 구성원에게 초대 메일 재발송 → 비밀번호 설정 완료 안내
+   - ⚠️ 구성원 등록 완료 ≠ 로그인 가능 (온보딩 완료까지 필요)
+2. **겸직 주법인 변경 필요 여부** → 온보딩 완료 상태인데도 로그인 불가이면 겸직 구조 확인
 
 문의: "OTP 때문에 로그인이 안 돼요" / "최고관리자가 OTP를 켜고 퇴사했어요"
 1. OTP 설정 상태 확인: `SELECT required FROM flex_auth.customer_credential_t_otp_setting WHERE customer_id = ?`
@@ -1640,6 +1653,40 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
    - 타임아웃 발생 시 → user id 기준으로 적절히 나눠서 여러 번 호출 후 엑셀 병합
 2. **특정 시점 조직 추출** → `user_position_time_series_segment` + `department` JOIN으로 `union all` 쿼리 구성 (상세 SQL은 cookbook/personnel-appointment.md 참조)
 
+문의: "엑셀 인사발령 기능 오픈해주세요" / "엑셀로 발령 기능 사용하고 싶어요"
+1. **엑셀 인사발령 = Flagsmith feature flag**로 고객사별 제어됨 [CI-4313] [CI-4352]
+2. 절차:
+   1. prod Flagsmith 접속: https://flagsmith.flexis.team/
+   2. Segments > `인사발령_엑셀업로드_우선_오픈_고객사` 클릭
+   3. Description에 회사명 추가, `customer_id` 값에 해당 ID 추가 (**공백 금지**)
+   4. [Update Segment] 클릭
+3. **사전 안내 필수**: 임시 제공 기능, 엑셀에 기재된 정보로 **덮어쓰기** (미기재 정보 소실 위험), 과거 발령 히스토리 손실 가능
+4. **CI-4214 버그 확인**: 엑셀 발령 후 "정보 변경하러가기" 버튼 미동작 FE 버그 수정 여부 확인 후 미수정 시 고객 안내
+
+#### 조사 플로우
+
+**F1: 엑셀 인사발령 기능 오픈 (Flagsmith)** · 타입: Spec · 히트: 2 · [CI-4313] [CI-4352]
+> 트리거: "엑셀 인사발령 기능 오픈해주세요" / "엑셀로 인사발령 사용 요청"
+
+```
+① 고객 안내 완료 여부 확인
+   덮어쓰기 특성, 임시 제공, 히스토리 손실 위험 안내
+   ├─ 안내 완료 + 고객 확인 → ②로
+   └─ 미안내 → 안내 후 확인 대기
+   ↓
+② CI-4214 FE 버그 수정 여부 확인
+   "정보 변경하러가기" 버튼 미동작 버그 수정됐는지 확인
+   ├─ 수정됨 → ③으로
+   └─ 미수정 → 고객에게 해당 제한사항 추가 안내 → ③으로
+   ↓
+③ prod Flagsmith에서 segment 업데이트
+   https://flagsmith.flexis.team/
+   Segments > 인사발령_엑셀업로드_우선_오픈_고객사
+   → customer_id 추가 (앞뒤 공백 주의) → [Update Segment]
+   ↓
+④ 고객에게 기능 오픈 완료 안내
+```
+
 → 상세: [cookbook/personnel-appointment.md](cookbook/personnel-appointment.md)
 
 ---
@@ -1801,6 +1848,34 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
    ├─ v2_customer_work_rule → 해당 요일이 주휴일/쉬는날
    └─ 위 항목 중 하나라도 해당 → 사용일수 0일은 스펙
 ```
+
+**F4: iOS 연차 미리쓰기 안내 문구 계산 불일치** · 타입: Render · 히트: 1 · [CI-4276]
+> 트리거: "연차 등록 시 '다음에 지급 받을 휴가 X일 Y분'이 이상해요" + iOS 사용자
+
+```
+① 플랫폼 확인
+   ├─ Android → 해당 안내 문구 미표시 (해당 없음)
+   └─ iOS → ②로
+   ↓
+② access log에서 dry-run 응답 확인
+   traceId로 postAnnualTimeOffNextAssignTime 값 확인
+   ├─ postAnnualTimeOffNextAssignTime = X (큰 값, 예: 16일) 인데 화면에 작은 값 표시
+   │  → iOS 매핑 실수 확정 — ③으로
+   └─ postAnnualTimeOffNextAssignTime도 이상한 값 → 백엔드 계산 로직 확인 필요
+   ↓
+③ 표시된 값의 출처 파악
+   preAmountToEarlyUse.timeOffTimeAmount 값과 화면 표시값 대조
+   ├─ 일치 → iOS에서 postAmountToEarlyUse(미리쓰기 누적량)를 다음 부여 예정 연차 라벨에 매핑 중 확정
+   └─ 불일치 → 다른 필드 매핑 문제 추가 조사
+   ↓
+④ 고객 안내
+   "iOS 앱에서 '다음에 지급 받을 휴가' 표시 값이 잘못된 필드를 참조하는 알려진 버그입니다.
+    다음 버전에서 수정 예정입니다. 실제 계산에는 영향 없으며, 정확한 값은 [버킷 조회로] X일입니다."
+```
+
+> 💡 **원인**: iOS에서 `postAnnualTimeOffNextAssignTime`(다음 부여 예정 연차 잔여) 대신
+> `postAmountToEarlyUse`(미리쓰기 누적 사용량)를 매핑. 클라이언트 변수명은 `nextAssignTime`이었으나 매핑 실수.
+> **Android는 해당 없음.** YEARLY 버킷 기준 가장 가까운 미래 부여 예정 연차를 합산한 값이 정상값.
 
 **F3: 잔여일 소수점 이상 — 소정근로시간 혼재 확인** · 타입: Spec · [CI-4349]
 > 트리거: "잔여 연차에 이상한 소수점이 있어요" / "0.002일이 어디서 났어요"
@@ -2491,6 +2566,10 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-08 | CI-4276 | 연차: iOS 연차 미리쓰기 안내 문구 계산 불일치 — F4 플로우 신설. `postAmountToEarlyUse`(미리쓰기 누적)를 `postAnnualTimeOffNextAssignTime`(다음 부여 예정) 라벨에 매핑하는 iOS 버그. Android 해당 없음. 다음 버전 수정 예정. d:kw/d:syn 추가 |
+| 2026-04-08 | CI-4280 | 계정/구성원: 온보딩 미완료로 로그인 불가 — 체크리스트 신규 항목("등록한 구성원이 로그인이 안 돼요") 추가. 초대 수락 후 비밀번호 설정 미완료 시 인증 계정 미생성, 재초대 안내 패턴. d:kw/d:syn 추가 |
+| 2026-04-08 | CI-4337 | 근태/휴가: 휴가 취소 후 사용 내역 상태 "승인완료" 유지 — 체크리스트#27 추가(증상 패턴, 근본 원인 미확정). CANCEL 이벤트 DB 존재 확인, v2_user_time_off_use 물리 삭제 구조 주의사항 기록. d:kw/d:syn 추가 |
+| 2026-04-08 | CI-4352 | 인사발령: 엑셀 인사발령 Flagsmith 오픈 — 진단 체크리스트(운영 요청 패턴) + F1 플로우 신설, 히트 2(CI-4313+CI-4352). Flagsmith segment 절차, 사전 안내 내용, CI-4214 버그 확인 사항 기록 |
 | 2026-04-07 | CI-4351 | 교대근무: 스케줄 미노출/삭제 오해 체크리스트(#7) 추가 — `v2_customer_work_plan_template` 직접 조회 + 스코프 확인 패턴. 계정/구성원 감사로그 체크리스트에 도메인 특화 삭제 이력 cross-ref 추가. domain-map.ttl d:kw/d:syn 보강, n:CI-4351 `:shift` 등록 |
 | 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
 | 2026-04-07 | CI-4335 | 계정/구성원: 문서/개인정보 변경 알림 수신자 스펙 확인 — 기존 COOKBOOK 체크리스트(권한 기반 발송) domain-map.ttl d:st "C" 완료 처리 |

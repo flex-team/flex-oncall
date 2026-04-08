@@ -3,6 +3,7 @@
 > ops-compact 스킬이 자동으로 기록한다. 오판 발견 시 git revert로 복원 가능.
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
+| 2026-04-08 | (전체) | ops-compact | 농축 0건, 퇴출 0건, COOKBOOK 강등 0건, 승격 0건 | Step 2: archive 노트 전체 d:st "C" 완료 상태. Step 3: R2 90일 경과 노트 없음(최고령 d:ca 2026-03-24), R1/R3 이전 컴팩션에서 처리됨. Step 4: 히트 0인 F-pay-2는 추가일 2026-03-30 기준 60일 미경과로 강등 대상 아님. Tier-2→Tier-1 승격 대상 없음. |
 | 2026-04-07 | CI-4335, CI-4338 | maintain+compact | COOKBOOK review 질문수정 S3+S7, account 알림 스펙 d:st C | maintain-notes: 2건 아카이브. CI-4338 구리뷰 질문 텍스트 수정 DML 패턴 COOKBOOK 추가 + cookbook/review.md SQL 템플릿. CI-4335 Not a Bug 확정 |
 | 2026-04-06 | CI-4117, CI-4227, CI-4256 | dup-clean | — | domain-map.ttl 중복 항목 3건 제거 (이전 compact 시 구 항목 미삭제 잔존) |
 | 2026-04-04 | CI-4304 | compact | COOKBOOK 대시보드-F2 신규 | time-tracking: 고스트 periodicWorkSchedule 조회 미필터링 패턴. 재동기화 불가 핵심 |

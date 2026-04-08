@@ -86,7 +86,11 @@
         "time_off_deletion" , "v2_user_shift_schedule_draft" ,
         "external_provider_event" , "v2_user_external_provider_event" ,
         "holiday replacement" , "compensatory time off" , "observed holiday" ,
-        "FLEXIBLE_CALENDAR_DAY_BASED" ;
+        "FLEXIBLE_CALENDAR_DAY_BASED" ,
+        "postAmountToEarlyUse" , "postAnnualTimeOffNextAssignTime" , "preAmountToEarlyUse" ,
+        "미리쓰기" , "연차미리쓰기" , "useInEarly" , "연차취소" , "휴가취소UI" ,
+        "UserTimeOffUseLookUpMappingService" , "UserTimeOffEventLatestCancelAmongSameReferenceIdFilter" ,
+        "v2_user_time_off_event" , "CANCEL이벤트" ;
   d:syn "휴일대체 기간이 안 맞아요" , "보상휴가 부여 안 돼요" ,
         "포괄 공제가 안 맞아요" , "휴일대체 탭에 날짜가 안 보여요" ,
         "퇴근 시간이 잘렸어요" , "퇴근이 정시로 찍혀요" ,
@@ -114,7 +118,11 @@
         "근무유형 적용일이 1970년으로 나와요" ,
         "교대근무 스케줄 게시 시 기존 휴가 있는 날 오류" ,
         "연차 조정 일괄 취소는 어떻게 해요" ,
-        "휴가 코드 삭제했더니 연차가 사라졌어요" ;
+        "휴가 코드 삭제했더니 연차가 사라졌어요" ,
+        "다음에 지급 받을 휴가 계산이 이상해요" ,
+        "연차 미리쓰기 안내 문구가 이상해요" ,
+        "휴가 취소했는데 사용 내역 상태가 승인완료로 보여요" ,
+        "휴가 취소 후에도 상태가 바뀌지 않아요" ;
   d:x   :scheduling , :shift , :notification , :payroll , :integration .
 
 :scheduling
@@ -237,7 +245,8 @@
         "audit_operation" , "감사로그다운로드" , "PersonalInformationType" ,
         "AuditEventCategory" ,
         "문서변경참조" , "CORE_USER_ATTACHMENT_UPDATE" , "CORE_USER_PERSONAL_UPDATE" ,
-        "구성원정보변경알림" ;
+        "구성원정보변경알림" ,
+        "온보딩미완료" , "인증계정미생성" , "비밀번호미설정" , "초대수락" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -262,7 +271,10 @@
         "감사로그 다운로드 요청드립니다" , "감사로그 데이터 추출해주세요" ,
         "장기간 감사로그가 필요합니다" ,
         "문서변경 참조에 없는데 알림이 와요" , "개인정보 등록 알림이 가요" ,
-        "신규입사자 가입 시 다른 분들에게 알림이 가요" ;
+        "신규입사자 가입 시 다른 분들에게 알림이 가요" ,
+        "등록한 구성원이 로그인이 안 돼요" ,
+        "초대했는데 로그인 오류가 나요" ,
+        "비밀번호를 설정 안 한 것 같은데 로그인이 안 돼요" ;
   d:x   :permission , :department .
 
 :department
@@ -293,10 +305,13 @@
   d:kw  "인사발령" , "발령엑셀" , "발령데이터" , "조직추출" ,
         "user_position_time_series_segment" , "personnel-appointment" ,
         "발령취소" , "예약발령" ,
-        "대표직무" , "직무순서" , "displayOrder" , "복수직무" ;
+        "대표직무" , "직무순서" , "displayOrder" , "복수직무" ,
+        "Flagsmith" , "인사발령_엑셀업로드_우선_오픈_고객사" , "엑셀인사발령" ;
   d:syn "인사발령 엑셀 데이터 뽑아주세요" ,
         "특정 시점의 조직 정보 추출해주세요" ,
-        "인사발령 후 대표 직무가 사람마다 다르게 표시돼요" ;
+        "인사발령 후 대표 직무가 사람마다 다르게 표시돼요" ,
+        "엑셀 인사발령 기능 오픈해주세요" ,
+        "엑셀로 발령 기능 사용하고 싶어요" ;
   d:x   :department , :account .
 
 :checklist
@@ -1098,6 +1113,20 @@ n:CI-4349
   d:st "C" ;
   d:ca "2026-04-07" ;
   d:s  "연차 잔여일 소수점 13.002일 — 소정근로시간 변경 후 버킷 간 agreedDayWorkingMinutes 혼재로 합산 시 소수점 발생. 정상 동작(스펙). 주식회사 무하유(69518)" .
+
+n:CI-4276
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "iOS 연차 미리쓰기 안내 문구 '1일 30분' 이상 — iOS에서 postAmountToEarlyUse(미리쓰기 누적량)를 postAnnualTimeOffNextAssignTime(다음 부여 예정 연차) 라벨에 매핑하는 버그. Android 해당 없음. 다음 버전 수정 예정. 주식회사 플레이하드(33374)" .
+
+n:CI-4352
+  d:in :personnel-appointment ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "엑셀 인사발령 기능 오픈 요청 — Ackerton Technology Services(167437), Flagsmith segment '인사발령_엑셀업로드_우선_오픈_고객사'에 customer_id 추가로 해결. CI-4313 동일 패턴" .
 
 # ============================================================
 # Notes — archive (brain/notes/archive/)
@@ -2488,8 +2517,10 @@ n:CI-4271
 
 n:CI-4280
   d:in :account ;
-  d:v  "investigating" ;
-  d:s  "팬세이션주식회사 구성원 PC웹 로그인 오류로 접속 불가" .
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "팬세이션주식회사 구성원 PC웹 로그인 오류로 접속 불가 — 온보딩 미완료(초대 수락 후 비밀번호 설정 미완료)로 인증 계정 미생성. 재초대 안내로 해결" .
 
 n:CI-4284
   d:in :goal ;
@@ -2918,8 +2949,10 @@ n:CI-4334
 
 n:CI-4332
   d:in :fins ;
-  d:v  "investigating" ;
-  d:s  "지출결의 반려 후 영수증 제출 화면 진행중 표시 — Vespa 인덱스 impact→fins 동기화 실패, operation API로 수동 동기화 완료" .
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "지출결의 반려 후 영수증 제출 화면 진행중 표시 — Vespa 인덱스 impact→fins 동기화 실패, operation API로 수동 동기화 완료. CI-4312 동일 회사, DB 레이어 vs Vespa 레이어 불일치 유사 패턴" .
 
 n:CI-4331
   d:in :review ;
@@ -2968,9 +3001,11 @@ n:CI-4350
   d:s  "취소 승인 완료 후 calendar_event.deleted_at 미업데이트로 구글 캘린더 삭제 이벤트 미발행 — cleansing API로 즉시 대응 완료, 취소 승인 플로우 버그 근본 수정 미완 (아보엠디코리아 113613)" .
 
 n:CI-4337
-  d:in :time-tracking ; d:v "investigating" ;
-  d:sy "휴가 취소 후 사용 내역 상태 미갱신" ;
-  d:kw "time-off-cancel", "휴가취소", "승인완료", "UserTimeOffEvent" .
+  d:in :time-tracking ;
+  d:v  "investigating" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "휴가 취소 후 '휴가 사용 내역' UI 상태가 '승인완료'로 유지 — DB CANCEL 이벤트 정상 저장 확인, 화면 표시 불일치 근본 원인 미확정(UserTimeOffUseLookUpMappingService 로직 조사 필요). 주식회사 포티파이(179342)" .
 
 n:CI-4327
   d:in :review ;
