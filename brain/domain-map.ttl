@@ -3005,6 +3005,8 @@ n:CI-4330
 n:CI-4350
   d:in :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
   d:s  "취소 승인 완료 후 calendar_event.deleted_at 미업데이트로 구글 캘린더 삭제 이벤트 미발행 — cleansing API로 즉시 대응 완료, 취소 승인 플로우 버그 근본 수정 미완 (아보엠디코리아 113613)" .
 
 n:CI-4337

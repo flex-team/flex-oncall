@@ -425,15 +425,21 @@
    └─ 재활성화 후 수동 전송 → 반영 여부 확인 (F2)
 ```
 
-**F2: 수동 전송 후 미반영** · 타입: Data · 히트: 1 · [CI-3861]
-> 트리거: "수동 전송했는데 반영 안 돼요"
+**F2: 수동 전송 후 미반영** · 타입: Data · 히트: 2 · [CI-3861, CI-4353]
+> 트리거: "수동 전송했는데 반영 안 돼요" / "외부 전송했는데 퇴근이 안 찍혀요"
 
 ```
-① 세콤 이벤트 수신 순서 확인
-   Metabase #3565 → 해당 날짜 이벤트 조회
-   ├─ 퇴근→출근 역순 수신 → 위젯 draft 불일치 가능
-   └─ 정상 순서 → 다른 원인, 위젯 draft 이벤트(#4716) 확인
+① Metabase로 빠른 확인 (DB 조회 전에 먼저)
+   #3565 → 이벤트 수신 순서·시각 확인
+   #4716 → draft 처리 결과 (fail_message) 확인
+   ├─ 퇴근→출근 역순 수신 + fail_message "WORK_CLOCK_START_NOT_EXIST"
+   │   → 역순 수신 확정. 출근이 뒤늦게 등록되어도 실패한 퇴근은 재처리 안 됨
+   │   → 조치: 사용자/관리자가 퇴근 시간 수동 입력 [CI-4353]
+   ├─ 퇴근→출근 역순 수신 + draft 불일치 → 위젯 상태 확인 [CI-3861]
+   └─ 정상 순서 → 다른 원인 조사 (잔존 위젯 F3, CONNECTION LIMIT F4 등)
 ```
+
+> ⚠️ 캡스는 실시간 + 수동 전송이 혼합될 수 있어 역순 수신 가능성이 세콤보다 높음 [CI-4353]
 
 **F3: 세콤 출근 미반영 — 잔존 위젯 차단** · 타입: Error · 히트: 1 · [CI-4157]
 > 트리거: "세콤 출근이 반영 안 돼요" + 진행중 위젯이 보임
@@ -1451,6 +1457,30 @@
    → form_user_form 생성 확인 → user_form_ids 채워짐 → 해결
 ```
 
+**F7: 평가지 질문 필수→선택 변경 후 form_user_answer.required 미갱신** · 타입: Data · 히트: 0 · [CI-4314]
+> 트리거: "평가지 질문을 필수→선택으로 변경했는데 제출이 안 돼요", "필수 항목 미작성 경고가 뜨는데 이미 선택으로 바꿨어요" — `RequiredChangeInfo`가 필수→선택(OFF) 변경을 감지하지 않아 `form_user_answer.required`가 true로 잔존
+
+```
+① form_question에서 현재 설정 확인
+   SELECT id, required FROM flex_review.form_question WHERE id = ?
+   ├─ required = 0 (선택) → 질문은 선택인데 UserAnswer가 필수로 남아있을 수 있음, ②로
+   └─ required = 1 (필수) → 정상. 다른 원인 조사
+   ↓
+② form_user_answer에서 동기화 누락 확인
+   SELECT id, question_id, required
+   FROM flex_review.form_user_answer
+   WHERE question_id = ? AND required = 1 AND deleted_at IS NULL
+   ├─ 1건 이상 → 동기화 누락 확정 (CI-4314 패턴), ③으로
+   └─ 0건 → 정상 동기화됨. 다른 원인 조사
+   ↓
+③ DML 보정 (결재 필요)
+   UPDATE flex_review.form_user_answer
+   SET required = 0, updated_at = NOW(6)
+   WHERE question_id = ? AND required = 1 AND deleted_at IS NULL
+   → 영향 행 수 확인 후 고객에게 제출 재시도 요청
+```
+> 근본 수정: EPBE-336에서 `RequiredChangeInfo`의 양방향(ON/OFF) 변경 추적 수정 예정
+
 → 상세: [cookbook/review.md](cookbook/review.md)
 
 #### 데이터 접근
@@ -2417,6 +2447,31 @@ Kibana 참고:
    ↓
 ④ 조치: FE size 값 변경 코드 수정 필요 — 운영 수동 해결 불가
 ```
+
+**F5: 지출결의 전자결재 반려 후 재작성 시 영수증 소실 (Kafka 소비 실패)** · 타입: Data · 히트: 0 · [CI-4312]
+> 트리거: "지출결의 반려 후 재작성 시 영수증이 사라져요", "진행중인 문서가 있어" — DB `spending_evidence_electronic_approval_document` 상태 미갱신 (F3은 Vespa만 불일치, F5는 DB도 불일치)
+
+```
+① DB에서 전자결재 문서 상태 확인
+   SELECT id, evidence_id, document_id, status, code, created_at
+   FROM flex_fins.spending_evidence_electronic_approval_document
+   WHERE customer_id = ? AND code = ?
+   ├─ status = IN_PROGRESS (실제는 REJECTED) → Kafka 이벤트 소비 실패, ②로
+   └─ status 정상 (REJECTED) → F3 시도 (Vespa만 불일치)
+   ↓
+② 고객 전체 최근 문서 상태 확인 (광범위 장애 여부)
+   SELECT id, evidence_id, document_id, status, code, created_at
+   FROM flex_fins.spending_evidence_electronic_approval_document
+   WHERE customer_id = ? ORDER BY created_at DESC LIMIT 30
+   ├─ 다수 IN_PROGRESS 잔존 → 고객 전체 Kafka 동기화 실패
+   └─ 1건만 → 단건 이벤트 유실
+   ↓
+③ 데이터 보정 (담당 개발자 결재 필요)
+   status를 전자결재 실제 상태와 일치시킴
+   + Bullseye 재동기화:
+   POST /api/operation/v2/fins/spending/customers/{customer_id}/synchronize
+```
+> ⚠️ F3(Vespa만 불일치)과의 차이: F5는 DB source-of-truth 자체가 잘못됨. F3의 operation API만으로는 해결 불가.
 
 → 상세: [cookbook/fins.md](cookbook/fins.md)
 
