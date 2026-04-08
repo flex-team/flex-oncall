@@ -26,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
         with:
           email: "flex-bot+oncall@flex.team"
-          model: bedrock_claude_sonnet_4_6
+          model: opus
           prompt: |
             /ops-brain-health 를 실행하세요.
             metrics/ 디렉토리의 모든 JSONL 파일을 분석하여
