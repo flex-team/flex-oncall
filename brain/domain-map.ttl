@@ -843,6 +843,13 @@ n:CI-4126
   d:st "C" ;
   d:ca "2026-03-31" .
 
+n:CI-4358
+  d:in :goal ;
+  d:v  "spec" ;
+  d:s  "cross-year 트리 깊은 뎁스 — root_objective_id vs parent_id 구분 필요" ;
+  d:st "C" ;
+  d:ca "2026-04-08" .
+
 n:CI-4130
   d:in :time-tracking ;
   d:v  "bug" ;
