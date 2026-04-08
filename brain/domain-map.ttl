@@ -247,6 +247,9 @@
         "문서변경참조" , "CORE_USER_ATTACHMENT_UPDATE" , "CORE_USER_PERSONAL_UPDATE" ,
         "구성원정보변경알림" ,
         "온보딩미완료" , "인증계정미생성" , "비밀번호미설정" , "초대수락" ;
+        "SAML" , "SAML2" , "SSO" , "AUTH_404_300" , "AUTH_401_100" ,
+        "AccountNotFoundSaml2Exception" , "Saml2VerificationProcessor" ,
+        "saml2_relying_party_registration" ;
   d:syn "이메일 변경해주세요" , "구성원 이메일 일괄 변경해주세요" ,
         "계열사 전환하면 로그인이 풀려요" ,
         "입사일 변경해주세요" , "입사일을 미래로 넣었어요" ,
@@ -275,6 +278,8 @@
         "등록한 구성원이 로그인이 안 돼요" ,
         "초대했는데 로그인 오류가 나요" ,
         "비밀번호를 설정 안 한 것 같은데 로그인이 안 돼요" ;
+        "SAML 로그인 시 사용할 수 없는 계정" , "SSO 로그인이 안 돼요" ,
+        "사용할 수 없는 계정이에요" ;
   d:x   :permission , :department .
 
 :department
@@ -341,7 +346,10 @@
         "approval_replacement_target" , "replacement-targets" ,
         "대결" , "휴직자승인" , "bulk-approve-for-user" ,
         "start-approval-process" , "produce-event" , "rollback-started" ,
-        "ApprovalProcessCommandInternalService" , "2PC" ;
+        "ApprovalProcessCommandInternalService" , "2PC" ,
+        "ApprovalProcessNotActableUserException" , "reviewWithoutStep" ,
+        "accessibleApprovers" , "approval_line_actor" ,
+        "syncApprovalProcessStepPromotion" , "user_workflow_task_box" ;
   d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
         "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
         "승인 설정/라인 확인해주세요" ,
@@ -353,7 +361,9 @@
         "승인 정책 복구해주세요" ,
         "휴직자가 승인 라인에 있어서 승인이 안 돼요" ,
         "대결 요청" , "결재 진행 중인 건 승인자 교체" ,
-        "퇴사자 미승인건 강제 승인 처리" , "퇴사자가 승인 라인에 있어서 승인이 안 돼요" ;
+        "퇴사자 미승인건 강제 승인 처리" , "퇴사자가 승인 라인에 있어서 승인이 안 돼요" ,
+        "승인했는데 승인 버튼이 계속 활성화돼요" ,
+        "승인라인에 포함되지 않은 사용자에요" ;
   d:x   :notification , :time-tracking , :flow .
 
 :data-export
@@ -2550,6 +2560,13 @@ n:CI-4309
   d:ca "2026-04-02" ;
   d:s  "감사로그 다운로드 요청 — raccoon audit operation API로 메일 발송 처리. customerId 25546, 기간 2025-09-22~2026-01-30" .
 
+n:CI-4361
+  d:in :account ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
+  d:s  "랜덤워크(229748) SAML 로그인 '사용할 수 없는 계정' — flex 등록 이메일(admin@randomwalk.co.kr)과 Azure AD SSO 이메일(admin@rdwalk.com) 불일치로 AUTH_404_300. 이메일 통일 안내" .
+
 n:CI-4351
   d:in :shift ;
   d:v  "spec" ;
@@ -3039,6 +3056,21 @@ n:CI-4355
   d:in :account ;
   d:v  "investigating" ;
   d:s  "케이유엠(217253) 구성원 일괄 업로드 후 조직·직5·주민번호·계좌 누락 — FE 정상 확인, BE task 비동기 처리에서 personnelAppointment/basic 저장 스킵 추정. taskId=14869" .
+
+n:CI-4362
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "워크플로우 승인 타임아웃 → approval-api 승인 완료 but impact-api 이벤트 전파 실패 → 승인 버튼 계속 노출 + ApprovalProcessNotActableUserException. DB 롤백+재승인으로 해결, EPBE-386에서 operation API 예정" .
+
+n:CI-4365
+  d:in :approval ;
+  d:v  "bug" ;
+  d:s  "워크플로우 문서 승인 버튼 미노출 — step 0 승인 이벤트가 impact-api에서 미처리, UserBox 미생성으로 myBoxInfo null. CI-4362와 동일 근본 원인(이벤트 동기화 실패 78건/일). 바이엘코리아(199890)" .
+
+n:CI-4364
+  d:in :checklist ;
+  d:v  "bug" ;
+  d:s  "입사자 체크리스트 할일 조직 기준 요청 시 퇴사자에게도 할일 전송 — 수동 trigger(triggerFromTargets)에서 isTriggerableStatus 필터 누락. 자동 trigger에는 필터 있음. EPDIV-119로 수정 등록. 딥세일즈(195101)" .
 
 g:ins-04
   d:in :insurance ;

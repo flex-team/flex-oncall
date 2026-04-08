@@ -574,6 +574,13 @@
 4. SSO 설정 있으면 → SSO 로그인으로 우회 가능 (OTP 확인 없음)
 5. OTP 설정 해제 필요 시 → F2: OTP 2차인증 해제 플로우 참조 [CI-4176]
 
+문의: "SAML 로그인 시 사용할 수 없는 계정" / "SSO 로그인이 안 돼요" / "사용할 수 없는 계정이에요"
+1. "사용할 수 없는 계정" 에러 코드 확인 → access log에서 AUTH_404_300 / AUTH_401_100 / AUTH_404_100 구분 [CI-4361]
+2. AUTH_404_300 → SAML assertion 이메일과 flex 등록 이메일 불일치. `/api-public/v2/auth/verification/identifier`로 세션 추출 → 이메일 비교 [CI-4361]
+3. AUTH_401_100 → 퇴직 처리된 계정. `flexUsagePeriod.to` 확인 [CI-4166]
+4. AUTH_404_100 → flex에 계정 자체가 없음
+5. 이메일 불일치면 → 고객사에 flex 이메일 또는 IdP 이메일 맞추도록 안내 [CI-4361]
+
 문의: "요청 정보가 올바르지 않습니다" / "주소 변경 시 오류"
 1. access log에서 traceId로 에러 코드 확인 [CI-4213]
 2. `UPER_400_011`이면 → `personalEmail` RFC 5322 검증 실패
@@ -624,6 +631,24 @@
    `UPDATE flex_auth.customer_credential_t_otp_setting SET required = 0 WHERE customer_id = ?`
    ├─ 쿼리 승인자 필요 (보안 규정)
    └─ 실행 후 고객 로그인 확인 요청
+
+**F3: SAML/SSO 로그인 "사용할 수 없는 계정"** · 타입: Auth · 히트: 1 · [CI-4361]
+> 트리거: "SAML 로그인 사용할 수 없는 계정", "SSO 로그인 안 됨", "사용할 수 없는 계정이에요"
+
+```
+① access log에서 에러 코드 확인
+   AUTH_404_300 / AUTH_401_100 / AUTH_404_100 중 어느 것인지
+   ↓
+② 에러 코드별 분기
+   ├─ AUTH_404_300 → ③ SAML assertion 이메일 확인
+   ├─ AUTH_401_100 → 퇴직 처리됨. flexUsagePeriod.to 확인
+   └─ AUTH_404_100 → 계정 자체 미존재
+   ↓
+③ `/api-public/v2/auth/verification/identifier`로 세션 추출
+   → SAML assertion의 이메일 vs flex 등록 이메일 비교
+   ├─ 불일치 → 고객사에 이메일 통일 안내
+   └─ 일치 → 다른 원인 조사 (계정 상태, 연동 설정 등)
+```
 
 #### 진단 체크리스트 (문서/개인정보 변경 알림)
 문의: "문서변경 참조에 없는데 알림이 와요" / "개인정보 등록 알림이 가요" / "신규입사자 가입 시 다른 분들에게 알림이 가요"
@@ -819,6 +844,14 @@
 2. `workflow_task` 테이블에서 동일 문서의 워크플로우 상태 확인 → ONGOING이면 동기화 실패
 3. 대응: `/action/operation/v2/approval/sync-with-approval` Operation API 호출로 워크플로우 상태 보정
 4. 보정 후 문서함에서 정상 표시 확인
+
+문의: "승인했는데 승인 버튼이 계속 활성화돼요" / "승인라인에 포함되지 않은 사용자에요"
+1. `approval_line_actor`에서 해당 사용자의 actor status 확인 — APPROVED이면 이미 승인 완료 [CI-4362]
+2. 근본 원인: 승인 처리 타임아웃 → approval-api 승인 완료 but impact-api 이벤트 전파 실패 → impact-api `approvalRequired=true` 유지
+3. 대응 (EPBE-386 operation API 완성 전): actor를 PENDING으로 DB 롤백 → 사용자 재승인 → 이벤트 정상 전파
+   `UPDATE flex_approval.approval_line_actor SET acted_user_id=null, acted_at='9090-09-09 18:09:09', status='PENDING' WHERE id='{actor_id}'`
+4. DB 직접 수정이므로 기안 필요. `acted_at` 마커값 `9090-09-09 18:09:09` 정확히 사용
+5. 재승인 후 Metabase #309에서 승인 상태 정상 반영 확인
 
 문의: "누가 리마인드 알림을 보냈는지 확인해주세요" / "승인 확인 요청 알림이 갑자기 왔어요"
 1. access log 조회 — `flex-app.be-access-{날짜}` 인덱스에서 `json.ipath: "remind/pending-approval"` + `json.authentication.customerId` 필터 [CI-4203]
@@ -2628,6 +2661,8 @@ ORDER BY last_modified_date DESC;
 | 2026-04-08 | CI-4280 | 계정/구성원: 온보딩 미완료로 로그인 불가 — 체크리스트 신규 항목("등록한 구성원이 로그인이 안 돼요") 추가. 초대 수락 후 비밀번호 설정 미완료 시 인증 계정 미생성, 재초대 안내 패턴. d:kw/d:syn 추가 |
 | 2026-04-08 | CI-4337 | 근태/휴가: 휴가 취소 후 사용 내역 상태 "승인완료" 유지 — 체크리스트#27 추가(증상 패턴, 근본 원인 미확정). CANCEL 이벤트 DB 존재 확인, v2_user_time_off_use 물리 삭제 구조 주의사항 기록. d:kw/d:syn 추가 |
 | 2026-04-08 | CI-4352 | 인사발령: 엑셀 인사발령 Flagsmith 오픈 — 진단 체크리스트(운영 요청 패턴) + F1 플로우 신설, 히트 2(CI-4313+CI-4352). Flagsmith segment 절차, 사전 안내 내용, CI-4214 버그 확인 사항 기록 |
+| 2026-04-08 | CI-4364 | 체크리스트: 조직 기준 할일 요청 시 퇴사자 전송 버그 — Tier-2 과거 사례 추가(code-fix, COOKBOOK 플로우 스킵). domain-map.ttl verdict=bug |
+| 2026-04-08 | CI-4361 | 계정/구성원: SAML/SSO 로그인 "사용할 수 없는 계정" — 진단 체크리스트 추가(AUTH_404_300 이메일 불일치 패턴), F3 플로우 추가. domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-07 | CI-4351 | 교대근무: 스케줄 미노출/삭제 오해 체크리스트(#7) 추가 — `v2_customer_work_plan_template` 직접 조회 + 스코프 확인 패턴. 계정/구성원 감사로그 체크리스트에 도메인 특화 삭제 이력 cross-ref 추가. domain-map.ttl d:kw/d:syn 보강, n:CI-4351 `:shift` 등록 |
 | 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
 | 2026-04-07 | CI-4335 | 계정/구성원: 문서/개인정보 변경 알림 수신자 스펙 확인 — 기존 COOKBOOK 체크리스트(권한 기반 발송) domain-map.ttl d:st "C" 완료 처리 |
