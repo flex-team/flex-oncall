@@ -80,7 +80,7 @@ jobs:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
         with:
           email: "flex-bot+oncall@flex.team"
-          model: bedrock_claude_sonnet_4_6
+          model: opus
           plugins: "linear@claude-plugins-official"
           prompt: |
             GitHub 이슈 #${{ steps.context.outputs.issue_number }}의 제목과 본문을 읽고 운영 문의 내용을 파악한 뒤,
@@ -134,7 +134,7 @@ jobs:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
         with:
           email: "flex-bot+oncall@flex.team"
-          model: bedrock_claude_sonnet_4_6
+          model: opus
           plugins: "linear@claude-plugins-official"
           prompt: |
             GitHub 이슈 #${{ steps.context.outputs.issue_number }}의 제목, 본문, 전체 코멘트를 읽으세요 (gh issue view --comments).
@@ -220,7 +220,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.FLEX_DEV_BOT_PERSONAL_TOKEN }}
         with:
           email: "flex-bot+oncall@flex.team"
-          model: bedrock_claude_sonnet_4_6
+          model: opus
           prompt: |
             /ops:update-cookbook --gh-issue ${{ steps.context.outputs.issue_number }}
 
