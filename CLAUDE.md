@@ -110,7 +110,6 @@ COOKBOOK이 스펙 데이터베이스가 아닌 이유: 쿡북은 "이런 문의
 | `opensearch:os-query-log` | 애플리케이션 로그 검색 (Kibana) |
 | `opensearch:os-query-service` | TT 서비스 문서 조회 (근무스케줄, 휴가사용 등) |
 | `kafka:kafka-query` | Kafka 토픽/메시지/컨슈머그룹 조회 |
-| `slack:slack-search` | Slack 메시지/파일/채널 검색 |
 
 ### 운영 도구
 
