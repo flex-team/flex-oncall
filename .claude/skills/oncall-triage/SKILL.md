@@ -27,6 +27,7 @@ $ARGUMENTS — 다음 중 하나:
 - **회사**: {회사명} (ID: {id})
 - **서비스 영역**: {영역}
 - **긴급도**: {긴급/상/중}
+- **슬랙 스레드**: channel_id={channel_id}, thread_ts={message_ts} (슬랙 URL 입력 시)
 
 [분류] {유형} ({영문}) — {근거 한 줄}
 [판정] {FE 이슈 / BE 이슈 / FE-BE 교차 / 스펙 이슈 / 판단 불가} — {근거 한 줄}
@@ -37,6 +38,8 @@ $ARGUMENTS — 다음 중 하나:
 - 스펙 이슈/Not a bug로 바로 결론 가능하면: `/oncall-summarize`
 - BE 이슈로 라우팅만 하면: BE 담당팀에 전달
 ```
+
+> **슬랙 스레드 정보 캡처**: Slack URL로 접수한 경우 `slack_read_thread` 호출 시 사용한 `channel_id`와 `message_ts`를 Output에 포함한다. Linear 티켓으로 접수한 경우에도 티켓에 Slack 링크가 첨부되어 있으면 URL에서 channel_id와 message_ts를 추출하여 포함한다. 이 정보는 `/oncall-summarize`에서 슬랙 초안을 스레드에 답장으로 생성할 때 사용된다.
 
 ## 코드베이스 위치
 
