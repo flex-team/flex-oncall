@@ -52,6 +52,15 @@ metrics/ JSONL 파일을 분석하여 brain 지식 시스템의 건강 상태를
 - cookbook_hit_flow별 히트 횟수
 - cookbook_flows_consulted에만 있고 hit_flow에 없는 "죽은 플로우" 목록
 
+**Pipeline Feedback** (pipeline_feedback 필드가 있는 investigation 이벤트만):
+- assess 유용도: assess_useful true vs false 비율
+- 범위 추정 정확도: scope_accuracy 분포 (일치/과대/과소/미추정)
+- 긴급도 적절성: urgency_accuracy 분포 (적절/과대/과소)
+- 조사 방향 준수율: direction_followed true vs false 비율
+- assess 생략율: skipped_assess true 비율
+- impact_analyze 필요율: impact_analyze_needed true 비율
+- retrospective 자유 서술 목록 (파이프라인 개선 단서)
+
 **Freshness:**
 - 도메인별 spec_items, spec_review_needed, api_refs, api_stale
 - 부패율: (spec_review_needed + api_stale) / (spec_items + api_refs)
@@ -93,6 +102,14 @@ Phase 1의 집계 결과를 바탕으로 다음을 분석:
    - 죽은 플로우 목록과 대응 방안
    - 도메인별 커버리지 갭
    - context_loaded=true + miss 조합 분석 ("지식은 있으나 절차가 없는" 도메인)
+
+2-1. **파이프라인 효과** (pipeline_feedback 데이터가 있을 때만)
+   - assess 유용도와 정확도 종합 평가
+   - 범위 추정이 "과소"인 케이스 패턴 분석 (어떤 도메인/타입에서 범위를 놓치는가)
+   - assess 생략 케이스에서 문제가 없었는지 vs 생략하지 말았어야 했는지
+   - 조사 방향 미준수 케이스 분석 (왜 안 따랐는지, 그 결과가 더 좋았는지)
+   - retrospective 자유 서술에서 반복되는 피드백 패턴 추출
+   - **5건 회고 트리거**: pipeline_feedback이 5건 이상이면 "파이프라인 v1 회고 시점" 알림
 
 3. **신선도 위험**
    - 부패율이 높은 도메인
@@ -198,6 +215,22 @@ Phase 1의 집계 결과를 바탕으로 다음을 분석:
   <h3>컨텍스트 효과 비교</h3>
   <!-- context_loaded true vs false 비교 테이블 -->
   <!-- 데이터 없으면 .no-data -->
+  <!-- AI 인사이트 (.insight) -->
+</section>
+
+<!-- 섹션 4-1: 파이프라인 효과 분석 (pipeline_feedback 데이터가 있을 때만) -->
+<section>
+  <h2>🔄 파이프라인 효과 분석</h2>
+  <h3>Assess 유용도</h3>
+  <!-- assess_useful true/false 비율, scope_accuracy 분포, urgency_accuracy 분포 -->
+  <h3>조사 방향 준수율</h3>
+  <!-- direction_followed 비율, 미준수 시 사유 목록 -->
+  <h3>Assess 생략 케이스</h3>
+  <!-- skipped_assess 비율 -->
+  <h3>Retrospective 목록</h3>
+  <!-- retrospective 자유 서술 모아서 표시 — 패턴 추출 -->
+  <!-- pipeline_feedback 5건 이상이면: .warning "파이프라인 v1 회고 시점입니다" -->
+  <!-- 데이터 없으면 .no-data "파이프라인 피드백 수집 중 — 아직 새 파이프라인으로 처리된 이슈가 없습니다" -->
   <!-- AI 인사이트 (.insight) -->
 </section>
 
