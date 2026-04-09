@@ -54,7 +54,7 @@ description: 메트릭스 기록 가이드
 - **트리거**: ops-investigate-issue 스킬의 조사 완료 시
 - **스키마**:
   ```json
-  {"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"cookbook_verdict":"hit","cookbook_flows_consulted":["F1","F3"],"cookbook_hit_flow":"F3","session":"..."}
+  {"ts":"...","type":"investigation","user":"...","model":"...","env":"local|ci","ticket":"CI-4240","domain":"time-tracking","context_loaded":true,"steps":5,"wrong_hypotheses":1,"stale_found":null,"cookbook_verdict":"hit","cookbook_flows_consulted":["F1","F3"],"cookbook_hit_flow":"F3","pipeline_feedback":{"skipped_assess":false,"assess_useful":true,"scope_accuracy":"과소","scope_detail":"assess: 1명 한정 → 실제: 같은 조건 47명","urgency_accuracy":"적절","direction_followed":true,"direction_detail":"쿡북 F3 경로대로 진행","impact_analyze_needed":true,"retrospective":"범위 추정 쿼리가 조사 방향을 좁히는 데 도움"},"session":"..."}
   ```
 - **필드 설명**:
 
@@ -69,6 +69,7 @@ description: 메트릭스 기록 가이드
 | `cookbook_verdict` | 쿡북 히트 판정 (`hit`/`ref`/`miss`) | 쿡북 히트/미스 확정 시 |
 | `cookbook_flows_consulted` | 참조한 플로우 ID 배열 | 쿡북 참조 시 |
 | `cookbook_hit_flow` | 히트 플로우 ID (없으면 `null`) | 히트/미스 확정 시 |
+| `pipeline_feedback` | assess 회고 비교 — 상세는 `investigate-issue` SKILL.md 참조 | 조사 완료 보고 시 |
 
 ### freshness (수동 기록 필수)
 

@@ -609,7 +609,37 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 | `cookbook_verdict` | 쿡북 히트 판정 결과 (`hit`/`ref`/`miss`) | Step 9-2a 쿡북 히트/미스 확정 시 |
 | `cookbook_flows_consulted` | 조사 중 참조한 플로우 ID 배열 (예: `["F1","F3"]`) | Step 1-3 쿡북 참조 시 |
 | `cookbook_hit_flow` | 원인 발견에 기여한 플로우 ID. miss/ref면 `null` | Step 9-2a 확정 시 |
-| `pipeline_feedback` | assess 유용성, 정확성, 생략 여부, impact-analyze 필요 여부 | Step 9 보고 시 |
+| `pipeline_feedback` | assess 회고 비교 (아래 수집 절차 참조) | Step 9 보고 시 |
+
+**`pipeline_feedback` 수집 절차:**
+
+조사 완료 후, operation-note의 `## 문제 평가`(assess 산출물)와 `## 원인 분석`(investigate 산출물)을 비교하여 기록한다.
+
+```json
+"pipeline_feedback": {
+  "skipped_assess": false,
+  "assess_useful": true,
+  "scope_accuracy": "일치|과대|과소|미추정",
+  "scope_detail": "assess: 1명 한정 → 실제: 같은 조건 47명",
+  "urgency_accuracy": "적절|과대|과소",
+  "direction_followed": true,
+  "direction_detail": "쿡북 F3 경로대로 진행",
+  "impact_analyze_needed": true,
+  "retrospective": "범위 추정 쿼리가 조사 방향을 좁히는 데 도움"
+}
+```
+
+| 필드 | 비교 대상 | 값 |
+|------|----------|-----|
+| `skipped_assess` | assess 생략 여부 | `## 문제 평가`에 "assess 생략" 마커가 있으면 `true` |
+| `assess_useful` | assess가 조사에 도움이 됐는지 전체 판단 | `true`/`false` |
+| `scope_accuracy` | assess의 범위 추정 vs 조사 후 실제 범위 | `일치`: 맞았음 / `과대`: 넓게 잡았음 / `과소`: 좁게 잡았음 / `미추정`: assess에서 범위 미기록 |
+| `scope_detail` | 구체적 비교 내용 | "assess: {추정} → 실제: {결과}" 형식 |
+| `urgency_accuracy` | assess의 긴급도 판단이 적절했는지 | `적절`/`과대`/`과소` |
+| `direction_followed` | assess의 조사 방향을 따랐는지 | `true`: 따랐음 / `false`: 다른 경로로 진행 |
+| `direction_detail` | 따랐으면 어떤 경로, 안 따랐으면 왜 | 자유 서술 1줄 |
+| `impact_analyze_needed` | 버그 판정으로 impact-analyze가 필요한지 | verdict가 `bug`이면 `true` |
+| `retrospective` | 이 이슈에서 파이프라인에 대해 배운 것 | 자유 서술 1줄 — 없으면 `null` |
 
 공통 필드(`ts`, `user`, `model`, `env`, `session`) 수집 규칙:
 - `ts`: KST 타임스탬프
