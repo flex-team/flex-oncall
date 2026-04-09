@@ -39,18 +39,15 @@
 
 ```
 이슈 접수 (Linear/Slack)
-  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec/Render)
-  → 도메인 파악 (ops-find-domain)
-  → d:api로 관련 API 패턴 확인 (있으면 즉시 사용, 없으면 코드 탐색)
-  → 타입별 첫 번째 액션:
-    - Error/Perf/Auth → access log 확인
-    - Data → DB 쿼리
-    - Spec → 도메인 스펙 문서 확인 (의도된 동작인지 판별)
-    - Render → access log로 API 응답 확인 → 정상이면 FE 코드 탐색
-  → 쿡북 확인 (brain/COOKBOOK.md — 히트율 순 진단 플로우)
-  → 데이터 조사 (DB/OpenSearch/Kafka)
-  → 원인 분석 및 해결
-  → 운영 노트 기록 (ops-note-issue / ops-investigate-issue)
+  → 이슈 타입 분류 + 도메인 파악 (ops-find-domain)
+  → 운영 노트 생성 (ops-note-issue)
+  → 문제 평가 (ops-assess-issue)
+    - 문제 성격 / 영향 범위 / 긴급도 / 조사 전략
+    - 여기서 끝나도 됨 (범위 보고만 필요한 경우)
+  → 기술 조사 (ops-investigate-issue)
+    - assess의 전략 기반 가설 수립 → 소거 루프 → 원인 확정
+  → [버그 판정 시] 영향 분석 (ops-impact-analyze)
+    - 사이드이펙트 + 해결안 + 수정 범위
   → 마감 (ops-close-note → brain 산출물 자동 갱신)
 ```
 
@@ -62,7 +59,9 @@
 |------|------|
 | `ops-find-domain` | 이슈 타입 분류 + 도메인 라우팅 — 관련 서브모듈, API 패턴, 쿡북 섹션, 과거 노트 탐색 |
 | `ops-note-issue` | Linear 이슈 조회 → operation-notes 문서 생성/업데이트 |
-| `ops-investigate-issue` | Linear 이슈 조사 → 원인 파악 → operation-note 기록 |
+| `ops-assess-issue` | 조사 전 문제 평가 — 성격/범위/긴급도 판단 + 조사 전략 수립 |
+| `ops-investigate-issue` | 기술 조사 — 가설 소거 루프 + 근본 원인 파악 (assess 선행 필수) |
+| `ops-impact-analyze` | 버그 확정 후 영향 분석 — 사이드이펙트 + 해결안 도출 |
 | `ops-fix-issue` | Linear 이슈 기반 코드 조사 → 구현 → PR 생성 |
 | `ops-close-note` | 완료된 이슈의 note 동기화 + 파생 산출물(COOKBOOK) 갱신 |
 
