@@ -55,17 +55,18 @@ brain/
 
 ```
 이슈 인입 (Linear/Slack)
-  → 이슈 타입 분류 (triage-signals.md 참조: Error/Data/Perf/Auth/Spec/Render)
-  → domain-map.ttl에서 키워드 + 용어집(g:*)으로 도메인 특정 및 용어 변환
-  → d:api로 관련 API 패턴 확인 (있으면 즉시 사용, 없으면 코드 탐색)
-  → 타입별 첫 번째 액션:
-    - Error/Perf/Auth → access log 확인
-    - Data → DB 쿼리
-    - Spec → 도메인 스펙 문서 확인 (의도된 동작인지 판별)
-    - Render → access log로 API 응답 확인 → 정상이면 FE 코드 탐색
-  → COOKBOOK.md에서 진단 플로우 확인 (히트율 순)
-  → 조사 수행 → 노트 기록
-  → 해결 완료 시 → close-note로 전체 갱신
+  → 이슈 타입 분류 + 도메인 파악 (ops-find-domain)
+  → 운영 노트 생성 (ops-note-issue)
+  → 문제 평가 (ops-assess-issue)
+    - 타입별 사실 검증 (triage-signals.md 참조)
+    - 성격 / 영향 범위 / 긴급도 / 조사 전략
+    - 여기서 끝나도 됨 (범위 보고만 필요한 경우)
+  → 기술 조사 (ops-investigate-issue)
+    - assess의 전략 기반 가설 수립 → 소거 루프 → 원인 확정
+    - verdict: spec / bug / undetermined
+  → [버그 판정 시] 영향 분석 (ops-impact-analyze)
+    - 사이드이펙트 + 해결안 (즉시 대응 vs 근본 해결)
+  → 마감 (ops-close-note → brain 산출물 자동 갱신)
 ```
 
 ## 노트 파일 규칙
