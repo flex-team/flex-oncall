@@ -94,8 +94,9 @@ Agent(
 
 ```markdown
 ### 다음 단계
-- 🔍 조사하려면: `/ops-investigate-issue {ticket-id}`
 - 📝 노트 만들려면: `/ops-note-issue {ticket-id}`
+- 📋 문제 평가하려면: `/ops-assess-issue {ticket-id}`
+- 🔍 (평가 후) 조사하려면: `/ops-investigate-issue {ticket-id}`
 - 📖 쿡북 확인: `brain/COOKBOOK.md` > "{cookbook 섹션명}"
 - 📂 서브모듈 갱신: `git submodule update --init --recursive {repo-path}`
 ```
