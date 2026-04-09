@@ -3054,12 +3054,16 @@ n:CI-4351
 
 n:CI-4355
   d:in :account ;
-  d:v  "investigating" ;
-  d:s  "케이유엠(217253) 구성원 일괄 업로드 후 조직·직5·주민번호·계좌 누락 — FE 정상 확인, BE task 비동기 처리에서 personnelAppointment/basic 저장 스킵 추정. taskId=14869" .
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-09" ;
+  d:s  "케이유엠(217253) 구성원 일괄 업로드 후 조직·직군·주민번호·계좌 누락 — 엑셀 직군명이 DB에 없는 값으로 파싱 + 계좌번호 하이픈 포함으로 560명 전원 미저장. sendNotification()이 USER 타입만 카운트해 '완료' 표시. 입력값 오류(스펙)" .
 
 n:CI-4362
   d:in :approval ;
   d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-08" ;
   d:s  "워크플로우 승인 타임아웃 → approval-api 승인 완료 but impact-api 이벤트 전파 실패 → 승인 버튼 계속 노출 + ApprovalProcessNotActableUserException. DB 롤백+재승인으로 해결, EPBE-386에서 operation API 예정" .
 
 n:CI-4365
