@@ -324,7 +324,8 @@ Step 2에서 찾은 연관 이슈의 문서에도 현재 이슈로의 링크를 
 - 업데이트 모드였으면 변경된 내용 요약
 - Gherkin 시나리오를 작성했으면 시나리오 내용을 함께 보고하고, 시나리오 테스트 추가를 안내
 - **산출물 갱신**: `ops:learn brain/notes/{ticket-id}.md` 를 실행하여 brain 산출물(COOKBOOK, domain-map.ttl 등)을 갱신한다
-- 조사가 필요하면 → `ops:investigate-issue {ticket-id}` 안내
+- 문제 평가가 필요하면 → `ops:assess-issue {ticket-id}` 안내 (조사 전 성격/범위/긴급도 판단)
+- (평가 후) 기술 조사가 필요하면 → `ops:investigate-issue {ticket-id}` 안내
 - 코드 수정이 필요하면 → `ops:fix-issue {ticket-id}` 안내
 - 완료된 이슈 데이터화 → `ops:close-note {ticket-id}` 안내
 - 완료된 노트의 일괄 정리가 필요하면 → `ops:maintain-notes` 안내

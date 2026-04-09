@@ -80,10 +80,13 @@ Read: .claude/skills/ops-common/domain-routing.md
 #### 3.2 Operation-note 전용 (Linear 티켓, 로컬 노트)
 
 operation-note에서는 추가로:
+- `## 문제 평가` → 범위 추정 패턴, 긴급도 판단 기준 (assess-issue 산출물)
 - `## 다음에 같은 문의가 오면` → 진단 체크리스트 원본
 - `## 발견한 스펙/제약` → 제약사항 (있으면)
 - `## 용어 발견` → 용어 매핑 테이블 (있으면)
 - `## 스펙/버그 판별` → 판정 결과
+- `## 영향 분석` → 사이드이펙트 패턴, 도메인 간 의존성 (impact-analyze 산출물, 있으면)
+- `## 해결안` → 즉시 대응 vs 근본 해결 패턴 (impact-analyze 산출물, 있으면)
 - 조사 플로우 추출 (cookbook-rules.md 참조)
 
 #### 3.3 쿡북 추가 대상 사전 판별 (operation-note 소스일 때)

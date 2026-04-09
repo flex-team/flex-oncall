@@ -51,12 +51,13 @@ operation-note 파일(`{ticket-id}.md`)을 찾을 때 아래 순서로 탐색한
 문서 상태에 따라 선행 커맨드를 실행한다.
 
 1. `{notes-dir}/{ticket-id}.md` 또는 `{notes-dir}/archive/{ticket-id}.md` 존재 여부 확인
-2. **문서 없음** → `note-issue.md` 를 읽고 Step 1~5를 실행하여 operation-note 생성, 이어서 `investigate-issue.md` 를 읽고 조사 수행
+2. **문서 없음** → `note-issue.md` → `assess-issue.md` → `investigate-issue.md` 순서로 실행
    ```
    Read: .claude/skills/ops-note-issue/SKILL.md
+   Read: .claude/skills/ops-assess-issue/SKILL.md
    Read: .claude/skills/ops-investigate-issue/SKILL.md
    ```
-3. **문서 있음, 조사 결과 없음** (원인 분석/해결안 섹션 미존재) → `investigate-issue.md` 를 읽고 조사 수행
+3. **문서 있음, 조사 결과 없음** (원인 분석 섹션 미존재) → `assess-issue.md` → `investigate-issue.md` 순서로 실행 (문제 평가가 이미 있으면 assess 스킵)
 4. **문서 있음, 조사 결과 있음** → Phase 1로 바로 진행
 
 ### Phase 1: 이슈 파악 (🤖 Linear 에이전트)

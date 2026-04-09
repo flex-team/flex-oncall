@@ -151,7 +151,7 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 
 농축 완료 후 노트 정제:
 - 제거: Claude 활동 로그, 소거된 가설, DB 원시 데이터, 상세 코드 트레이스
-- 유지: 증상 요약, 확정 원인, 해결 조치, PR 링크, Gherkin
+- 유지: 증상 요약, 문제 평가, 확정 원인, 영향 분석 + 해결안(있는 경우), 해결 조치, PR 링크, Gherkin
 
 ### 상대 링크 규칙
 
@@ -170,25 +170,39 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 - domain-map.ttl g:* 블록에서 사용자 표현을 시스템 용어로 변환한다.
 - d:api로 관련 API 패턴을 확인한다 (있으면 즉시 활용, 없으면 코드 탐색으로 진행).
 
-### 2. 분석 기록
+### 2. 분석 기록 (note-issue)
 
 - 노트 파일을 생성하고 증상 섹션을 작성한다.
 - domain-map.ttl에 노트 항목을 추가한다 (verdict: `"investigating"`).
 
-### 3. 원인 조사
+### 3. 문제 평가 (assess-issue)
 
+- 조사에 들어가기 전에 문제의 성격·범위·긴급도를 판단한다.
+- triage-signals.md 의 타입별 첫 번째 액션으로 사실 검증을 수행한다.
+- operation-note에 `## 문제 평가` 섹션을 추가한다.
+- **여기서 끝나도 됨** — 범위 보고만 필요한 경우.
+
+### 4. 원인 조사 (investigate-issue)
+
+- **assess-issue 선행 필수**: `## 문제 평가` 섹션이 없으면 조사 불가.
 - COOKBOOK.md에서 해당 도메인 진단 플로우를 먼저 확인한다.
-- API 이슈일 때: **가설 세우기 전에 access log부터 확인**하여 요청/응답을 파악한다.
+- 가설 소거 루프 → 5 Whys → 스펙/버그 판별 (`**verdict**: bug/spec`).
 - 필요한 서브모듈만 `git submodule update --recursive` 로 갱신한다.
 - DB, OpenSearch, Kafka 등 조사 도구를 활용한다.
 
-### 4. 해결
+### 5. 영향 분석 (impact-analyze, 버그 판정 시만)
+
+- 버그 확정 후, 수정이 미치는 사이드이펙트를 분석한다.
+- 즉시 대응(표면 원인) vs 근본 해결(구조적 수정) 해결안을 도출한다.
+- operation-note에 `## 영향 분석` + `## 해결안` 섹션을 추가한다.
+
+### 6. 해결 (fix-issue)
 
 - 코드 수정이 필요하면 해당 서브모듈 repo에서 PR을 생성한다.
 - 운영 조치(데이터 패치 등)는 노트에 상세히 기록한다.
 - 노트의 해결 섹션을 업데이트한다.
 
-### 5. 회고
+### 7. 회고 (close-note)
 
 - close-note 스킬로 노트를 마감한다.
   - verdict 확정
@@ -203,7 +217,9 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 | 스킬 | domain-map.ttl | COOKBOOK.md | 노트 |
 |------|---------------|------------|------|
 | `note-issue` | 노트 항목 추가 | ops-learn 갱신 | 생성/갱신 |
-| `investigate-issue` | 노트 항목 추가 | ops-learn 갱신 | 생성/갱신 |
+| `assess-issue` | - | - | `## 문제 평가` 섹션 추가 |
+| `investigate-issue` | 노트 항목 추가 | ops-learn 갱신 | `## 원인 분석` 등 추가 |
+| `impact-analyze` | - | - | `## 영향 분석` + `## 해결안` 추가 (버그 시) |
 | `close-note` | verdict 확정 | ops-learn 갱신 | archive 이동 |
 | `fix-issue` | - | - | 갱신 |
 | `ops-learn` | 키워드/glossary 갱신 | 진단 패턴 갱신 | - |
