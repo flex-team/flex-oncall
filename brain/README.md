@@ -97,15 +97,19 @@ flowchart LR
 flowchart TD
     Hook["PreToolUse hook<br/>(자동)"] --> JSONL["metrics/{user}/{date}.jsonl"]
     INV["ops-investigate-issue"] -- "히트 판정" --> HIT["COOKBOOK.md<br/>히트 카운트"]
+    INV -- "pipeline_feedback<br/>(assess 회고)" --> JSONL
     FD["ops-find-domain"] -- "miss/reject/correction" --> RM["routing-misses.md"]
     LEARN["ops-learn"] -- "소비" --> RM
     COMPACT["ops-compact"] -- "on-demand 집계" --> JSONL
     COMPACT -- "히트율 리포트" --> HIT
+    BH["ops-brain-health"] -- "분석" --> JSONL
+    BH -- "파이프라인 효과<br/>리포트" --> RPT["brain-health-report.html"]
 ```
 
 | 수집처 | 형식 | 방식 | 용도 |
 |--------|------|------|------|
 | `metrics/{user}/{date}.jsonl` | JSONL | 자동 (PreToolUse hook) | 모든 스킬 호출 기록 (단일 소스) |
+| `metrics/{user}/{date}.jsonl` (pipeline_feedback) | JSONL 내 필드 | `investigate-issue` Step 9 | assess 판단 정확도 회고 (범위/긴급도/방향) |
 | `COOKBOOK.md` 히트 카운트 | Markdown 인라인 | `investigate-issue` 가 갱신 | 플로우별 히트 실적 |
 | `routing-misses.md` | Markdown | `ops-find-domain` 기록, `ops-learn` 소비 | 라우팅 miss/reject/correction |
 
@@ -144,6 +148,7 @@ flowchart TD
 [자동] PreToolUse hook ──→ skill 이벤트 ──────────────→ brain-health 리포트
 [수동] ops-investigate ──→ investigation 이벤트 ──────→ brain-health 리포트
                          + COOKBOOK 히트 N+1 ──────────→ ops-compact 계층 조정
+                         + pipeline_feedback ─────────→ brain-health "파이프라인 효과" 섹션
 [수동] ops-compact Step 6 → freshness 이벤트 ─────────→ brain-health 리포트
                            + freshness-report.md ──────→ 수동 리뷰
 [수동] ops-find-domain ──→ routing-misses.md ──────────→ ops-learn → d:kw/d:syn 보강
