@@ -170,6 +170,13 @@ operation-note의 `## 문제 평가` 섹션을 읽고 조사 맥락을 파악한
 ```
 → **즉시 종료**. 평가 없이 조사를 시작하지 않는다.
 
+**`## 문제 평가` 섹션이 있지만 "assess 생략" 마커인 경우:**
+escape hatch로 assess가 생략되면 성격/범위/긴급도/조사방향이 비어 있다.
+이 경우 investigate가 Step 4(가설 수립) 전에 증상 섹션을 기반으로 자체적으로 빠르게 판단한다:
+- 증상에서 문제 성격 추론
+- COOKBOOK 매칭 직접 시도
+- 범위/긴급도는 조사 중 파악되는 대로 `## 문제 평가` 섹션에 보강
+
 #### 1-2: 도메인 라우팅 확인
 
 평가 섹션에서 도메인 정보가 있으면 활용. 없으면 domain-routing.md로 라우팅 수행.
@@ -617,29 +624,25 @@ note 업데이트 후 **별도 subagent로 문서 검토**를 수행한다. `not
 
 ```json
 "pipeline_feedback": {
-  "skipped_assess": false,
   "assess_useful": true,
-  "scope_accuracy": "일치|과대|과소|미추정",
-  "scope_detail": "assess: 1명 한정 → 실제: 같은 조건 47명",
-  "urgency_accuracy": "적절|과대|과소",
-  "direction_followed": true,
-  "direction_detail": "쿡북 F3 경로대로 진행",
-  "impact_analyze_needed": true,
-  "retrospective": "범위 추정 쿼리가 조사 방향을 좁히는 데 도움"
+  "retrospective": "범위 추정 쿼리가 조사 방향을 좁히는 데 도움",
+  "scope_accuracy": "과소",
+  "urgency_accuracy": "적절",
+  "direction_followed": true
 }
 ```
 
 | 필드 | 비교 대상 | 값 |
 |------|----------|-----|
-| `skipped_assess` | assess 생략 여부 | `## 문제 평가`에 "assess 생략" 마커가 있으면 `true` |
+**필수 필드** (반드시 기록):
 | `assess_useful` | assess가 조사에 도움이 됐는지 전체 판단 | `true`/`false` |
-| `scope_accuracy` | assess의 범위 추정 vs 조사 후 실제 범위 | `일치`: 맞았음 / `과대`: 넓게 잡았음 / `과소`: 좁게 잡았음 / `미추정`: assess에서 범위 미기록 |
-| `scope_detail` | 구체적 비교 내용 | "assess: {추정} → 실제: {결과}" 형식 |
-| `urgency_accuracy` | assess의 긴급도 판단이 적절했는지 | `적절`/`과대`/`과소` |
-| `direction_followed` | assess의 조사 방향을 따랐는지 | `true`: 따랐음 / `false`: 다른 경로로 진행 |
-| `direction_detail` | 따랐으면 어떤 경로, 안 따랐으면 왜 | 자유 서술 1줄 |
-| `impact_analyze_needed` | 버그 판정으로 impact-analyze가 필요한지 | verdict가 `bug`이면 `true` |
 | `retrospective` | 이 이슈에서 파이프라인에 대해 배운 것 | 자유 서술 1줄 — 없으면 `null` |
+
+**선택 필드** (의미 있는 비교가 가능할 때만 기록):
+| `skipped_assess` | assess 생략 여부 | `## 문제 평가`에 "assess 생략" 마커가 있으면 `true` |
+| `scope_accuracy` | assess의 범위 추정 vs 조사 후 실제 범위 | `일치`/`과대`/`과소`/`미추정` |
+| `urgency_accuracy` | assess의 긴급도 판단이 적절했는지 | `적절`/`과대`/`과소` |
+| `direction_followed` | assess의 조사 방향을 따랐는지 | `true`/`false` |
 
 공통 필드(`ts`, `user`, `model`, `env`, `session`) 수집 규칙:
 - `ts`: KST 타임스탬프

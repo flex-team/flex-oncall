@@ -13,8 +13,11 @@ argument-hint: <ticket-id> (예: CI-3861)
 
 ## 전제 조건
 - operation-note에 `## 원인 분석` 섹션이 존재해야 함 (investigate 완료)
-- 원인 분석 섹션에 `**verdict**: \`bug\`` 마커가 있어야 함 (버그 판정)
-- 전제 미충족 시 `ops-investigate-issue` 먼저 실행하라고 안내 후 즉시 종료
+- 버그 판정 확인 순서:
+  1. `**verdict**: \`bug\`` 마커가 있으면 → 확정
+  2. 마커가 없으면 → 원인 분석 섹션에서 "버그", "bug", "코드 수정 필요" 등 자연어로 버그 판정 여부를 확인
+  3. 스펙 판정(`**verdict**: \`spec\``)이 명시되어 있으면 → impact-analyze 불필요, 안내 후 종료
+  4. 판정 자체가 없으면 → `ops-investigate-issue` 먼저 실행하라고 안내 후 종료
 
 ## Input
 $ARGUMENTS

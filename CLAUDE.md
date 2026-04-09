@@ -43,7 +43,8 @@
   → 운영 노트 생성 (ops-note-issue)
   → 문제 평가 (ops-assess-issue)
     - 문제 성격 / 영향 범위 / 긴급도 / 조사 전략
-    - 여기서 끝나도 됨 (범위 보고만 필요한 경우)
+    - 여기서 끝나도 됨 (스펙 확인 완료 또는 범위 보고만 필요한 경우)
+    - escape hatch: 명백히 단순한 이슈는 생략 가능 (노트에 사유 기록)
   → 기술 조사 (ops-investigate-issue)
     - assess의 전략 기반 가설 수립 → 소거 루프 → 원인 확정
   → [버그 판정 시] 영향 분석 (ops-impact-analyze)
