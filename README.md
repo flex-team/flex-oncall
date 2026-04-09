@@ -51,6 +51,34 @@ flowchart TD
     H --> S3[/"<b>📋 Linear</b><br/>상태: Done<br/>Slack :내가해냄:"/]
 ```
 
+### 지식 유지보수
+
+이슈 처리 외에, 축적된 지식을 정리하고 시스템 건강을 점검하는 흐름이 있다.
+
+```mermaid
+flowchart LR
+    subgraph 일일 자동화
+        MN["🤖 ops-maintain-notes<br/>노트 일괄 정리"]
+        MN --> |"완료 이슈"| AR["📦 archive 이동"]
+        MN --> |"Linear 동기화"| SYNC["📋 상태 갱신"]
+        MN --> |"brain 산출물"| LN["🧠 ops-learn<br/>COOKBOOK + TTL 갱신"]
+    end
+
+    subgraph 주기적 점검
+        BH["🤖 ops-brain-health<br/>건강 리포트 생성"]
+        BH --> RPT["📊 brain-health-report.html"]
+        RPT --> |"쿡북 히트율"| T1["COOKBOOK 효과 분석"]
+        RPT --> |"pipeline_feedback"| T2["파이프라인 효과 분석"]
+        RPT --> |"신선도"| T3["문서 부패 감지"]
+    end
+
+    subgraph 필요 시
+        CP["🤖 ops-compact<br/>농축 + 퇴출"]
+        CP --> |"히트 0 + 60일"| DM["Tier-1 → Tier-2 강등"]
+        CP --> |"히트 발생"| UP["Tier-2 → Tier-1 승격"]
+    end
+```
+
 ### 이슈 인입 채널
 
 | 채널 | 용도 |
