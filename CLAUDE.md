@@ -120,14 +120,6 @@ COOKBOOK이 스펙 데이터베이스가 아닌 이유: 쿡북은 "이런 문의
 | `operation:hashed-id` | DB Long ID ↔ HashedId 변환 |
 | `operation:log-analysis` | OpenSearch URL/Slack 에러/traceId 기반 로그 분석 |
 
-### 로컬 개발
-
-| 스킬 | 용도 |
-|------|------|
-| `local-dev:local-server` | 로컬 Spring Boot 서버 기동/종료/모니터링 |
-| `local-dev:local-debug` | 로컬 서버 디버깅 (브라우저+대시보드) |
-| `dev-tools:dev-loop` | dev 환경 통합 검증 루프 (서버, DB, Kafka, API) |
-
 ### 지식 관리
 
 | 스킬 | 용도 |
