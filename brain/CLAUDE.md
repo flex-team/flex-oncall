@@ -162,14 +162,14 @@ close-note(Phase 3) 또는 ops-compact에서 archive 이전에 수행한다:
 
 ## 운영 업무 진행 절차
 
-### 1. 티켓 확인
+### 1. 티켓 확인 (find-domain)
 
 - Linear 이슈 내용을 읽고 증상을 정리한다.
 - **이슈 타입 분류**: triage-signals.md를 참조하여 Error/Data/Perf/Auth/Spec/Render 중 하나로 분류한다.
-  - 타입에 따라 첫 번째 조사 액션이 달라진다 (Error/Perf/Auth → access log, Data → DB 쿼리, Spec → 도메인 스펙 문서, Render → access log + FE 코드).
 - domain-map.ttl 키워드 매칭으로 도메인을 특정한다.
 - domain-map.ttl g:* 블록에서 사용자 표현을 시스템 용어로 변환한다.
 - d:api로 관련 API 패턴을 확인한다 (있으면 즉시 활용, 없으면 코드 탐색으로 진행).
+- **타입별 첫 번째 액션은 assess-issue가 수행한다** (3단계 참조).
 
 ### 2. 분석 기록 (note-issue)
 
