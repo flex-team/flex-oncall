@@ -14,3 +14,5 @@
 {"ts":"2026-04-07T16:39:14+0900","epoch":1775547554,"date":"2026-04-07","user":"yj.kim","skill":"ops-close-note","args":"CI-4351","session":"73bd0704-785f-4fa9-8612-b8630a3f2934"}
 {"ts":"2026-04-07T17:30:00+0900","epoch":1775551800,"date":"2026-04-07","type":"investigation","user":"yj.kim","model":"claude-sonnet-4-6","env":"local","ticket":"CI-4351","domain":"shift","context_loaded":true,"steps":1,"wrong_hypotheses":1,"stale_found":"감사로그(:account) 잘못 라우팅 — 실제 도메인은 :shift, DB 직접 조회로 해결","session":"73bd0704-785f-4fa9-8612-b8630a3f2934"}
 {"ts":"2026-04-07T17:09:59+0900","epoch":1775549399,"date":"2026-04-07","user":"yj.kim","skill":"git:git-commit","args":"","session":"73bd0704-785f-4fa9-8612-b8630a3f2934"}
+{"ts":"2026-04-07T17:10:28+0900","epoch":1775549428,"date":"2026-04-07","user":"yj.kim","skill":"git:git-push","args":"","session":"73bd0704-785f-4fa9-8612-b8630a3f2934"}
+{"ts":"2026-04-07T18:24:05+0900","epoch":1775553845,"date":"2026-04-07","user":"yj.kim","skill":"git:git-commit","args":"","session":"6ea35cda-5faa-4eb3-8486-7b049b056f29"}

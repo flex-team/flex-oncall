@@ -14,7 +14,7 @@
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
 - **렌더형 (Render)**: 연차-F4(iOS 미리쓰기 매핑 실수)
-- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류, 인사발령-F1(Flagsmith 엑셀 발령 오픈)
+- **스펙질문형 (Spec)**: 알림-F1(수신자 역할 중복), 근태-F3(퇴근 자정 잘림), 맞춤휴가-F2(소정근로시간 변경 후 잔여 변동), 근태-IP제한+자동퇴근, 연차촉진-UTC연도경계, 외부연동-세콘쿼리오류, 인사발령-F1(Flagsmith 엑셀 발령 오픈), 출퇴근-F2(canCreateWorkRecordWithWorkClock 설정 off)
 
 ## 도메인별 진단 가이드
 
@@ -191,6 +191,7 @@
     - "휴가 사용 내역" UI 상태는 Event Sourcing 기반 — `UserTimeOffUseLookUpMappingService`가 CANCEL 이벤트 존재 여부와 approval 레코드 상태를 결합하여 표시 상태 결정
     - ⚠️ 근본 원인 미확정(조사 중): H1 CANCEL 이벤트 누락 감지 문제, H2 approval 레코드 상태 불일치, H3 직접 취소 시 cancelApproval() 별도 트랜잭션 문제
     - 엑셀 다운로드에서도 동일 상태 표시이면 API 응답 레벨 문제. `v2_user_time_off_use`는 취소 시 물리 삭제되므로 0건이면 실제 계산 영향 없음
+28. **근무 유형 클릭 시 추가(생성) 화면 노출** → 샘플 근무 유형 여부 확인. 온보딩 시 자동 생성된 샘플 유형은 생성 플로우가 정상 동작. 고객에게 "생성 플로우를 그대로 진행하면 근무 유형이 설정됩니다" 안내 — **스펙** [CI-4379]
 
 #### 조사 플로우
 
@@ -832,6 +833,11 @@
 1. 승인 설정 확인: `customer_workflow_task_template` + `customer_workflow_task_template_stage`
 2. 위젯 종료 시 기본 근무일은 승인 미발생이 정상 동작 (스펙)
 3. 주휴일인데 휴일 근무 승인 발생 → 주휴일 설정 일시와 휴일 근무 등록 일시 간 시간차 확인
+
+문의: "승인 문서에서 이전 기록 비교가 안 보여요" / "실시간 근무 기록 후 승인 문서에 변경 전 기록이 없어요"
+1. 승인 상태 확인 → **진행 중(ONGOING)이면 이전 기록 비교 미표시는 정상** (인정되지 않은 기록이므로 비교 대상 미확정) [QNA-2004]
+2. 승인 완료 후에도 미표시면 → 추가 조사 필요
+3. 참고: 위젯은 승인 프로세스에 묶여있지 않으므로, 승인 대기 중이어도 위젯은 독립적으로 표시됨 [QNA-2004]
 
 문의: "요승설이 뭐가 적용됐나요" / "어떤 승인 정책이 매칭됐는지 알고 싶어요"
 1. 요승설 매칭 결과는 **DB에 저장되지 않음** — 서버 로그에만 남음
@@ -1812,6 +1818,25 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
    └─ /start 호출됐으나 에러 → 에러 응답 확인
 ```
 
+**F2: 위젯 퇴근 후 근무 그래프 미표시 — canCreateWorkRecordWithWorkClock 설정** · 타입: Spec · 히트: 1 · [CI-4372]
+> 트리거: "퇴근했는데 근무 기록이 안 보여요" / "위젯 출퇴근했는데 그래프가 비어있어요" / work_record_event_block이 비어있음
+
+```
+① v2_user_work_record_event에서 해당 일자 이벤트 확인
+   user_id + date_from → 이벤트 존재 여부 + 타입(REGISTER vs REGISTER_BY_WORK_CLOCK)
+   ├─ 이벤트 없음 → 다른 원인 (이벤트 발행 실패 등)
+   └─ 이벤트 있으나 블럭 비어있음 (REGISTER 타입) → ②로
+   ↓
+② canCreateWorkRecordWithWorkClock 설정 확인
+   v2_customer_work_record_rule.can_create_work_record_with_work_clock
+   ├─ false → 의도된 동작 (설정이 꺼져있으면 위젯 기록 → 인정 근무 미반영)
+   │   → ③ 설정 변경 경위 확인
+   └─ true/null → 다른 원인 조사
+   ↓
+③ v2_customer_work_record_rule_aud로 설정 변경 이력 확인
+   → 관리자 의도 여부 판별 → 고객 소통으로 전환
+```
+
 → 상세: [cookbook/work-clock.md](cookbook/work-clock.md)
 
 ---
@@ -2666,6 +2691,9 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-09 | CI-4379 | 근태/휴가: 체크리스트#28 샘플 근무 유형 클릭 시 생성 화면 노출 — 스펙 확인, 고객 안내 |
+| 2026-04-09 | CI-4372 | 출퇴근: F2(canCreateWorkRecordWithWorkClock 설정 off → 근무블럭 미생성) 플로우 추가, 과거 사례·SQL 템플릿 추가. d:kw 보강 |
+| 2026-04-09 | QNA-2004 | 승인: "승인 문서 이전 기록 비교 미표시" 체크리스트 추가. 위젯-승인 독립성 도메인 컨텍스트 추가. d:kw(실시간 근무, 인정 근무), d:syn 추가 |
 | 2026-04-08 | CI-4358 | 목표: cross-year 트리 뎁스 주의사항 추가 (`parent_id` 확인 필수), Cmd+클릭 UI 팁. cookbook/goal.md에 2-step SQL 템플릿, 과거 사례, 구현 특이사항 추가. 히트: CI-4126 패턴 +1 |
 | 2026-04-08 | CI-4276 | 연차: iOS 연차 미리쓰기 안내 문구 계산 불일치 — F4 플로우 신설. `postAmountToEarlyUse`(미리쓰기 누적)를 `postAnnualTimeOffNextAssignTime`(다음 부여 예정) 라벨에 매핑하는 iOS 버그. Android 해당 없음. 다음 버전 수정 예정. d:kw/d:syn 추가 |
 | 2026-04-08 | CI-4280 | 계정/구성원: 온보딩 미완료로 로그인 불가 — 체크리스트 신규 항목("등록한 구성원이 로그인이 안 돼요") 추가. 초대 수락 후 비밀번호 설정 미완료 시 인증 계정 미생성, 재초대 안내 패턴. d:kw/d:syn 추가 |

@@ -24,19 +24,27 @@ flowchart TD
 
     B --> N["<b>🤖 Claude</b><br/>ops-note-issue<br/>노트 생성 · 도메인 파악"]
 
-    N --> S1[/"<b>📋 Linear</b><br/>상태: In Progress"/]
+    N --> AS["<b>🤖 Claude</b><br/>ops-assess-issue<br/>성격 · 범위 · 긴급도 판단"]
+
+    AS --> S1[/"<b>📋 Linear</b><br/>상태: In Progress"/]
     S1 --> C{"직접 해결 가능?"}
 
     C -->|"No"| R["<b>👤 사람</b><br/>담당 팀 라우팅<br/>도메인별 슬랙 멘션"]
 
-    C -->|"Yes"| D["<b>🤖 Claude</b><br/>ops-investigate-issue<br/>DB · 로그 · 코드 조사"]
+    C -->|"Yes"| D["<b>🤖 Claude</b><br/>ops-investigate-issue<br/>가설 소거 · 원인 파악"]
 
-    D --> E{"코드 수정 필요?"}
+    D --> V{"스펙? 버그?"}
 
-    E -->|"No"| F["<b>🤖 Claude</b><br/>운영 조치<br/>DB · Config · API"]
+    V -->|"스펙"| F["<b>🤖 Claude</b><br/>고객 안내 근거 정리"]
+    V -->|"버그"| IA["<b>🤖 Claude</b><br/>ops-impact-analyze<br/>사이드이펙트 · 해결안"]
+
+    IA --> E{"코드 수정 필요?"}
+
+    E -->|"No"| F2["<b>🤖 Claude</b><br/>운영 조치<br/>DB · Config · API"]
     E -->|"Yes"| G["<b>🤖 Claude</b><br/>ops-fix-issue<br/>서브모듈에서 구현 → PR"]
 
     F --> S2[/"<b>📋 Linear</b><br/>상태: Pending<br/>고객·CS 답변 대기"/]
+    F2 --> S2
     G --> S2
 
     S2 --> H["<b>🤖 Claude</b><br/>ops-close-note<br/>노트 마무리 + COOKBOOK 갱신"]

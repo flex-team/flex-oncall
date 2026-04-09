@@ -34,6 +34,7 @@
 - **"현재 근무유형" vs "해당 날짜 시점 근무유형"**: 유저의 근무유형이 변경되었을 때, 문의 날짜 기준으로 `v2_user_work_rule`의 `date_from`/`date_to` 범위를 확인해야 한다. 현재 시점 기준으로 보면 원인을 못 찾는다.
 - **OpenSearch 문서 없음 vs 데이터 이상**: 문서가 없는 것은 sync가 안 된 것이지 데이터 이상이 아니다. 수동 sync로 해결된다.
 - **Work Clock(출퇴근 시각) vs Work Record(근무 기록)**: 출근시각/퇴근시각(`realCheckInTime`)은 물리적 타각, 시작시간/종료시간(`startTime`)은 이벤트 블록 기반 기록. 다른 데이터 소스다.
+- **canCreateWorkRecordWithWorkClock 설정**: false이면 위젯 STOP 시 work_record_event는 REGISTER 타입으로 생성되지만 블럭(인정 근무)은 비어있음. null이면 기본값 true. FE 근무유형 설정에서 아무것도 안 건드리고 저장하면 true로 전달되므로, false는 관리자의 명시적 의도.
 - **월별 연차 잔여 vs 내휴가 잔여**: 월별 연차 사용내역은 연도 말(12/31) 기준, 내휴가는 현재 월 기준. 입사 1주년 시점 월차 소멸로 차이 발생.
 - **`ON_TIME` 퇴근 설정**: 유저 본인이 flex 앱에서 변경 가능. 정시 이후 모든 퇴근이 정시로 기록되므로, 외부기기 연동 환경에서 의도치 않은 결과 발생.
 
@@ -84,6 +85,29 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 
 - `DayWorkingType`: `WORKING_DAY`(근무일), `WEEKLY_PAID_HOLIDAY`(주휴일/유급), `WEEKLY_UNPAID_HOLIDAY`(휴무일/무급)
 
+```sql
+-- canCreateWorkRecordWithWorkClock 설정 확인
+SELECT id, can_create_work_record_with_work_clock
+FROM v2_customer_work_record_rule
+WHERE id = ?;  -- ? = v2_customer_work_rule.customer_work_record_rule_id
+
+-- 설정 변경 이력 확인
+SELECT id, can_create_work_record_with_work_clock, rev, revtype
+FROM v2_customer_work_record_rule_aud
+WHERE id = ?
+ORDER BY rev DESC;
+
+-- 근무 이벤트 + 블럭 존재 확인
+SELECT wre.id, wre.user_id, wre.date_from, wre.event_type
+FROM v2_user_work_record_event wre
+WHERE wre.user_id = ? AND wre.date_from >= ?;
+
+SELECT * FROM v2_user_work_record_event_block
+WHERE user_work_record_event_id = ?;
+-- 블럭이 비어있고 이벤트 타입이 REGISTER(REGISTER_BY_WORK_CLOCK 아님)이면
+-- canCreateWorkRecordWithWorkClock = false 가능성 높음
+```
+
 ## 과거 사례
 
 - **휴일대체 탭 미표기 — OS 문서 미생성**: 근무를 건드리지 않은 유저는 sync 이벤트 미발생 → OS 문서 없음 → 조회 누락. 수동 sync로 즉시 대응 — **버그 (설계 한계)** [CI-3949]
@@ -95,6 +119,7 @@ POST /action/operation/v2/time-off/customers/{customerId}/time-offs/excel/used
 - **퇴사자 휴가 데이터 웹 UI 누락**: 주조직 없는 퇴직자가 조직 기반 필터링에서 제외됨. Operation API(`departmentIds: null`)로 우회 추출 — **스펙 (웹 UI 한계)** [CI-3976]
 - **세콤/캡스/텔레캅 퇴근이 정시로 고정**: 유저 본인이 flex 앱에서 퇴근 설정을 `ON_TIME`(정시)으로 변경 → 정시 이후 모든 퇴근이 정시로 기록. 날짜별 퇴근 기록 비교로 변곡점 특정 → DB/OpenSearch로 설정 변경 시점·주체 확인 → 본인 변경 확인 → 설정 재변경 안내 — **스펙** [CI-4145]
 - **퇴근 타각 자정 조정**: 자정 넘긴 퇴근이 다음날 종일휴가와 겹치면 휴가 시작 시간(00:00)으로 조정. `adjustWorkClockStopTime()` 휴가 겹침 체크에 의한 정상 동작 — **스펙** [CI-3979]
+- **위젯 퇴근 후 근무 그래프 미표시**: `canCreateWorkRecordWithWorkClock = false` 설정 시 위젯 STOP은 200 반환하지만 work_record_event_block 미생성(인정 근무 미반영). 관리자가 의도적으로 설정 변경한 경우 고객 소통으로 전환 — **스펙** [CI-4372]
 - **휴직/휴가 비대칭 검증**: 유즈케이스 기반 의도적 설계. 휴가→휴직 허용(갑작스런 휴직 발생 시, 기존 휴가 잔여 미차감 처리), 휴직→휴가 차단(유즈케이스 없음). 서비스 경계 분리: 휴직(`flex-core-backend`) / 휴가(`flex-timetracking-backend`) — **스펙** [CI-4120]
 - **선택적 근무 추천 휴게 미입력**: 추천 휴게는 실시간 기록 시점이 아닌 **근무 확정 시점**에 판단/입력. 별도 등록 휴게와 겹치지 않으면 자동 등록, 겹치면 미등록 — **스펙** [QNA-1922]
 - **연차 사용 내역 사라짐**: 연차 정책 부여 시작일 이전 사용 내역은 제품 내 미표시. 엑셀에는 원시 데이터 존재. — **스펙** [QNA-1920]

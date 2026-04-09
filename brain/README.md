@@ -27,11 +27,15 @@
 flowchart TD
     A["이슈 인입<br/>(Linear / Slack)"] --> B["ops-find-domain<br/>도메인 라우팅"]
     B --> C["ops-note-issue<br/>노트 생성"]
-    C --> D["ops-investigate-issue<br/>원인 조사"]
-    D --> E{"해결?"}
+    C --> AS["ops-assess-issue<br/>성격·범위·긴급도 판단"]
+    AS --> D["ops-investigate-issue<br/>가설 소거 · 원인 파악"]
+    D --> V{"스펙/버그?"}
+    V -- "버그" --> IA["ops-impact-analyze<br/>사이드이펙트 · 해결안"]
+    IA --> E{"코드 수정?"}
+    V -- "스펙" --> G
     E -- "코드 수정 필요" --> F["ops-fix-issue<br/>PR 생성"]
     F --> G["ops-close-note<br/>마감 + 농축"]
-    E -- "운영 조치/스펙" --> G
+    E -- "운영 조치" --> G
     G --> H["ops-learn<br/>산출물 갱신"]
     H --> I["ops-compact<br/>퇴출 + 계층 조정"]
 
@@ -41,8 +45,10 @@ flowchart TD
         B -. "쓰기" .-> RM["routing-misses.md"]
         C -. "쓰기" .-> DM
         C -. "쓰기" .-> NT["notes/"]
+        AS -. "쓰기" .-> NT
         D -. "읽기" .-> CB["COOKBOOK.md"]
         D -. "쓰기(히트)" .-> CB
+        IA -. "쓰기" .-> NT
         G -. "쓰기" .-> NT
         H -. "쓰기" .-> DM
         H -. "쓰기" .-> CB
@@ -55,10 +61,12 @@ flowchart TD
 
 1. **ops-find-domain** -- `domain-map.ttl` 에서 키워드 매칭으로 도메인 특정. 실패 시 `routing-misses.md` 에 기록
 2. **ops-note-issue** -- 노트 생성 + `domain-map.ttl` 에 `n:{ticket-id}` 추가
-3. **ops-investigate-issue** -- `COOKBOOK.md` 플로우를 히트율 순으로 시도. 히트 시 카운트 +1
-4. **ops-close-note** -- 노트 농축(증상 표현/키워드 흡수) + archive 이동 + `ops-learn` 호출
-5. **ops-learn** -- `COOKBOOK`, `domain-map.ttl` 일괄 갱신
-6. **ops-compact** -- 퇴출 기준에 따라 오래된 참조 제거 + COOKBOOK 계층 조정
+3. **ops-assess-issue** -- 조사 전 문제 평가: 성격/범위/긴급도 판단 + 조사 전략 수립. 노트에 `## 문제 평가` 섹션 추가
+4. **ops-investigate-issue** -- assess 전제 필수. `COOKBOOK.md` 플로우를 히트율 순으로 시도. 가설 소거 루프 → 5 Whys → 스펙/버그 판별
+5. **ops-impact-analyze** -- 버그 판정 시만. 사이드이펙트 분석 + 해결안 도출. 노트에 `## 영향 분석` + `## 해결안` 추가
+6. **ops-close-note** -- 노트 농축(증상 표현/키워드 흡수) + archive 이동 + `ops-learn` 호출
+7. **ops-learn** -- `COOKBOOK`, `domain-map.ttl` 일괄 갱신
+8. **ops-compact** -- 퇴출 기준에 따라 오래된 참조 제거 + COOKBOOK 계층 조정
 
 ---
 
@@ -110,7 +118,7 @@ flowchart TD
 | 데이터 | 위치 | 수집 방식 | 왜 수집하는가 | 활용처 |
 |--------|------|-----------|--------------|--------|
 | **skill 이벤트** | `metrics/{user}/{date}.jsonl` | 자동 (PreToolUse hook) | 스킬 사용 패턴 파악, 사용자간 워크플로우 차이 분석 | brain-health 리포트 "스킬 사용 분석" |
-| **investigation 이벤트** | `metrics/{user}/{date}.jsonl` | 수동 (`ops-investigate` Step 9-2b) | COOKBOOK이 실제로 조사에 도움이 됐는지(hit/ref/miss) 검증, 조사 효율(steps, wrong_hypotheses) 추적 | brain-health 리포트 "조사 효율", "쿡북 효과" |
+| **investigation 이벤트** | `metrics/{user}/{date}.jsonl` | 수동 (`ops-investigate` Step 9-2b) | COOKBOOK이 실제로 조사에 도움이 됐는지(hit/ref/miss) 검증, 조사 효율(steps, wrong_hypotheses) 추적, assess 판단 정확도(pipeline_feedback) 검증 | brain-health 리포트 "조사 효율", "쿡북 효과", "파이프라인 효과" |
 | **freshness 이벤트** | `metrics/{user}/{date}.jsonl` | 수동 (`ops-compact` Step 6-3) | COOKBOOK·스펙 문서가 현재 코드와 일치하는지 부패율 추적 | brain-health 리포트 "신선도 분석", `freshness-report.md` |
 | **COOKBOOK 히트 카운트** | `COOKBOOK.md` 인라인 `히트: N` | `ops-investigate` Step 9-2a | 어떤 진단 플로우가 자주 사용되는지 → 승격/강등 근거 | `ops-compact` 계층 조정 (Tier-1 ↔ Tier-2) |
 | **라우팅 미스 로그** | `routing-misses.md` | `ops-find-domain` 자동 기록 | domain-map.ttl 키워드 커버리지 부족 감지 | `ops-learn` 이 소비 → `d:kw`/`d:syn` 보강 |
@@ -126,6 +134,9 @@ flowchart TD
 | 조사 효율이 개선되고 있나? | investigation `steps`, `wrong_hypotheses` 추이 (WoW 비교) |
 | 문서가 코드와 맞지 않는 곳은? | freshness `spec_review_needed`, `api_stale` |
 | 도메인 라우팅이 정확한가? | `routing-misses.md` miss/reject 건수 추이 |
+| assess가 조사에 도움이 되나? | investigation `pipeline_feedback.assess_useful` 비율 |
+| 범위 추정이 정확한가? | investigation `pipeline_feedback.scope_accuracy` 분포 |
+| 파이프라인 v1 회고가 필요한가? | pipeline_feedback 5건 이상 누적 여부 |
 
 ### 데이터 흐름
 
@@ -152,9 +163,15 @@ flowchart TD
     NI["ops-note-issue"] -- "노트 생성" --> NT["notes/"]
     NI -- "n:* 추가" --> DM
 
+    AS["ops-assess-issue"] -- "## 문제 평가" --> NT
+    AS -- "triage-signals 참조" --> TS["triage-signals.md"]
+
     INV["ops-investigate-issue"] -- "플로우 참조" --> CB["COOKBOOK.md"]
     INV -- "히트 +1" --> CB
     INV -- "노트 갱신" --> NT
+    INV -- "pipeline_feedback" --> JSONL["metrics/ JSONL"]
+
+    IA["ops-impact-analyze"] -- "## 영향 분석 + 해결안" --> NT
 
     FIX["ops-fix-issue"] -- "노트 갱신" --> NT
 
