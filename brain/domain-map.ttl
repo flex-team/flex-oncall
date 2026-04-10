@@ -351,7 +351,7 @@
         "ThreadTopicType.USER_DATA" ,
         "요승설" , "match-step" , "ApprovalPolicy" , "승인정책복구" ,
         "approval_replacement_target" , "replacement-targets" ,
-        "대결" , "휴직자승인" , "bulk-approve-for-user" ,
+        "대결" , "휴직자승인" , "bulk-approve-for-user" , "replace-user-to-user" ,
         "start-approval-process" , "produce-event" , "rollback-started" ,
         "ApprovalProcessCommandInternalService" , "2PC" ,
         "ApprovalProcessNotActableUserException" , "reviewWithoutStep" ,
@@ -371,6 +371,8 @@
         "승인 댓글이 중복으로 보여요" ,
         "요승설이 뭐가 적용됐나요" , "어떤 승인 정책이 매칭됐나요" ,
         "승인 정책 복구해주세요" ,
+        "승인 정책 승인권자를 다른 사람으로 변경해주세요" ,
+        "승인권자 일괄 교체 요청" ,
         "휴직자가 승인 라인에 있어서 승인이 안 돼요" ,
         "대결 요청" , "결재 진행 중인 건 승인자 교체" ,
         "퇴사자 미승인건 강제 승인 처리" , "퇴사자가 승인 라인에 있어서 승인이 안 돼요" ,
@@ -764,6 +766,13 @@ n:CI-4286
   d:s  "퇴사자 미승인건 강제 승인 — bulk-approve-for-user(APPROVAL_DOCUMENT) + sync-with-approval로 workflow 동기화" ;
   d:st "C" ;
   d:ca "2026-04-01" .
+
+n:CI-4342
+  d:in :approval ;
+  d:v  "operational" ;
+  d:s  "승인 정책 승인권자 일괄 교체 — replace-user-to-user Operation API로 39개 정책 교체. SK케미칼 반복 패턴(CI-1602)" ;
+  d:st "C" ;
+  d:ca "2026-04-09" .
 
 n:CI-4228
   d:in :approval ;

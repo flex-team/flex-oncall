@@ -66,6 +66,49 @@ SELECT * FROM workflow_task WHERE customer_id = ? AND task_key = ?;
 SELECT * FROM workflow_task_stage WHERE customer_id = ? AND workflow_task_id = ?;
 ```
 
+## 승인 정책 승인권자 일괄 교체
+
+> 승인 정책(policy)에서 특정 유저를 다른 유저로 1:1 교체하는 운영 절차.
+> 진행 중 승인 요청(request)은 이 API 대상이 아님 — 별도 "퇴사자 승인 변경" 사용.
+
+### Operation API
+
+```
+POST /action/operation/v2/approval/policy/customers/{customerId}/replace-user-to-user
+Body:
+{
+  "targetIdentities": [
+    { "category": "<ApprovalPolicyCategory>", "key": "<target_key>" }
+  ],
+  "beforeUserId": <기존 user_id>,
+  "afterUserId": <변경 user_id>
+}
+```
+
+- `targetIdentities`: DB 쿼리로 조회한 대상 정책 목록 (아래 SQL 참조)
+- category enum: `TEMPLATE`, `APPROVAL_DOCUMENT`, `WORK_RECORD`, `TIME_OFF`, `TIME_OFF_PROMOTION`, `USER_DATA`, `OBJECTIVE`, `EVALUATION`
+- 롤백: afterUserId → beforeUserId 역방향 호출
+- PR: [flex-approval-backend#866](https://github.com/flex-team/flex-approval-backend/pull/866) (2024-09-25, 권민철)
+
+### 대상 정책 조회 SQL
+
+```sql
+-- 승인 정책 대상 정책 조회 — targetIdentities용
+SELECT DISTINCT ap.target_category, ap.target_key
+FROM flex_approval.approval_policy ap
+JOIN flex_approval.approval_step astp ON astp.approval_policy_id = ap.id
+JOIN flex_approval.approval_step_actor asa ON asa.approval_step_id = astp.id
+WHERE ap.customer_id = ?
+  AND asa.resolve_target_type = 'USER'
+  AND asa.resolve_target_value = ?  -- 기존 user_id (문자열)
+  AND ap.deleted_at = '9090-09-09 09:09:09'
+  AND astp.deleted_at = '9090-09-09 09:09:09';
+```
+
+> ⚠️ `approval_policy` 테이블은 이벤트소싱 구조. 동일 (category, key)에 여러 버전 row 존재 가능. `DISTINCT`로 고유 정책만 추출해야 함.
+
+---
+
 ## 삭제된 구성원 승인건 강제 승인
 
 > "퇴직자 승인자 교체"와 별개의 처리 절차. 삭제된 구성원은 퇴사 이벤트가 발행되지 않아 `approval_replacement_target`에 등록되지 않으므로 제품의 교체 기능이 동작하지 않는다.
@@ -145,6 +188,8 @@ WHERE customer_id = ? AND target_uid = '{task_key}' AND target_category = 'APPRO
 - **경력/학력 변경 요청 댓글 누락/중복**: FE가 UserDataApproval activities API를 `sort=ASC&size=1`로 호출하여 action history만 반환, 댓글 누락. BE 응답은 정상(targetUid 기반 UUID 고유키로 cross-contamination 없음). 동일 댓글 2회 POST도 확인(idempotency 미적용) — **버그 (FE)** [CI-4193]
 
 - **휴직자 승인 라인 강제 승인**: 휴직 예정자가 승인 라인에 포함된 TIME_OFF 미처리 건 29건. `replacement-targets`는 퇴직자 전용(퇴사 이벤트 기반)으로 휴직자 미지원. 고객 동의 후 `bulk-approve-for-user` API로 강제 승인 처리 — **스펙 (운영 대응, 반복 패턴)** [CI-4266]
+
+- **승인 정책 승인권자 일괄 교체**: SK케미칼 승인 정책 39개에서 승인권자를 `replace-user-to-user` Operation API로 일괄 교체. 퇴사가 아닌 단순 담당자 변경. 반복 인입 패턴 (CI-1602 동일 고객사) — **운영 대응** [CI-4342]
 
 ## 코어 런북 보강 — 과거 사례 (추가)
 
