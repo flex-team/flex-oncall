@@ -49,6 +49,8 @@ $ARGUMENTS
 
 **4개 Agent를 동시에 실행하여 데이터 수집 시간을 최소화한다.**
 
+각 Agent에게 사용 가능한 도구를 안내하고, 실행할 수 없는 경우 `delegation-guide.md` 위임 포맷으로 대체하도록 지시한다.
+
 #### 🤖 Agent A: DB 메트릭 (aws pi + aws cloudwatch)
 
 **사전 조건:**
@@ -100,6 +102,13 @@ aws cloudwatch get-metric-statistics --region ap-northeast-2 --profile {env} \
 
 **baseline 비교는 필수:** 비정상 시간대와 동일 쿼리로 baseline 시간대도 조회하여 수치 차이를 정량화한다.
 
+**실행할 수 없는 경우:**
+- AWS 콘솔 직접 접속 안내:
+  - RDS Performance Insights: `https://ap-northeast-2.console.aws.amazon.com/rds/home?region=ap-northeast-2#performance-insights-v2`
+  - CloudWatch: `https://ap-northeast-2.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-2#metricsV2`
+- 위 PI 핵심 쿼리 7종의 CLI 명령어를 `delegation-guide.md` 의 AWS CLI 위임 포맷으로 출력
+- 수집해야 할 메트릭과 시간 범위를 체크리스트로 제공
+
 #### 🤖 Agent B: 트래픽 분석 (opensearch:os-query-log)
 
 `os-query-log` 스킬의 인증/실행 방법을 따른다.
@@ -112,6 +121,11 @@ aws cloudwatch get-metric-statistics --region ap-northeast-2 --profile {env} \
 - **고객별/사용자별 분포**: `terms` agg on `json.authentication.customerId` 또는 `userId`
 - **어제 vs 오늘**: 동일 쿼리를 어제/오늘 epoch으로 각각 실행하여 비교
 
+**실행할 수 없는 경우:**
+- Kibana 대시보드 직접 접속 안내 (시간 범위, 필터 파라미터 포함 URL 구성)
+- 검색 조건을 `delegation-guide.md` 의 OpenSearch 위임 포맷으로 출력: 인덱스 패턴, 필터 필드, 시간 범위
+- 결과를 받으면 Phase 3 교차 분석에 반영
+
 #### 🤖 Agent C: RDS 이벤트 + 배포 확인
 
 ```bash
@@ -123,6 +137,10 @@ aws rds describe-events --region ap-northeast-2 --profile {env} \
 # 최근 배포
 cd {서브모듈} && git log --oneline --since="{날짜}" --all | head -20
 ```
+
+**실행할 수 없는 경우:**
+- 배포 확인(`git log`)은 도구 불필요 — 기존 경로 유지
+- RDS 이벤트만 AWS 콘솔 접속 안내로 대체
 
 #### 🤖 Agent D: LB/WAS/인프라 메트릭
 
@@ -168,6 +186,10 @@ grafana_dashboard_snapshot(env="prod", dashboard_uid="0BjSzaB7z",
   variables='{"application":"{app}"}',
   time_from="{KST ISO}", time_to="{KST ISO}")
 ```
+
+**실행할 수 없는 경우:**
+- Grafana 대시보드 직접 접속 URL 안내 (시간 범위 파라미터 포함)
+- 확인해야 할 패널 목록(HikariCP, JVM GC, HTTP 응답시간, 에러율)과 정상 baseline을 체크리스트로 제공
 
 ### Phase 3: 원인 좁히기 (소거법)
 
