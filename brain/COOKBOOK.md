@@ -10,7 +10,7 @@
 > 타입 정의: **Error**(오류/버그/장애) · **Data**(데이터 누락/불일치/조회) · **Perf**(성능/타임아웃) · **Auth**(접근 차단/권한/인증) · **Spec**(스펙 확인/운영 절차)
 
 - **오류형 (Error)**: 알림-F3(이메일 CTA 이동 불일치), 알림-F4(메일 중복 발신), 근태-F4(휴일대체 취소 불가), 교대근무-F2(스케줄 게시 확인 필요), 외부연동-F3(세콤 출근 미반영), 외부연동-F4(ODBC 연결 실패), 전자계약-F2(일괄 다운로드 링크 미생성), 평가-F3(등급 배분 validation 오류), 평가-F2(UserForm 미초기화), 조직관리-F2(발령+조직 데드락), 캘린더-F1(구글 캘린더 동기화 실패), Kafka-F1(컨슘 실패), Kafka-F2(사용자 변경 이벤트 실패), Kafka-F3(Rebalance 무한 루프)
-- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 비용관리-F4(수정 팝업 영수증 건수 초과), 워크플로우-F1(임시저장 문서 소실)
+- **데이터형 (Data)**: 알림-F2(Core 알림 내용 확인), 근태-F1(휴일대체 탭 미표기), 근태-F2(퇴근 정시 고정), 외부연동-F1(세콤 연동 해제 추적), 외부연동-F2(수동 전송 미반영), 계정-F3(문서함 삭제 복구), 승인-F1(비활성 사용자 강제 승인), 승인-F2(리마인드 발송자 추적), 승인-F3(승인정책 승인권자 교체), 전자계약-F1(서식 삭제자 추적), 전자계약-F3(계열사 서식 복제), 평가-F1(삭제 평가 복구), 평가-F4(뉴성과관리 전환 후 리뷰 소실), 채용-F1(subdomain 변경 요청 방치), 조직관리-F1(조직 삭제 처리), 대시보드-F1(수치 불일치), 대시보드-F2(고스트 periodicWorkSchedule 미달 오표시), 연차-F1(잔여 불일치), 연차-F2(사용일수 0일), 맞춤휴가-F1(잔여 불일치), 휴일-F1(휴일 미표시), 휴일-F2(공휴일 삭제 요청), 근무기록-F1(삭제 요청 대응), 비용관리-F1(데이터 소급 동기화), 비용관리-F4(수정 팝업 영수증 건수 초과), 워크플로우-F1(임시저장 문서 소실)
 - **성능형 (Perf)**: 없음
 - **권한형 (Auth)**: 교대근무-F1(구성원 조회 누락), 외부연동-F5(캡스/세콤 인증 오류), 계정-F1(Billing 접근 차단), 계정-F2(OTP 2차인증 해제), 출퇴근-F1(출근 불가 근무지 범위), OpenAPI-F1(403 grant configuration)
 - **렌더형 (Render)**: 연차-F4(iOS 미리쓰기 매핑 실수)
@@ -852,9 +852,17 @@
 2. 메타베이스에서 삭제된 정책 조회 후 엑셀로 전달 (CC팀 접근 권한 없음)
 3. [요청자별 승인 현황 Metabase](https://metabase.dp.grapeisfruit.com/dashboard/218?email=) / [승인자별 승인 현황](https://metabase.dp.grapeisfruit.com/dashboard/224?email=)
 
+문의: "승인 정책 승인권자를 다른 사람으로 변경해주세요" / "승인권자 일괄 교체 요청"
+1. `view_user` 에서 기존/변경 이메일로 user_id 조회
+2. 대상 정책 수 확인 (SQL: cookbook/approval.md "승인 정책 대상 정책 조회" 참조) [CI-4342]
+3. **퇴사 여부 확인** — 퇴사 + 진행 중 문서 있으면 "퇴사자 승인 변경" 별도 사용 필요 (이 API로는 승인 요청 교체 불가)
+4. Operation API `replace-user-to-user` 호출 → 실행 후 동일 쿼리로 0건 확인 [CI-4342]
+5. 롤백: 역방향(afterUserId → beforeUserId)으로 다시 호출
+
 #### Operation API
 - Swagger: `https://flex-raccoon.grapeisfruit.com/swagger/approval`
 - category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진)
+- **승인 정책 유저 교체**: `POST /action/operation/v2/approval/policy/customers/{customerId}/replace-user-to-user` — 정책 내 승인권자 1:1 교체. `targetIdentities`(category+key) + `beforeUserId` + `afterUserId` [CI-4342]
 
 #### 진단 체크리스트 (추가)
 문의: "승인 완료된 문서가 진행중으로 보여요" / "기안서 승인했는데 승인 필요로 남아있어요"
@@ -1334,6 +1342,12 @@
 2. 섹션명도 `review_question.question_type = 'SUBTITLE'` 행의 `question` 값이므로 동일 방법으로 수정 가능
 3. **불가 범위**: 질문 추가/삭제/타입 변경, 선택형 문항 수정
 4. 조치: template_id + question ID 확인 → `review_question.question` UPDATE → `question_log.content` 동기화 (결재 필요, SQL은 cookbook/review.md 참조) [CI-4338]
+
+문의: "선택형 문항 보기가 안 보여요" / "SINGLE_SELECT 빈 박스" / "보기 옵션이 텍스트 없이 빈 박스"
+1. getUserForm API access log에서 SINGLE_SELECT question의 `elements` 배열 확인 — `elements = []` 이고 `selectSetting.options` 에 데이터 있으면 `form_element` 미생성 패턴 [CI-4376]
+2. 인과 타임라인 재구성: 해당 evaluation의 Draft 수정 시간대 access log에서 선택형 타입 간 변경(MULTI↔SINGLE) API 호출 확인 [CI-4376]
+3. 근본 원인: `correctQuestionElementIfQuestionTypeChanged()` 에서 선택형↔선택형 변환 시 `elements = emptyList()` 로 초기화하는 버그 — PR#5251로 수정 완료 [CI-4376]
+4. 재발 시 즉시 대응: `form_question.select_setting` JSON의 options 기반으로 `form_element` INSERT [CI-4376]
 
 문의: "평가지 생성 중" / "평가지가 안 보여요"
 1. `evaluation_reviewer` 테이블에서 해당 reviewee-reviewer 조합의 `user_form_ids`가 `[]`인지 확인 [CI-4188]
@@ -2718,6 +2732,8 @@ ORDER BY last_modified_date DESC;
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-10 | CI-4376 | 평가: 선택형 문항 MULTI→SINGLE 변경 시 elements 초기화 버그 — 체크리스트 추가 (PR#5251 수정 완료). 인과 타임라인 재구성 패턴 적용 사례 |
+| 2026-04-09 | CI-4342 | 승인: 승인 정책 승인권자 교체 체크리스트 + Operation API(`replace-user-to-user`) + SQL 템플릿 추가 |
 | 2026-04-09 | CI-4379 | 근태/휴가: 체크리스트#28 샘플 근무 유형 클릭 시 생성 화면 노출 — 스펙 확인, 고객 안내 |
 | 2026-04-09 | CI-4372 | 출퇴근: F2(canCreateWorkRecordWithWorkClock 설정 off → 근무블럭 미생성) 플로우 추가, 과거 사례·SQL 템플릿 추가. d:kw 보강 |
 | 2026-04-09 | QNA-2004 | 승인: "승인 문서 이전 기록 비교 미표시" 체크리스트 추가. 위젯-승인 독립성 도메인 컨텍스트 추가. d:kw(실시간 근무, 인정 근무), d:syn 추가 |
