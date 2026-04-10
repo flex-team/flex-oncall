@@ -150,4 +150,4 @@ WHERE customer_id = ? AND target_uid = '{task_key}' AND target_category = 'APPRO
 
 - **삭제된 구성원 승인건 강제 승인**: 관리자가 2차 조직장 계정을 삭제하여 승인 라인 깨짐. 삭제된 사용자는 퇴사 이벤트 미발행 → `approval_replacement_target` 미등록 → 퇴직자 교체 불가. `bulk-approve-for-user` API로 강제 승인 처리 — **스펙 (운영 대응, 반복 패턴)** [CI-4228] [CI-3769]
 - **승인 완료 후 데이터 반영 오류**: 승인 완료 이벤트 처리 중 오류 → ONGOING 상태 잔류. `re-produce-messages` Operation API로 이벤트 재발행하여 정상 처리 — **운영 대응** [코어 런북]
-- **승인 완료 문서가 진행중 표시 (워크플로우 동기화)**: approval_process APPROVED인데 workflow_task ONGOING 잔류. `sync-with-approval` Operation API로 보정. 반복 발생 패턴 — **버그 (운영 대응)** [CI-4019] [CI-4182]
+- **승인 완료 문서가 진행중 표시 (워크플로우 동기화)**: approval_process APPROVED인데 workflow_task ONGOING 잔류. `sync-with-approval` Operation API로 보정. 반복 발생 패턴. 근본 원인: 승인 act API 타임아웃(`FlexRemoteUnknownStateException`) — **버그 (운영 대응)** [CI-4019] [CI-4182] [CI-4385]

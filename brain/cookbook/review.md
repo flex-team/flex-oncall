@@ -48,6 +48,7 @@
 - **마이그레이션 스케줄러**: `MigrationScheduler`는 뉴성과관리 전환 시 구 리뷰를 자동 soft delete. OpenSearch 로그에서 `[migrate]` 태그로 추적 가능.
 - **EvaluationStep 크론 자동 복구**: `EvaluationStepScheduler`가 **매분 0초**에 실행되어 `RESERVED` 상태 단계를 `IN_PROGRESS`로 자동 전환한다. "지금 시작" 후 FE-BE 시간차로 RESERVED 상태가 된 경우 최대 1분 내 자동 복구. 고객 문의 시 "잠시 후 자동으로 해결됐습니다"라고 안내 가능. [CI-4164]
 - **"지금 시작" vs "예약" 구분**: `period.start`가 서버 현재 시각보다 미래이면 BE는 무조건 `RESERVED`로 판정한다(`now < period.start` strict 비교). FE-BE 시계 차이가 수 초 이상이면 "지금 시작"이 "예약"으로 저장될 수 있다. API 변경으로 근본 수정됨(2026-03). [CI-4164]
+- **삭제 전략 불일치**: `evaluation`(평가 세션)은 soft delete(`deleted_at`, `deleted_user_id`)이나, `evaluation_reviewee`(평가 대상자)는 **hard delete**. 대상자 삭제 시 `evaluation_reviewer`, `form_user_form` 등 6개 테이블이 연쇄 물리 삭제되어 복구 불가. [CI-4387]
 
 ---
 
@@ -133,3 +134,4 @@ WHERE rq.template_id = ?
 - **삭제된 진행 중 평가 복구**: 고객 관리자가 다른 평가를 삭제하려다 진행 중 평가까지 삭제. `evaluation` 테이블 soft delete(`deleted_at`, `deleted_user_id`) NULL 복구 DML로 해결. Operation API PR #5181 머지 후 API 복구 가능 — **운영 대응** [CI-4195]
 - **등급 배분율 초과 시 제출 차단 설정 보정**: 평가 진행 중 `evaluation_grade_distribution.allow_submission_if_exceed = 0` 상태에서 배분율 초과 시 제출 불가. 평가 단계 시작 후 UI 편집 잠김 — DML로만 보정 가능. `evaluation_id`와 레코드 `id` 모두 WHERE 조건 필요 — **운영 대응** [CI-4327]
 - **진행 중 구리뷰 질문 텍스트 수정**: 리뷰 게시 후 질문 수정은 제품 비지원(스펙). 단, 질문 제목/설명 텍스트 수정만 예외 오퍼레이션 가능. `review_question.question` UPDATE 후 반드시 `question_log.content` 동기화 필요 — 섹션명도 `question_type='SUBTITLE'` 행으로 동일 처리. **불가 범위**: 질문 추가/삭제/타입 변경, 선택형 수정 — **운영 대응** [CI-4338]
+- **평가 대상자(reviewee) 삭제 복구 요청**: `evaluation`(세션) 삭제는 soft delete이나, `evaluation_reviewee`(대상자) 삭제는 **hard delete**. 대상자 삭제 시 `evaluation_reviewer`, `form_user_form`, `evaluation_reviewee_step_mapping`, `reviewee_evaluation_item`, `evaluation_reviewer_nomination` 6개 테이블 연쇄 물리 삭제. 애플리케이션 복구 불가 → 고객에게 대상자 재추가 + 평가 재작성 안내 — **운영 대응 (복구 불가)** [CI-4387]

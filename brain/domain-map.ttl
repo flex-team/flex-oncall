@@ -214,7 +214,8 @@
         "PIP" , "마이그레이션" , "authorization-cache" ;
   d:syn "누가 언제 권한을 부여했는지 확인해주세요" ,
         "감사로그에서 권한 변경이 안 보여요" ,
-        "권한 캐시가 갱신 안 돼요" ;
+        "권한 캐시가 갱신 안 돼요" ,
+        "권한 부여 증명 자료가 필요해요" ;
   d:x   :shift , :account .
 
 :account
@@ -230,6 +231,8 @@
         "정보복구" , "DB Snapshot" , "개인정보현황" , "이메일대량변경" ,
         "bullseye" , "opensearch싱크" ,
         "force-open" , "close-forced-open" , "결제취소" , "체험종료일" , "billing" ,
+        "activeFeatures" , "expiredFeatures" , "구독만료" , "customer_flex_subscription_feature" ,
+        "FlexTeam-ActiveFeatures" , "shutdownActivated" , "수동청구" ,
         "UPER_400_011" , "UserPersonalValidatorImpl" , "personalEmail" ,
         "ValuesContinuation" , "search_after" , "continuation token" ,
         "ContinuationExtensions" , "사번정렬" , "무한스크롤" ,
@@ -256,6 +259,8 @@
         "삭제된 구성원 복구해주세요" , "구성원 정보가 마스킹됐어요" ,
         "개인정보 보유현황 파악해주세요" ,
         "결제 취소 후 로그인이 안 돼요" ,
+        "화면이 하얗게만 표시돼요" , "콘텐츠가 안 보여요" ,
+        "구독 만료 후 기능이 안 돼요" ,
         "요청 정보가 올바르지 않습니다" , "주소 변경 시 오류" ,
         "집주소 변경 시 오류" ,
         "사번 정렬 시 무한 스크롤이 발생해요" ,
@@ -349,7 +354,12 @@
         "ApprovalProcessCommandInternalService" , "2PC" ,
         "ApprovalProcessNotActableUserException" , "reviewWithoutStep" ,
         "accessibleApprovers" , "approval_line_actor" ,
-        "syncApprovalProcessStepPromotion" , "user_workflow_task_box" ;
+        "syncApprovalProcessStepPromotion" , "user_workflow_task_box" ,
+        "myBoxInfo" , "approval-process/sync" , "FlexRemoteUnknownStateException" ,
+        "patchAllUserBoxes" ;
+  d:syn "워크플로우 승인 버튼이 안 보여요" ,
+        "승인 차례인데 승인 버튼이 없어요" ,
+        "승인했는데 버튼이 계속 떠요" ;
   d:syn "퇴직자 승인자 교체 알림이 뜨는데 실제 건이 없어요" ,
         "승인은 완료됐는데 데이터가 안 바뀌었어요" ,
         "승인 설정/라인 확인해주세요" ,
@@ -415,7 +425,8 @@
         "구리뷰" , "ANSWER_NOT_OPEN" , "progress_status" , "flag" , "구리뷰원복" ,
         "잔존고객사" ,
         "review_question" , "question_log" , "SUBTITLE" , "question_type" ,
-        "onetime_template_id" , "구리뷰질문수정" , "review_template" ;
+        "onetime_template_id" , "구리뷰질문수정" , "review_template" ,
+        "evaluation_reviewee" , "bulkDeleteReviewees" , "evaluation_reviewee_step_mapping" ;
   d:syn "평가 등급이 안 보여요" , "리뷰 작성이 안 돼요" ,
         "평가 폼이 안 열려요" , "등급 체계 변경이 안 돼요" ,
         "리뷰 다운로드가 안 돼요" ,
@@ -428,6 +439,8 @@
         "필수에서 선택으로 변경했는데 제출이 안 돼요" ,
         "배분율 초과 시 제출이 안 돼요" ,
         "인원 초과 시 제출 제한 비활성화하고 싶어요" ,
+        "평가 대상자를 지워버렸어요" ,
+        "대상자를 실수로 삭제했는데 복구 가능한가요" ,
         "구리뷰로 원복 가능한가요" , "구리뷰 메뉴가 안 보여요" ,
         "평가에서 구리뷰로 전환해주세요" , "리뷰 작성기간 수정이 안 돼요" ,
         "구리뷰 질문 수정해주세요" , "리뷰 섹션명 변경해주세요" ,
@@ -628,6 +641,13 @@
 # ============================================================
 # Notes — active (brain/notes/)
 # ============================================================
+
+n:CI-4381
+  d:in :payroll ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-09" ;
+  d:s  "2023년 11월 정산결과 지급액 0원 표시 — work_income_payment_settlement_payee_result_item backfill 누락. 포스타입(326). migrate-ci4227 API로 해결" .
 
 n:CI-4307
   d:in :payroll ;
@@ -1093,6 +1113,13 @@ n:CI-4195
   d:s  "삭제된 진행 중 평가 복구 — evaluation 테이블 soft delete(deleted_at, deleted_user_id) NULL 복구 DML 실행. Operation API PR #5181 대기 중" ;
   d:st "C" ;
   d:ca "2026-03-31" .
+
+n:CI-4387
+  d:in :review ;
+  d:v  "ops" ;
+  d:s  "평가 대상자(reviewee) 삭제 복구 요청 — evaluation_reviewee hard delete 구조로 애플리케이션 복구 불가. 고객 안내로 종결" ;
+  d:st "C" ;
+  d:ca "2026-04-09" .
 
 n:CI-4210
   d:in :review ;
@@ -2399,6 +2426,11 @@ g:review-11
   d:q  "배분율 초과 시 제출이 안 돼요" , "인원 초과 시 제출 제한 비활성화하고 싶어요" ;
   d:a  "evaluation_grade_distribution.allow_submission_if_exceed = 0 확인. 평가 진행 중 UI 편집 잠김 → DML 보정 필요 (allow_submission_if_exceed = 1)" .
 
+g:review-12
+  d:in :review ;
+  d:q  "평가 대상자를 삭제했는데 복구 가능한가요" , "평가 대상자를 지워버렸어요" ;
+  d:a  "evaluation_reviewee는 hard delete — 복구 불가. evaluation(세션) 삭제는 soft delete(F1 참고). 대상자 재추가 + 평가 재작성 안내" .
+
 g:fins-02
   d:in :fins ;
   d:q  "이전 카드 내역 연동해주세요" ;
@@ -3069,12 +3101,41 @@ n:CI-4362
 n:CI-4365
   d:in :approval ;
   d:v  "bug" ;
-  d:s  "워크플로우 문서 승인 버튼 미노출 — step 0 승인 이벤트가 impact-api에서 미처리, UserBox 미생성으로 myBoxInfo null. CI-4362와 동일 근본 원인(이벤트 동기화 실패 78건/일). 바이엘코리아(199890)" .
+  d:st "C" ;
+  d:ca "2026-04-09" ;
+  d:s  "워크플로우 문서 승인 버튼 미노출 — approval-api 타임아웃(~25s)으로 impact-api UserBox 동기화 실패, myBoxInfo null. sync Operation API(EPBE-388)로 보정. 바이엘코리아(199890)" .
 
 n:CI-4364
   d:in :checklist ;
   d:v  "bug" ;
   d:s  "입사자 체크리스트 할일 조직 기준 요청 시 퇴사자에게도 할일 전송 — 수동 trigger(triggerFromTargets)에서 isTriggerableStatus 필터 누락. 자동 trigger에는 필터 있음. EPDIV-119로 수정 등록. 딥세일즈(195101)" .
+
+n:CI-4375
+  d:in :fins ;
+  d:v  "investigating" ;
+  d:s  "비용관리 카드 사용 내역 엑셀 다운로드 시 조직 내 퇴사자 정보 노출 — Bullseye 조회 경로에 excludeResignedUser 필터 미적용. 부서 ID 기반 INTERSECT 필터만 사용. 스펙/버그 판별 보류. 아이즈(199832)" .
+
+n:CI-4377
+  d:in :permission ;
+  d:v  "ops" ;
+  d:s  "퇴사자 최고관리자 권한 부여 증명 자료(로그) 요청 — 에이드코리아(215787). DB 물리삭제이나 OpenSearch 감사로그에서 이력 확인 가능. CI-4150 보정" .
+
+n:CI-4385
+  d:in :approval ;
+  d:v  "ops" ;
+  d:s  "기안서 승인완료이나 진행중-승인필요 상태 표시 — 워시스왓(52783). act API 타임아웃으로 workflow_task 동기화 실패. sync-with-approval v3 API로 보정" .
+
+n:CI-4389
+  d:in :goal ;
+  d:v  "investigating" ;
+  d:s  "목표 마이그레이션 과정에서 조직 목표가 개인목표로 변경 — 지구홀딩스(98607). 일반구성원 기준 개인목표 분류 정책 확인 필요" .
+
+n:CI-4390
+  d:in :account ;
+  d:v  "ops" ;
+  d:s  "PC 웹 전체 콘텐츠 화이트아웃 — 도안회계법인(222963). 수동 청구 구독 기간(~4/8) 만료로 activeFeatures 빈 값 전환. 구독 추가로 해결" ;
+  d:st "C" ;
+  d:ca "2026-04-09" .
 
 g:ins-04
   d:in :insurance ;

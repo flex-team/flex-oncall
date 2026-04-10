@@ -518,10 +518,12 @@
 ### 권한 (Permission)
 
 #### 진단 체크리스트
-문의: "누가 언제 권한을 부여했는지 확인해주세요" / "감사로그에서 권한 변경이 안 보여요"
+문의: "누가 언제 권한을 부여했는지 확인해주세요" / "감사로그에서 권한 변경이 안 보여요" / "권한 부여 증명 자료가 필요해요" — 히트: 2 [CI-4150, CI-4377]
 1. `flex_authorization.flex_grant_subject`에서 대상 사용자의 grant 멤버십 확인 → `created_at`이 포함 시점, `created_by`가 수행자 [CI-4150]
 2. 대상 사용자가 grant에 없으면 → 이미 회수됨 (물리 삭제로 이력 소실). 회사 최초 유저인지 확인 → 최초 유저라면 회사 생성 시 자동 부여된 것 [CI-4150]
-3. 감사로그(Envers)는 권한 변경을 기록하지 않음 → 고객에게 "감사로그 기록 대상이 아닙니다" 안내 [CI-4150]
+3. **과거 이력 필요 시**: OpenSearch 감사로그에서 직접 검색 — DB 물리삭제와 무관하게 권한 변경 이벤트가 기록되어 있음 (보존 기간 내) [CI-4377]
+4. 제품 감사로그(Envers) / raccoon audit API(CI-4309)는 권한 테이블 미포함 — 사용 불가 [CI-4150, CI-4377]
+5. 증빙 자료 제공 시: OpenSearch 로그를 확인하여 이메일 발송 가능 [CI-4377]
 
 → 상세: [cookbook/permission.md](cookbook/permission.md)
 
@@ -592,8 +594,8 @@
 
 #### 조사 플로우
 
-**F1: Billing 접근 차단 (결제 취소 / 무료체험 종료)** · 타입: Auth · 히트: 2 · [CI-4169] [CI-4291]
-> 트리거: "결제 취소 후 로그인 불가", "무료체험 종료 후 접속 불가", "구독 추가했는데 로그인 안 됨", "체험 종료일 변경", "카드 등록 불가"
+**F1: Billing 접근 차단 (결제 취소 / 무료체험 종료 / 구독 만료)** · 타입: Auth · 히트: 3 · [CI-4169] [CI-4291] [CI-4390]
+> 트리거: "결제 취소 후 로그인 불가", "무료체험 종료 후 접속 불가", "구독 추가했는데 로그인 안 됨", "체험 종료일 변경", "카드 등록 불가", "화면이 하얗게 표시", "콘텐츠가 안 보여요", "activeFeatures 빈 값", "구독 만료"
 
 ```
 ① 라쿤 > 빠른 회사 검색 > 상세 정보에서 확인
@@ -855,11 +857,13 @@
 - category 값: `WORK_RECORD`(근무), `TIME_OFF`(휴가), `TIME_OFF_PROMOTION`(연차촉진)
 
 #### 진단 체크리스트 (추가)
-문의: "승인 완료된 문서가 진행중으로 보여요"
-1. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인지 확인
-2. `workflow_task` 테이블에서 동일 문서의 워크플로우 상태 확인 → ONGOING이면 동기화 실패
-3. 대응: `/action/operation/v2/approval/sync-with-approval` Operation API 호출로 워크플로우 상태 보정
+문의: "승인 완료된 문서가 진행중으로 보여요" / "기안서 승인했는데 승인 필요로 남아있어요"
+1. `workflow_task` 테이블에서 해당 문서번호의 상태 확인 → `SELECT * FROM flex.workflow_task WHERE code = '{문서번호}' AND customer_id = ?`
+2. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인데 workflow_task가 ONGOING이면 동기화 실패
+3. 대응: sync-with-approval Operation API 호출로 보정 [CI-4385]
+   - v3: `POST /proxy/impact/api/operation/v3/impact/customers/{customerId}/approval-documents/{targetUid}/approval-process/sync?actorUserId={actorUserId}&dryRun=false&dataOnly=false`
 4. 보정 후 문서함에서 정상 표시 확인
+5. **근본 원인**: 승인 act API 타임아웃(`FlexRemoteUnknownStateException: InterruptedIOException: timeout`)으로 상태 전이 실패 — 광범위 오류 시 동일 패턴 다건 발생 가능 [CI-4385]
 
 문의: "승인했는데 승인 버튼이 계속 활성화돼요" / "승인라인에 포함되지 않은 사용자에요"
 1. `approval_line_actor`에서 해당 사용자의 actor status 확인 — APPROVED이면 이미 승인 완료 [CI-4362]
@@ -1187,7 +1191,7 @@
 
 15. **정산 실행 시 "알 수 없는 오류" + 대상자 0명** → 대규모 회사(1,000명+)에서 사업장 담당자 계정으로 정산 실행 시 인가 타임아웃(`resolveAccessibleUsers`) 발생 가능. settlement은 커밋되지만 payee 초기화 실패 → 0명 IN_PROGRESS stuck. 깨진 정산 CANCELED 처리 필요 [CI-4260]
 
-16. **정산 상세 지급액 0원 (실지급액은 정상)** → `work_income_payment_settlement_payee_result_item` 테이블에 해당 payee result 항목이 존재하는지 확인. 0건이면 2025-03-19 backfill 누락. customer_id 기준 미마이그레이션 payee 수 조회 → 다수이면 Operation API `migrate-ci4227/{customerId}?dryRun=true`로 확인 후 `dryRun=false`로 실행 — 히트: 2 (CI-4227, CI-4265) [CI-4265]
+16. **정산 상세 지급액 0원 (실지급액은 정상)** → `work_income_payment_settlement_payee_result_item` 테이블에 해당 payee result 항목이 존재하는지 확인. 0건이면 2025-03-19 backfill 누락. customer_id 기준 미마이그레이션 payee 수 조회 → 다수이면 Operation API `migrate-ci4227/{customerId}?dryRun=true`로 확인 후 `dryRun=false`로 실행 — 히트: 3 (CI-4227, CI-4265, CI-4381) [CI-4265]
 
 17. **퇴직자 급여정산 주휴수당 미노출** → 정산 템플릿의 `work_record_import` 확인. `NONE`이면 TT 주휴수당 미조회 → default recipient 생성 시 dateRange가 전체 기간으로 설정됨 → 월 중도 퇴사자는 base payment dateRange와 불일치 → items:[] 반환 (Known Issue). 워크어라운드: 지급 항목 별도 추가로 수동 반영 [CI-4307]
 
@@ -1290,9 +1294,12 @@
 4. 리뷰 마이그레이션 "Failed requirement." 에러 → raccoon **prod**(`flex-raccoon.grapeisfruit.com`)를 사용하고 있는지 확인. dev raccoon에 prod 해시를 쓰면 Hashids salt 불일치로 `INVALID_NUMBER` 반환 → `require(reviewSetId > 0L)` 실패 [QNA-1936]
 
 문의: "삭제된 평가 복구해주세요"
-1. `flex_review.evaluation` 테이블에서 해당 회사의 `deleted_at IS NOT NULL` 레코드 조회 — 삭제된 평가 목록과 삭제 시점 확인 [CI-4195]
-2. 고객에게 삭제 시점과 대상 평가명 확인. 여러 건이면 평가 상태(`BEFORE_START` vs 진행 중)와 `deleted_at` 시점으로 대상 특정 [CI-4195]
-3. Operation API PR #5181 머지 여부 확인
+1. **먼저 구분**: 삭제된 것이 **평가 세션(evaluation) 자체**인지, **평가 대상자(reviewee)**인지 확인 [CI-4195] [CI-4387]
+   - "평가를 삭제했다" → 평가 세션 삭제 → ②로 (soft delete, 복구 가능)
+   - "평가 대상자를 삭제했다" → 대상자 삭제 → **복구 불가** (hard delete). 고객에게 안내 [CI-4387]
+2. 평가 세션 삭제인 경우: `flex_review.evaluation` 테이블에서 `deleted_at IS NOT NULL` 조회 [CI-4195]
+3. 고객에게 삭제 시점과 대상 평가명 확인. 여러 건이면 평가 상태(`BEFORE_START` vs 진행 중)와 `deleted_at` 시점으로 대상 특정 [CI-4195]
+4. Operation API PR #5181 머지 여부 확인
    - 머지됨 → Operation API로 복구
    - 미머지 → DML 실행 (`deleted_at = NULL, deleted_user_id = NULL`), 결재 필요 [CI-4195]
 
@@ -1504,6 +1511,26 @@
    ↓
 ③ raccoon Operation API initialize-user-form 호출
    → form_user_form 생성 확인 → user_form_ids 채워짐 → 해결
+```
+
+**F8: 평가 대상자(reviewee) 삭제 — 복구 불가 안내** · 타입: Spec · 히트: 1 · [CI-4387]
+> 트리거: "평가 대상자를 지워버렸어요", "실수로 대상자를 삭제했는데 복구 가능한가요?" — evaluation이 아닌 reviewee 삭제
+
+```
+① 삭제 대상 구분
+   "평가를 삭제" vs "평가 대상자를 삭제"
+   ├─ 평가 세션 삭제 → F1 (soft delete, 복구 가능)
+   └─ 대상자(reviewee) 삭제 → ②로
+   ↓
+② evaluation_reviewee 테이블 확인
+   SELECT id, reviewee FROM flex_review.evaluation_reviewee
+   WHERE evaluation_id = ? AND reviewee = ?
+   ├─ 0건 → hard delete 확정. ③으로
+   └─ 존재 → 다른 원인 조사 (대상자는 삭제되지 않았음)
+   ↓
+③ 고객 안내
+   evaluation_reviewee는 hard delete 구조로
+   애플리케이션 복구 불가. 대상자 재추가 + 평가 재작성 안내
 ```
 
 **F7: 평가지 질문 필수→선택 변경 후 form_user_answer.required 미갱신** · 타입: Data · 히트: 0 · [CI-4314]
@@ -2697,9 +2724,12 @@ ORDER BY last_modified_date DESC;
 | 2026-04-08 | CI-4358 | 목표: cross-year 트리 뎁스 주의사항 추가 (`parent_id` 확인 필수), Cmd+클릭 UI 팁. cookbook/goal.md에 2-step SQL 템플릿, 과거 사례, 구현 특이사항 추가. 히트: CI-4126 패턴 +1 |
 | 2026-04-08 | CI-4276 | 연차: iOS 연차 미리쓰기 안내 문구 계산 불일치 — F4 플로우 신설. `postAmountToEarlyUse`(미리쓰기 누적)를 `postAnnualTimeOffNextAssignTime`(다음 부여 예정) 라벨에 매핑하는 iOS 버그. Android 해당 없음. 다음 버전 수정 예정. d:kw/d:syn 추가 |
 | 2026-04-08 | CI-4280 | 계정/구성원: 온보딩 미완료로 로그인 불가 — 체크리스트 신규 항목("등록한 구성원이 로그인이 안 돼요") 추가. 초대 수락 후 비밀번호 설정 미완료 시 인증 계정 미생성, 재초대 안내 패턴. d:kw/d:syn 추가 |
+| 2026-04-09 | CI-4387 | 평가: 대상자(reviewee) 삭제 복구 불가 — F8 플로우 신설, 체크리스트 "삭제된 평가 복구" 항목에 evaluation vs evaluation_reviewee 구분 단계 추가. g:review-12 추가, d:syn 추가 |
 | 2026-04-08 | CI-4337 | 근태/휴가: 휴가 취소 후 사용 내역 상태 "승인완료" 유지 — 체크리스트#27 추가(증상 패턴, 근본 원인 미확정). CANCEL 이벤트 DB 존재 확인, v2_user_time_off_use 물리 삭제 구조 주의사항 기록. d:kw/d:syn 추가 |
 | 2026-04-08 | CI-4352 | 인사발령: 엑셀 인사발령 Flagsmith 오픈 — 진단 체크리스트(운영 요청 패턴) + F1 플로우 신설, 히트 2(CI-4313+CI-4352). Flagsmith segment 절차, 사전 안내 내용, CI-4214 버그 확인 사항 기록 |
 | 2026-04-08 | CI-4364 | 체크리스트: 조직 기준 할일 요청 시 퇴사자 전송 버그 — Tier-2 과거 사례 추가(code-fix, COOKBOOK 플로우 스킵). domain-map.ttl verdict=bug |
+| 2026-04-09 | CI-4375 | 비용관리: 증빙 담당자 resolve 시 퇴사자 처리 비즈니스 규칙 추가 (cookbook/fins.md 도메인 컨텍스트). 과거 사례 추가 (Bullseye 부서ID 필터 퇴사자 미적용 버그) |
+| 2026-04-09 | CI-4385 | 승인: "승인 완료인데 진행중" 체크리스트 보강 — v3 sync-with-approval API URL 추가, 타임아웃 근본 원인 기록, 문의 표현 추가 |
 | 2026-04-08 | CI-4361 | 계정/구성원: SAML/SSO 로그인 "사용할 수 없는 계정" — 진단 체크리스트 추가(AUTH_404_300 이메일 불일치 패턴), F3 플로우 추가. domain-map.ttl d:kw/d:syn 보강 |
 | 2026-04-07 | CI-4351 | 교대근무: 스케줄 미노출/삭제 오해 체크리스트(#7) 추가 — `v2_customer_work_plan_template` 직접 조회 + 스코프 확인 패턴. 계정/구성원 감사로그 체크리스트에 도메인 특화 삭제 이력 cross-ref 추가. domain-map.ttl d:kw/d:syn 보강, n:CI-4351 `:shift` 등록 |
 | 2026-04-07 | CI-4338 | 평가: 진행 중 구리뷰 질문/섹션명 텍스트 수정 오퍼레이션 — 진단 체크리스트 추가(텍스트 수정만 가능, SUBTITLE 타입=섹션명). cookbook/review.md SQL 템플릿(review_question UPDATE + question_log 동기화) + 과거 사례 추가 |
@@ -2814,4 +2844,5 @@ ORDER BY last_modified_date DESC;
 | 2026-02-20 | CI-3932 | 연차촉진 도메인에 정책 변경 후 PENDING_WRITE 잔존 진단 항목 추가 |
 | 2026-04-07 | CI-4338 | 평가 — 구리뷰 진행 중 질문 텍스트 수정 진단 항목 + F6 플로우 추가 |
 | 2026-04-09 | CI-4349, CI-4355, CI-4358, CI-4361, CI-4362 | maintain-notes 일괄 갱신. 계정/구성원: 구성원 일괄 업로드 데이터 누락 체크리스트 추가(CI-4355 직군명+계좌번호 형식 검증). 5건 아카이브 완료 |
+| 2026-04-09 | CI-4377 | 권한: 히트 +1 (2). **OpenSearch 감사로그로 권한 이력 추적 가능** 발견 — 체크리스트#3 보정(DB 불가 시 OpenSearch 경로 추가). raccoon audit 미적용(#4). "증명 자료" 표현 추가. Tier-2 과거 사례 추가 |
 | 2026-02-15 | 전체 | 초기 버전 — 기존 14개 노트에서 전체 추출 |
