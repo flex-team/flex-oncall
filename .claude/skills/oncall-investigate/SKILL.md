@@ -101,6 +101,11 @@ BE 이슈로 판단되면 `~/Desktop/PROJECTS/flex-support-oncall/` 레포에서
 
 ### opensearch 로그 검색
 
+> ⛔ **[MUST] curl로 OpenSearch를 직접 호출하지 않는다.** 로그 조회는 반드시 `opensearch:os-query-log` 스킬(MCP 플러그인)을 통해서만 수행한다.
+> - MCP 도구(`mcp__opensearch-prod__search_documents` 등)가 세션에 없으면, **curl로 우회하지 않는다.**
+> - 대신 유저에게 `~/.mcp.json` opensearch MCP 서버 설정 + `uvx` 설치 + Claude Code 재시작을 안내한다.
+> - curl fallback은 유저가 명시적으로 허가한 경우에만 사용한다.
+
 opensearch MCP(`os-query-log` 스킬)를 활용하여 로그를 검색한다.
 
 **기본 필터링 조건:**
@@ -252,7 +257,7 @@ FE 조사 중 다음 중 하나에 해당하면 이 단계로 진입:
    - 어떤 response 필드가 문제인지 특정
    - FE 코드가 정상임을 확인한 근거 정리 (파서, 폼 바인딩, 렌더링 확인 완료)
 
-2. **BE access log 확인** (opensearch — `os-query-log` 스킬 활용)
+2. **BE access log 확인** (반드시 `/os-query-log` 스킬 사용 — curl 직접 호출 금지)
    - FE에서 확인한 API path + customer_id + 시간 범위로 로그 검색
    - 실제 response status, duration 확인
    - 가능하면 동일 API의 정상 요청과 비교하여 차이점 파악

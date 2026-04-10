@@ -6,6 +6,7 @@
 
 - Always respond in Korean
 - 서브모듈 변경은 이 repo에 커밋하지 않는다. 코드 수정과 PR은 각 서브모듈 내에서 수행한다.
+- **OpenSearch 로그 조회는 반드시 `opensearch:os-query-log` 스킬(MCP 플러그인)을 사용한다. curl로 OpenSearch/Elasticsearch를 직접 호출하지 않는다.** 이유: curl 직접 호출은 인덱스 패턴, 쿼리 포맷, 인증 등을 매번 수동 구성해야 하고 오류가 잦다. `os-query-log` 스킬이 이를 모두 추상화한다.
 
 ## 워크스페이스 구조
 
