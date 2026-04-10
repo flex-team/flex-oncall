@@ -44,6 +44,8 @@
 
 - **`act-approval-process` + `produce-approval-process-event` 2단계**: 조직 승인라인 강제 승인 시 이 두 API를 연속 실행해야 한다. 첫 번째는 승인 행위 강제 실행, 두 번째는 승인 완료 이벤트 발행. 둘 다 실행하지 않으면 워크플로우 상태가 갱신되지 않는다.
 - **`bulk-approve-for-user`의 한계**: `target_category`만 받아서 해당 사용자가 포함된 **모든** 문서가 처리된다. 조직 승인라인 케이스에서는 사용 불가 — 의도하지 않은 문서까지 승인될 수 있다.
+- **WORK_RECORD는 `workflow_task` 미사용**: 근무(WORK_RECORD) 승인 상태는 time-tracking 이벤트 소비자가 직접 관리한다. `flex.workflow_task` 테이블에 WORK_RECORD source_feature가 없으므로, `sync-with-approval`(impact 경로)은 효과 없다. 이벤트 재전달이 필요하면 `produce-event-to-operation-topic` API를 사용한다. [CI-4391]
+- **`produce-event-to-operation-topic`은 별도 토픽 발행**: 원본 created 이벤트(`event.flex.approval.process.v1`)와 달리 operation 토픽(`event.flex.approval.process.operation.v1`)으로 발행한다. 이벤트 타입도 `team.flex.approval.process.event.operation.sync.v1`로 다르다. [CI-4391]
 
 ---
 

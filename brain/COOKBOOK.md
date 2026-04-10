@@ -894,6 +894,13 @@
    - 대응: `cloud_event_entity`에서 문제 이벤트 ID 조회 → `/action/operation/v2/approval/re-produce-messages` Operation API로 이벤트 재발행
    - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
 
+문의: "근무 승인 올렸는데 대기중이에요" / "승인 요청이 승인권자에게 안 갔어요"
+1. `approval_process` 상태 확인 (ONGOING이면 정상 생성됨) → `approval_line` step 0 상태 확인
+2. `cloud_event_entity`에서 해당 건의 created 이벤트 존재 여부 확인 (extensions.flexcustomerid + time)
+3. 이벤트 없음 → 2PC Phase 2 실패. `produce-event-to-operation-topic` API로 재발행
+4. 이벤트 있음 + UI "대기중" → 소비자(time-tracking) 처리 실패. 동일 API로 sync 이벤트 재발행
+5. **WORK_RECORD는 workflow_task 미사용** — sync-with-approval(impact 경로)는 WORK_RECORD에 효과 없음 [CI-4391]
+
 문의: "승인 프로세스가 시작됐는데 TT에서 400 오류 / 승인 항목이 비정상 상태"
 1. **신승인 start-approval-process / produce-event 2PC 패턴** → 신승인 처리는 2단계:
    - Step 1: `startWithoutEventProduce` → `/start-approval-process`
@@ -935,6 +942,29 @@
    POST /api/v2/operation/workflow/customers/{customerId}/users/{writerId}/approval-document/{documentKey}/sync-with-approval
    ├─ DONE으로 변경 → 완료
    └─ 이미 DONE → ⑤에서 완료
+```
+
+**F3: WORK_RECORD 승인 이벤트 미전달 — 소비자 실패 또는 2PC 실패** · 타입: Data · 히트: 1 · [CI-4391]
+> 트리거: "근무 승인 올렸는데 대기중이에요" / "1단계 승인 진행중으로 안 바뀌어요"
+
+```
+① approval_process + approval_line 상태 확인
+   customer_id + target_category='WORK_RECORD' + status='ONGOING'
+   ├─ step 0 PENDING → 승인권자 미행동 (이벤트 전달 여부 확인 필요)
+   └─ step 0 APPROVED → 정상 흐름, 다른 원인 조사
+   ↓
+② cloud_event_entity에서 이벤트 존재 확인
+   extensions.flexcustomerid = ? AND time 범위 → partitionkey에서 target_uid 매칭
+   ├─ 이벤트 없음 → 2PC Phase 2 실패. ③으로
+   └─ 이벤트 있음 → 소비자 처리 실패. ③으로
+   ↓
+③ produce-event-to-operation-topic API 호출
+   POST /action/operation/v2/approval/process/produce-event-to-operation-topic
+   { customerIdRange: {cid}~{cid}, category: "WORK_RECORD", chunkSize: 100 }
+   → ONGOING 건 전체에 APPROVAL_PROCESS_SYNC 이벤트 재발행
+   ↓
+④ 보정 후 UI에서 상태 변경 확인
+   ⚠️ WORK_RECORD는 workflow_task 미사용 — sync-with-approval(impact)는 효과 없음
 ```
 
 **F2: 승인 리마인드 발송자 추적** · 타입: Data · 히트: 1 · [CI-4203]
@@ -1130,7 +1160,7 @@
 
 → 상세: [cookbook/contract.md](cookbook/contract.md)
 
-**F3: 계열사 전자계약 서식 복제** · 타입: Data · 히트: 1 · [CI-4283]
+**F3: 계열사 전자계약 서식 복제** · 타입: Data · 히트: 2 · [CI-4283] [CI-4395]
 > 트리거: "전자계약 서식 계열사에 복사해달라" / "주법인 서식 이관"
 
 ```
@@ -2734,6 +2764,8 @@ ORDER BY last_modified_date DESC;
 |------|------|----------|
 | 2026-04-10 | CI-4376 | 평가: 선택형 문항 MULTI→SINGLE 변경 시 elements 초기화 버그 — 체크리스트 추가 (PR#5251 수정 완료). 인과 타임라인 재구성 패턴 적용 사례 |
 | 2026-04-09 | CI-4342 | 승인: 승인 정책 승인권자 교체 체크리스트 + Operation API(`replace-user-to-user`) + SQL 템플릿 추가 |
+| 2026-04-10 | CI-4391 | 승인: WORK_RECORD 이벤트 소비자 실패 체크리스트 + F3 플로우 신설. WORK_RECORD→workflow_task 미사용, produce-event-to-operation-topic 보정. d:syn 추가 |
+| 2026-04-10 | CI-4395 | 전자계약: F3 히트 +1 (계열사 서식 복제, 엘케이홀딩스 → 초록에프앤비) |
 | 2026-04-09 | CI-4379 | 근태/휴가: 체크리스트#28 샘플 근무 유형 클릭 시 생성 화면 노출 — 스펙 확인, 고객 안내 |
 | 2026-04-09 | CI-4372 | 출퇴근: F2(canCreateWorkRecordWithWorkClock 설정 off → 근무블럭 미생성) 플로우 추가, 과거 사례·SQL 템플릿 추가. d:kw 보강 |
 | 2026-04-09 | QNA-2004 | 승인: "승인 문서 이전 기록 비교 미표시" 체크리스트 추가. 위젯-승인 독립성 도메인 컨텍스트 추가. d:kw(실시간 근무, 인정 근무), d:syn 추가 |
