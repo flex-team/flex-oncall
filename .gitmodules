@@ -2,144 +2,144 @@
 	path = flex-timetracking-backend
 	url = git@github.com:flex-team/flex-timetracking-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-pavement-backend"]
 	path = flex-pavement-backend
 	url = git@github.com:flex-team/flex-pavement-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-digicon-backend"]
 	path = flex-digicon-backend
 	url = git@github.com:flex-team/flex-digicon-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-core-backend"]
 	path = flex-core-backend
 	url = git@github.com:flex-team/flex-core-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-payroll-backend"]
 	path = flex-payroll-backend
 	url = git@github.com:flex-team/flex-payroll-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-yearend-backend"]
 	path = flex-yearend-backend
 	url = git@github.com:flex-team/flex-yearend-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-flow-backend"]
 	path = flex-flow-backend
 	url = git@github.com:flex-team/flex-flow-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-goal-backend"]
 	path = flex-goal-backend
 	url = git@github.com:flex-team/flex-goal-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-fins-backend"]
 	path = flex-fins-backend
 	url = git@github.com:flex-team/flex-fins-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-permission-backend"]
 	path = flex-permission-backend
 	url = git@github.com:flex-team/flex-permission-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-v2-backend-commons"]
 	path = flex-v2-backend-commons
 	url = git@github.com:flex-team/flex-v2-backend-commons.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-review-backend"]
 	path = flex-review-backend
 	url = git@github.com:flex-team/flex-review-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-work-event-transmitter-backend"]
 	path = flex-work-event-transmitter-backend
 	url = git@github.com:flex-team/flex-work-event-transmitter-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-openapi-backend"]
 	path = flex-openapi-backend
 	url = git@github.com:flex-team/flex-openapi-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-timetracking-config"]
 	path = flex-timetracking-config
 	url = git@github.com:flex-team/flex-timetracking-config.git
 	branch = prod
-	ignore = dirty
+	ignore = all
 [submodule "flex-raccoon"]
 	path = flex-raccoon
 	url = git@github.com:flex-team/flex-raccoon.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-admin-shell"]
 	path = flex-admin-shell
 	url = git@github.com:flex-team/flex-admin-shell.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-github-actions"]
 	path = flex-github-actions
 	url = git@github.com:flex-team/flex-github-actions.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-timetracking-frontend"]
 	path = flex-timetracking-frontend
 	url = git@github.com:flex-team/flex-frontend-apps-time-tracking.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-approval-backend"]
 	path = flex-approval-backend
 	url = git@github.com:flex-team/flex-approval-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-backend-gateway"]
 	path = flex-backend-gateway
 	url = git@github.com:flex-team/flex-backend-gateway.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-terraform"]
 	path = flex-terraform
 	url = git@github.com:flex-team/flex-terraform.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-impact-backend"]
 	path = flex-impact-backend
 	url = git@github.com:flex-team/flex-impact-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-billing-backend"]
 	path = flex-billing-backend
 	url = git@github.com:flex-team/flex-billing-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-mobile-bff"]
 	path = flex-mobile-bff
 	url = git@github.com:flex-team/flex-mobile-bff.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-frontend-apps-performance-management"]
 	path = flex-frontend-apps-performance-management
 	url = git@github.com:flex-team/flex-frontend-apps-performance-management.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-frontend-apps-people"]
 	path = flex-frontend-apps-people
 	url = git@github.com:flex-team/flex-frontend-apps-people.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-calendar-backend"]
 	path = flex-calendar-backend
 	url = git@github.com:flex-team/flex-calendar-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
 [submodule "flex-audit-backend"]
 	path = flex-audit-backend
 	url = git@github.com:flex-team/flex-audit-backend.git
 	branch = main
-	ignore = dirty
+	ignore = all
