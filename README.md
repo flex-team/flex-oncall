@@ -5,7 +5,7 @@
 ## Setup
 
 ```bash
-git clone --recursive git@github.com:flex-haena/flex-oncall.git
+git clone --recursive git@github.com:flex-team/flex-oncall.git
 cd flex-oncall
 ```
 
@@ -70,7 +70,7 @@ claude
 
 ### Skills
 
-`/vscode`, `/sync-repos`, `/cleanup-worktrees` 스킬은 `~/.claude/skills/`에 설치해야 한다. 설치 가이드는 Notion 문서를 참조.
+`/vscode`, `/sync-repos`, `/cleanup-worktrees` 스킬은 `flex-fe/.claude/skills/`에 포함되어 있다. 레포 clone 시 자동으로 사용 가능.
 
 ### Scheduled Tasks (세션 한정)
 

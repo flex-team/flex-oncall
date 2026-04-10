@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill(git:commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \"[hook] Pre-commit: remember to run type-check and lint in the affected repo before committing\"'"
+          }
+        ]
+      }
+    ]
+  }
+}

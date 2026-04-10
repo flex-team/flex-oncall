@@ -1,0 +1,11 @@
+# Worktrees (created at runtime by oncall/vscode workflow)
+*--*/
+
+# VSCode workspace files (generated per-ticket)
+workspaces/
+
+# OS
+.DS_Store
+
+# Dependencies (each submodule manages its own)
+node_modules/

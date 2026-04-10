@@ -1,10 +1,110 @@
-[submodule "flex-fe"]
-	path = flex-fe
-	url = git@github.com:flex-haena/flex-fe.git
-	branch = main
-	ignore = dirty
 [submodule "flex-support-oncall"]
 	path = flex-support-oncall
 	url = git@github.com:flex-team/flex-support-oncall.git
 	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-packages"]
+	path = flex-fe/flex-frontend-packages
+	url = git@github.com:flex-team/flex-frontend-packages.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-services"]
+	path = flex-fe/flex-frontend-services
+	url = git@github.com:flex-team/flex-frontend-services.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-services-platform"]
+	path = flex-fe/flex-frontend-services-platform
+	url = git@github.com:flex-team/flex-frontend-services-platform.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-design-system"]
+	path = flex-fe/flex-frontend-design-system
+	url = git@github.com:flex-team/flex-frontend-design-system.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-gnb"]
+	path = flex-fe/flex-frontend-apps-gnb
+	url = git@github.com:flex-team/flex-frontend-apps-gnb.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-skeleton"]
+	path = flex-fe/flex-frontend-apps-skeleton
+	url = git@github.com:flex-team/flex-frontend-apps-skeleton.git
+	branch = main
+	ignore = dirty
+[submodule "flex-fe/flex-frontend"]
+	path = flex-fe/flex-frontend
+	url = git@github.com:flex-team/flex-frontend.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-host"]
+	path = flex-fe/flex-frontend-apps-host
+	url = git@github.com:flex-team/flex-frontend-apps-host.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-auth"]
+	path = flex-fe/flex-frontend-apps-auth
+	url = git@github.com:flex-team/flex-frontend-apps-auth.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-brain"]
+	path = flex-fe/flex-frontend-apps-brain
+	url = git@github.com:flex-team/flex-frontend-apps-brain.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-digicon"]
+	path = flex-fe/flex-frontend-apps-digicon
+	url = git@github.com:flex-team/flex-frontend-apps-digicon.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-fins"]
+	path = flex-fe/flex-frontend-apps-fins
+	url = git@github.com:flex-team/flex-frontend-apps-fins.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-insight"]
+	path = flex-fe/flex-frontend-apps-insight
+	url = git@github.com:flex-team/flex-frontend-apps-insight.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-leaf"]
+	path = flex-fe/flex-frontend-apps-leaf
+	url = git@github.com:flex-team/flex-frontend-apps-leaf.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-payroll"]
+	path = flex-fe/flex-frontend-apps-payroll
+	url = git@github.com:flex-team/flex-frontend-apps-payroll.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-people"]
+	path = flex-fe/flex-frontend-apps-people
+	url = git@github.com:flex-team/flex-frontend-apps-people.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-performance-management"]
+	path = flex-fe/flex-frontend-apps-performance-management
+	url = git@github.com:flex-team/flex-frontend-apps-performance-management.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-playground"]
+	path = flex-fe/flex-frontend-apps-playground
+	url = git@github.com:flex-team/flex-frontend-apps-playground.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-recruiting"]
+	path = flex-fe/flex-frontend-apps-recruiting
+	url = git@github.com:flex-team/flex-frontend-apps-recruiting.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-time-tracking"]
+	path = flex-fe/flex-frontend-apps-time-tracking
+	url = git@github.com:flex-team/flex-frontend-apps-time-tracking.git
+	branch = develop
+	ignore = dirty
+[submodule "flex-fe/flex-frontend-apps-workflow"]
+	path = flex-fe/flex-frontend-apps-workflow
+	url = git@github.com:flex-team/flex-frontend-apps-workflow.git
+	branch = develop
 	ignore = dirty

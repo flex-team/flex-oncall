@@ -46,8 +46,8 @@ $ARGUMENTS — 다음 중 하나:
 
 ## 코드베이스 위치
 
-- **FE 코드**: `~/Projects/flex-fe/` 하위 각 레포 (flex-frontend-apps-performance-management, flex-frontend-apps-time-tracking 등)
-- **BE 코드 + opensearch**: `~/Desktop/PROJECTS/flex-support-oncall/` (BE 서브모듈 + brain/ 디렉토리)
+- **FE 코드**: `flex-fe/` 하위 각 레포 (flex-frontend-apps-performance-management, flex-frontend-apps-time-tracking 등)
+- **BE 코드 + opensearch**: `flex-support-oncall/` (BE 서브모듈 + brain/ 디렉토리)
 
 ## 진행 상황 표시 규칙
 

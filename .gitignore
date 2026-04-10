@@ -1,2 +1,6 @@
 .DS_Store
 .last-submodule-sync
+.claude/settings.local.json
+flex-fe/*--*/
+flex-fe/workspaces/
+node_modules/

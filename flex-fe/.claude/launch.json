@@ -1,0 +1,33 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "host",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["turbo", "dev", "--filter=@flex-apps/host"],
+      "port": 3000,
+      "cwd": "flex-frontend-apps-host"
+    },
+    {
+      "name": "gnb",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev:standalone"],
+      "port": 3002,
+      "cwd": "flex-frontend/web-applications/remotes-gnb"
+    },
+    {
+      "name": "home",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev:standalone"],
+      "port": 3007,
+      "cwd": "flex-frontend/web-applications/remotes-home"
+    },
+    {
+      "name": "settings",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev:standalone"],
+      "port": 3101,
+      "cwd": "flex-frontend/web-applications/remotes-settings"
+    }
+  ]
+}
