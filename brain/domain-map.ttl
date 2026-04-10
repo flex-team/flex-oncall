@@ -211,11 +211,13 @@
   d:kw  "권한" , "감사로그" , "audit_log" , "flex_grant_subject" ,
         "물리삭제" , "최고관리자" , "자동부여" ,
         "OpenFGA" , "DocumentDB" , "Redis캐시" , "분산락" ,
-        "PIP" , "마이그레이션" , "authorization-cache" ;
+        "PIP" , "마이그레이션" , "authorization-cache" ,
+        "OpenSearch감사로그" , "권한변경이력" ;
   d:syn "누가 언제 권한을 부여했는지 확인해주세요" ,
         "감사로그에서 권한 변경이 안 보여요" ,
         "권한 캐시가 갱신 안 돼요" ,
-        "권한 부여 증명 자료가 필요해요" ;
+        "권한 부여 증명 자료가 필요해요" ,
+        "퇴사자 권한 이력 확인해주세요" ;
   d:x   :shift , :account .
 
 :account
@@ -3118,11 +3120,15 @@ n:CI-4375
 n:CI-4377
   d:in :permission ;
   d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-10" ;
   d:s  "퇴사자 최고관리자 권한 부여 증명 자료(로그) 요청 — 에이드코리아(215787). DB 물리삭제이나 OpenSearch 감사로그에서 이력 확인 가능. CI-4150 보정" .
 
 n:CI-4385
   d:in :approval ;
   d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-10" ;
   d:s  "기안서 승인완료이나 진행중-승인필요 상태 표시 — 워시스왓(52783). act API 타임아웃으로 workflow_task 동기화 실패. sync-with-approval v3 API로 보정" .
 
 n:CI-4389
