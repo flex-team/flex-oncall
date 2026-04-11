@@ -648,6 +648,11 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:CI-4404
+  d:in :review ;
+  d:v  "spec" ;
+  d:s  "평가 등급 산출 오류 — 상태 변경 경합으로 factor grade 미생성. 작성 마감 후 18초 이내 평가 마감 시 결과 산출 스케줄러가 CLOSED 체크에 의해 skip. 프롭티어(176018)" .
+
 n:CI-4381
   d:in :payroll ;
   d:v  "ops" ;
