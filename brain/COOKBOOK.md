@@ -895,11 +895,12 @@
    - 이후 approval process 상태가 APPROVED로 변경 및 코어 데이터 변경 확인
 
 문의: "근무 승인 올렸는데 대기중이에요" / "승인 요청이 승인권자에게 안 갔어요"
-1. `approval_process` 상태 확인 (ONGOING이면 정상 생성됨) → `approval_line` step 0 상태 확인
-2. `cloud_event_entity`에서 해당 건의 created 이벤트 존재 여부 확인 (extensions.flexcustomerid + time)
-3. 이벤트 없음 → 2PC Phase 2 실패. `produce-event-to-operation-topic` API로 재발행
-4. 이벤트 있음 + UI "대기중" → 소비자(time-tracking) 처리 실패. 동일 API로 sync 이벤트 재발행
-5. **WORK_RECORD는 workflow_task 미사용** — sync-with-approval(impact 경로)는 WORK_RECORD에 효과 없음 [CI-4391]
+1. **"대기중"은 정상 UI 표기** — 개편 전 근무 승인 UI에 "진행중" 표기는 존재하지 않음. 개편 후는 "승인 진행 중"으로 변경 [CI-4391]
+2. 실제 문제가 "승인권자에게 알림이 안 감"인지 확인 → `approval_process` + `approval_line` 상태 확인
+3. `cloud_event_entity`에서 created 이벤트 존재 여부 확인 (extensions.flexcustomerid + time)
+4. 이벤트 없음 → 2PC Phase 2 실패. `produce-event-to-operation-topic` API로 재발행
+5. 이벤트 있음 → 승인권자에게 직접 승인 안내 (알림 재발송은 produce-event-to-operation-topic으로 시도 가능하나, 효과 불확실 [CI-4391])
+6. **WORK_RECORD는 workflow_task 미사용** — sync-with-approval(impact 경로)는 효과 없음 [CI-4391]
 
 문의: "승인 프로세스가 시작됐는데 TT에서 400 오류 / 승인 항목이 비정상 상태"
 1. **신승인 start-approval-process / produce-event 2PC 패턴** → 신승인 처리는 2단계:
@@ -912,7 +913,7 @@
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 
-**F1: 비활성 사용자(삭제/휴직/퇴직) 승인건 강제 승인** · 타입: Data · 히트: 3 · [CI-4228] [CI-3769] [CI-4266] [CI-4286]
+**F1: 비활성 사용자(삭제/휴직/퇴직) 승인건 강제 승인** · 타입: Data · 히트: 4 · [CI-4228] [CI-3769] [CI-4266] [CI-4286] [CI-4397]
 > 트리거: "삭제된 구성원이 승인 라인에 있어 승인 불가" / "삭제한 사람 승인건 처리" / "휴직자 승인건 처리" / "퇴사자 미승인건 처리" / "대결 요청"
 
 ```
@@ -1229,7 +1230,7 @@
 
 15. **정산 실행 시 "알 수 없는 오류" + 대상자 0명** → 대규모 회사(1,000명+)에서 사업장 담당자 계정으로 정산 실행 시 인가 타임아웃(`resolveAccessibleUsers`) 발생 가능. settlement은 커밋되지만 payee 초기화 실패 → 0명 IN_PROGRESS stuck. 깨진 정산 CANCELED 처리 필요 [CI-4260]
 
-16. **정산 상세 지급액 0원 (실지급액은 정상)** → `work_income_payment_settlement_payee_result_item` 테이블에 해당 payee result 항목이 존재하는지 확인. 0건이면 2025-03-19 backfill 누락. customer_id 기준 미마이그레이션 payee 수 조회 → 다수이면 Operation API `migrate-ci4227/{customerId}?dryRun=true`로 확인 후 `dryRun=false`로 실행 — 히트: 3 (CI-4227, CI-4265, CI-4381) [CI-4265]
+16. **정산 상세 지급액 0원 (실지급액은 정상)** → `work_income_payment_settlement_payee_result_item` 테이블에 해당 payee result 항목이 존재하는지 확인. 0건이면 2025-03-19 backfill 누락. customer_id 기준 미마이그레이션 payee 수 조회 → 다수이면 Operation API `migrate-ci4227/{customerId}?dryRun=true`로 확인 후 `dryRun=false`로 실행 — 히트: 4 (CI-4227, CI-4265, CI-4381, CI-4399) [CI-4265]
 
 17. **퇴직자 급여정산 주휴수당 미노출** → 정산 템플릿의 `work_record_import` 확인. `NONE`이면 TT 주휴수당 미조회 → default recipient 생성 시 dateRange가 전체 기간으로 설정됨 → 월 중도 퇴사자는 base payment dateRange와 불일치 → items:[] 반환 (Known Issue). 워크어라운드: 지급 항목 별도 추가로 수동 반영 [CI-4307]
 
@@ -2496,7 +2497,7 @@ Kibana 참고:
 → 도메인 이해: [cookbook/fins.md#도메인-컨텍스트](cookbook/fins.md#도메인-컨텍스트)
 
 #### 진단 체크리스트
-문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요" / "영수증 업데이트하기 클릭 시 선택 초기화돼요" / "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" / "지출결의 수정 시 특정 시점 이전 영수증이 목록에 없어요"
+문의: "카드 내역이 안 들어와요" / "세금계산서 연동 요청" / "이전 데이터 연동 요청" / "증빙이 시간 정책 위반으로 나와요" / "영수증 업데이트하기 클릭 시 선택 초기화돼요" / "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" / "지출결의 수정 시 특정 시점 이전 영수증이 목록에 없어요" / "법인카드 금액이 카드사 홈페이지와 달라요" / "해외결제 금액이 다르게 보여요"
 1. 연동 대상 확인 (카드사 / 국세청 / 홈택스 등) → 금융사마다 연동 가능 범위가 다름 [CI-4179]
 2. 해당 데이터 소스가 연동되어 있는지 확인 → 미연동이면 고객사에서 직접 연동 필요 [CI-4179]
 3. 연동 완료 상태이면 → 어드민쉘 수동 동기화로 희망 기간 데이터 동기화 가능 [CI-4179]
@@ -2505,6 +2506,7 @@ Kibana 참고:
 6. **지출결의 영수증 "업데이트 하기" 클릭 시 선택 초기화** → access log에서 compare API(`/api/v2/electronic-approval/documents/receipts/compare`) 응답 `list`가 빈 배열인지 확인. 빈 배열이면 Bullseye 매트릭스(`fins_spending_entire_v1`) 색인 누락 — 임형태에게 전체 고객사 재동기화 요청 [CI-4324]
 7. **지출결의 반려 후 영수증 > 제출 화면에서 진행중 표시** → impact → fins Vespa 인덱스(`fins_spending_entire_v1`) 동기화 오류. DB에서 `document_id` 확인 후 operation API로 재동기화: `POST /api/operation/v3/impact/electronic-approval/customers/{customerId}/documents/{documentId}/publish` [CI-4332]
 8. **지출결의 수정 팝업에서 특정 시점 이전 영수증 미표시** → 해당 사용자의 영수증 건수 확인. 현재 FE 조회 limit은 1000건으로, 1000건 초과 시 이전 영수증이 잘림 — **F4** [CI-4334]
+9. **법인카드 금액이 카드사 홈페이지와 다름 (해외결제)** → 승인-매입 시차. 승인 데이터(매시간 수집)는 임시 환율, 매입 데이터(하루 1회 수집)는 확정 환율. 매입 미수신 시 승인금액 표시 — **스펙** [CI-4401]
 
 #### 조사 플로우
 

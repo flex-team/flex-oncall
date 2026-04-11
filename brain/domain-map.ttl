@@ -450,7 +450,8 @@
         "구리뷰로 원복 가능한가요" , "구리뷰 메뉴가 안 보여요" ,
         "평가에서 구리뷰로 전환해주세요" , "리뷰 작성기간 수정이 안 돼요" ,
         "구리뷰 질문 수정해주세요" , "리뷰 섹션명 변경해주세요" ,
-        "진행 중 리뷰 문항 텍스트가 잘못됐어요" ;
+        "진행 중 리뷰 문항 텍스트가 잘못됐어요" ,
+        "평가 생성 중 알 수 없는 오류" , "구리뷰 템플릿 불러오기 후 오류" ;
   d:x   :notification , :permission , :goal , :approval .
 
 :contract
@@ -508,7 +509,9 @@
         "세금계산서" , "국세청" , "스크래핑" , "홈택스" ,
         "transactedTime" , "시간정책" ,
         "지출결의" , "영수증" , "Vespa" , "fins_spending_entire_v1" ,
-        "MatrixQL" , "Bullseye" , "continuation" ;
+        "MatrixQL" , "Bullseye" , "continuation" ,
+        "purchasedAmount" , "approvedAmount" , "CardSyncExecutor" ,
+        "spending_card_detail" ;
   d:syn "카드 내역이 안 들어와요" , "법인카드 등록이 안 돼요" ,
         "비용 승인이 안 돼요" , "가맹점 정보가 안 맞아요" ,
         "경비 정산이 이상해요" ,
@@ -517,7 +520,9 @@
         "지출결의 반려했는데 영수증 제출 화면에서 진행중으로 보여요" ,
         "반려된 지출결의가 영수증 쪽에서 진행중으로 나와요" ,
         "지출결의 수정하면 이전 영수증이 안 보여요" ,
-        "지출결의서 수정 시 특정 날짜 이전 영수증이 없어요" ;
+        "지출결의서 수정 시 특정 날짜 이전 영수증이 없어요" ,
+        "법인카드 청구 금액이 다르게 보여요" ,
+        "해외결제 금액이 달라요" ;
   d:x   :approval , :payroll .
 
 :payroll
@@ -652,6 +657,13 @@ n:CI-4404
   d:in :review ;
   d:v  "spec" ;
   d:s  "평가 등급 산출 오류 — 상태 변경 경합으로 factor grade 미생성. 작성 마감 후 18초 이내 평가 마감 시 결과 산출 스케줄러가 CLOSED 체크에 의해 skip. 프롭티어(176018)" .
+
+n:CI-4399
+  d:in :payroll ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-10" ;
+  d:s  "정산결과 지급액 0원 — 매드엔진(2879). CI-4227 동일 원인(backfill 누락). migrate-ci4227 wetRun으로 198건 복구" .
 
 n:CI-4381
   d:in :payroll ;
@@ -3191,6 +3203,18 @@ n:CI-4364
   d:v  "bug" ;
   d:s  "입사자 체크리스트 할일 조직 기준 요청 시 퇴사자에게도 할일 전송 — 수동 trigger(triggerFromTargets)에서 isTriggerableStatus 필터 누락. 자동 trigger에는 필터 있음. EPDIV-119로 수정 등록. 딥세일즈(195101)" .
 
+n:CI-4401
+  d:in :fins ;
+  d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-10" ;
+  d:s  "법인카드 해외결제 청구 금액 불일치 — 승인→매입 2단계 수집 구조의 시차. 해외결제 환율 차이로 매입 전 승인금액 표시. 스펙. 이마고웍스(119392)" .
+
+n:CI-4375
+  d:in :fins ;
+  d:v  "investigating" ;
+  d:s  "비용관리 카드 사용 내역 엑셀 다운로드 시 조직 내 퇴사자 정보 노출 — Bullseye 조회 경로에 excludeResignedUser 필터 미적용. 부서 ID 기반 INTERSECT 필터만 사용. 스펙/버그 판별 보류. 아이즈(199832)" .
+
 n:CI-4377
   d:in :permission ;
   d:v  "ops" ;
@@ -3219,15 +3243,17 @@ n:CI-4390
 
 n:CI-4391
   d:in :approval ;
-  d:v  "ops" ;
-  d:s  "근무 승인 1단계 대기중 미전환 — 디지털아이덴티티솔루션코리아(198613). 이벤트 소비자 처리 실패 + 2PC Phase 2 미발행. produce-event-to-operation-topic으로 보정" ;
+  d:v  "spec" ;
+  d:s  "근무 승인 1단계 '대기중' 표기 — 디지털아이덴티티솔루션코리아(198613). '대기중'은 정상 UI 표기(진행중 없음). 별건: 745087 3건 2PC Phase 2 이벤트 미발행. 승인권자 직접 승인으로 해소" ;
   d:st "C" ;
   d:ca "2026-04-10" .
 
 n:CI-4392
   d:in :review ;
-  d:v  "investigating" ;
-  d:s  "평가 생성 중 알 수 없는 오류 — athometrip(202640). 평가 생성 화면에서 오류 지속 발생, 새로고침/재진입 무효" .
+  d:v  "fe-bug" ;
+  d:s  "평가 생성 중 알 수 없는 오류 — 구리뷰 템플릿 불러오기로 생성된 점수형 질문 옵션 description이 FE maxLength(100자) 초과. Zod 검증 실패로 toast 에러. FE PR#4838에서 200자로 확대" ;
+  d:st "C" ;
+  d:ca "2026-04-10" .
 
 n:CI-4395
   d:in :contract ;
@@ -3238,8 +3264,10 @@ n:CI-4395
 
 n:CI-4397
   d:in :approval ;
-  d:v  "investigating" ;
-  d:s  "퇴사자 미승인건 강제 승인 요청 — 브레인커머스(135020). 퇴직자 승인자 교체 화면에서 조회 불가, 문서 3건(2024-1071~1073) 처리 필요. CI-3951 동일 패턴" .
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-04-10" ;
+  d:s  "삭제된 구성원 승인 라인 잔존으로 워크플로우 문서 3건 차단 — 브레인커머스(135020). bulk-approve-for-user + sync-with-approval로 전체 강제 승인 처리. CI-4228 동일 패턴" .
 
 g:ins-04
   d:in :insurance ;
@@ -3255,3 +3283,9 @@ g:ins-06
   d:in :insurance ;
   d:q  "중도 가입이 뭐예요?" ;
   d:a  "보험계약기간 내 신규 피보험자 추가. 케이스별 제품 가능 여부 다름" .
+
+n:CI-4400
+  d:in :approval ;
+  d:x  :time-tracking ;
+  d:v  "bug" ;
+  d:s  "외근 승인 요청 클릭 시 알 수 없는 오류 — FE에서 삭제된 workForm 매핑 실패 시 error throw. 체리픽 핫픽스 PR#2470. 하이컨시(216339)" .
