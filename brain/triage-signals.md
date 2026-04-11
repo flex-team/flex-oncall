@@ -19,6 +19,13 @@
 - 키워드: 느려요, 로딩, 타임아웃, 오래 걸려요, 무한 로딩, 멈춰요, timeout
 - 첫 번째 액션: access log (응답시간 분포), 검색 필드: `duration_ms`, `request_uri`
 
+## 인프라 성능형 (InfraPerf)
+
+- 키워드: DB 부하, CPU 스파이크, AAS, 레이턴시 급등, cascade, 커넥션 풀, HikariCP timeout, 전체 API 느려짐, Writer 포화, RDS, Performance Insights
+- 판별 기준: 사용자 문의가 아닌 **모니터링 메트릭에서 발견**되는 시스템 전반 성능 저하. 특정 API/고객이 아닌 전체 서비스에 영향.
+- 첫 번째 액션: `ops-investigate-performance` 스킬로 조사 (AWS PI, CloudWatch, Grafana, OpenSearch 병렬 수집)
+- Perf와의 구분: Perf는 "사용자가 느리다고 문의" → access log부터. InfraPerf는 "모니터링에서 DB/CPU/메모리 이상 감지" → PI/CloudWatch부터.
+
 ## 권한형 (Auth)
 
 - 키워드: 접근이 안 돼요, 권한, 403, Forbidden, 볼 수 없어요, 메뉴가 없어요, 비활성화
@@ -42,4 +49,5 @@
 명확한 장애 신호(500, 타임아웃)가 있으면 해당 타입 우선.
 모호하면 스펙질문형으로 시작하여 의도된 동작인지 먼저 확인.
 "안 보여요" 등 데이터형과 겹치는 키워드는 access log에서 API 응답이 정상이면 화면형(Render)으로 재분류.
+Perf와 InfraPerf 구분: 특정 사용자/API의 느림 문의 → Perf. DB 부하/CPU 급등 등 시스템 전반 모니터링 이상 → InfraPerf.
 어느 쪽이든 아니다 싶으면 재진입 — 이전에 확인한 사실은 재사용하고 미확인 경로만 탐색.
