@@ -590,19 +590,27 @@
 :flow
   d:n   "협업/커뮤니케이션 (Flow)" ;
   d:tpl "state-machine" ;
-  d:repo "flex-flow-backend" ;
+  d:repo "flex-flow-backend" , "flex-impact-backend" ;
   d:mod "notice" , "thread" , "todo" , "meeting" , "issue" ,
-        "summary" , "transcript" , "collaborative-document" , "sequence" ;
+        "summary" , "transcript" , "collaborative-document" , "sequence" ,
+        "approval-document" , "approval-document-template" , "electronic-approval" ;
   d:kw  "공지사항" , "스레드" , "댓글" , "할일" , "미팅" , "회의록" ,
         "이슈" , "요약" , "음성전사" , "협업문서" , "flow" ,
         "notice" , "thread" , "todo" , "meeting" , "transcript" ,
         "reaction" , "render-manager" ,
         "임시저장" , "기안서" , "워크플로우" , "workflow_task_draft" ,
-        "approval-document" , "작성하기" ;
+        "approval-document" , "작성하기" ,
+        "관리자만 보기" , "권한자만 보기" , "is_only_visible_for_admin" ,
+        "customer_workflow_task_template" , "workflow_task_template" ,
+        "양식 관리 권한" , "workflow_form_management" , "공유 링크" ;
   d:cb  "워크플로우 (Flow / Approval Document)" ;
   d:syn "공지사항이 안 보여요" , "할일 목록이 안 나와요" ,
         "미팅 요약이 안 돼요" , "댓글이 안 달려요" ,
-        "임시저장된 문서가 사라졌어요" , "작성하던 문서가 날라갔어요" .
+        "임시저장된 문서가 사라졌어요" , "작성하던 문서가 날라갔어요" ,
+        "권한 없는 구성원이 관리자만 보기 양식을 상신했어요" ,
+        "권한자만 보기로 설정한 양식을 일반 사용자가 작성했어요" ,
+        "양식 관리 권한이 없는 사람이 결재를 올렸어요" ,
+        "누군가 문서 작성 요청을 보냈는지 확인해주세요" .
 
 :openapi
   d:n   "외부 API / 데이터 통합 (OpenAPI)" ;
@@ -2457,6 +2465,16 @@ g:flow-02
   d:in :flow ;
   d:q  "작성하던 문서가 날라갔어요" ;
   d:a  "workflow_task_draft data.text에서 HTML 본문 추출" .
+
+g:flow-03
+  d:in :flow ;
+  d:q  "권한자만 보기가 뭐예요? / 관리자만 보기로 설정했는데 일반 사용자가 작성했어요" ;
+  d:a  "`is_only_visible_for_admin`은 양식 목록 가시성만 제한하는 플래그. 권한자가 URL(`?workflow-action=create&workflow-template-key=...`)을 복사해 비권한자에게 공유하면 비권한자도 작성 가능. 이는 의도된 제품 스펙(예: 퇴사자 워플 작성 요청). [CI-4416]" .
+
+g:flow-04
+  d:in :flow ;
+  d:q  "누군가 문서 작성 요청을 보냈는지 확인해주세요" ;
+  d:a  "두 가지 채널 존재 — (1) Todo 기반 `assignedBy`는 `workflow_task.requester_id`로 DB 추적 가능, (2) URL 공유는 DB에 흔적 없음. URL 공유 경로는 고객사 자체 내부 확인 필요. [CI-4416]" .
 
 # ============================================================
 # Glossary — payroll

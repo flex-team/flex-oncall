@@ -2652,12 +2652,21 @@ Kibana 참고:
 
 ### 워크플로우 (Flow / Approval Document)
 
+> **중요 스펙 — "관리자만 보기(`is_only_visible_for_admin`)"**: 양식 **목록 가시성만 제한**하는 플래그. 양식 작성 자체를 차단하지 않는다. 권한자가 URL(`?workflow-action=create&workflow-template-key=...`)을 복사해 비권한자에게 공유하면 비권한자도 해당 양식 작성 가능. 이는 **의도된 제품 요구사항**(예: 퇴사자에게 퇴사 워플 작성 요청). [CI-4416]
+
 #### 진단 체크리스트
-문의: "임시저장된 문서가 사라졌어요" / "작성하던 문서가 날라갔어요"
+
+**문의 1**: "임시저장된 문서가 사라졌어요" / "작성하던 문서가 날라갔어요"
 1. `workflow_task_draft` 테이블에서 해당 사용자의 draft 존재 여부 확인 [CI-4220]
 2. draft가 있고 내용 초기화 → "할일 > 작성하기" 재진입에 의한 초기화 (access log에서 18:25:42 패턴 확인) [CI-4220]
 3. draft가 없음 → 보관 기한 만료 또는 다른 원인 조사
 4. 복구 요청 시 → draft data의 `text` 필드에서 HTML 본문 추출하여 고객 전달. DB INSERT 복구는 지양.
+
+**문의 2**: "권한 없는 구성원이 관리자만 보기 양식으로 결재를 올렸어요" / "누군가 문서 작성 요청을 보냈는지 확인해주세요"
+1. 먼저 **스펙 안내**: `is_only_visible_for_admin`은 목록 가시성만 제한. 작성 차단 아님. URL 공유로 비권한자가 작성하는 건 정상 플로우 [CI-4416]
+2. 작성 요청 경로 DB 확인: `workflow_task.requester_id` + `requested_todo_id` 가 NULL이 아니면 Todo(`assignedBy`) 기반 위임
+3. requester_id가 NULL이면 → URL 공유 기반 (시스템 흔적 없음, 고객사 자체 내부 확인 권장)
+4. access log로 FE Referer 추적 가능 — `requestHeaders.referer` 에 `workflow-template-key` 쿼리 파라미터 포함 여부로 진입 경로 식별
 
 #### 조사 플로우
 
@@ -2676,17 +2685,64 @@ Kibana 참고:
    └─ 내용 존재 → 조회 문제, workflow_task 레코드 존재 여부 확인
 ```
 
+**F2: 관리자만 보기 양식 상신 — 스펙 확인** · 타입: Spec · 히트: 1 · [CI-4416]
+> 트리거: "권한자만 보기 양식을 일반 사용자가 작성했어요" / "양식 관리 권한 없는 사람이 결재 올렸어요"
+
+```
+① customer_workflow_task_template에서 is_only_visible_for_admin 확인
+   ├─ FALSE → 양식이 원래 공개 (스펙 확인 완료, 고객 안내)
+   └─ TRUE  → ②
+   ↓
+② 고객에게 스펙 안내: "관리자만 보기는 목록 가시성만 제한. URL 공유 통한
+   작성은 의도된 기능(예: 퇴사자 워플). 시스템이 차단하지 않는 건 정상"
+   ↓
+③ (고객이 여전히 의심) workflow_task에서 requester_id / requested_todo_id 확인
+   ├─ NOT NULL → Todo 기반 작성 요청. 요청자 user_id 확인하여 고객에게 안내
+   └─ NULL     → URL 공유 기반. 시스템 추적 불가, 고객사 내부 확인 권장
+   ↓
+④ (확정 필요 시) access log traceId 추적 — requestHeaders.referer의
+   workflow-template-key 쿼리 파라미터로 FE 진입 경로 식별
+```
+
 #### 데이터 접근
 ```sql
--- 워크플로우 임시저장 문서 조회
+-- 워크플로우 임시저장 문서 조회 (F1)
 SELECT id, customer_id, user_id, workflow_task_key, created_date, last_modified_date
 FROM flex.workflow_task_draft
 WHERE user_id = ? AND customer_id = ?
 ORDER BY last_modified_date DESC;
+
+-- 양식 가시성 설정 확인 (F2)
+SELECT id, customer_id, task_type, template_key, name,
+       is_only_visible_for_admin, is_active, is_terminated,
+       created_date, last_modified_date
+FROM flex.customer_workflow_task_template
+WHERE customer_id = ? AND name LIKE ?;
+
+-- 특정 사용자의 해당 양식 상신 이력 + 작성 요청 경로 확인 (F2)
+SELECT id, task_key, code, status, source_feature,
+       requester_id, requested_at, requested_todo_id,
+       writer_id, written_at, created_date
+FROM flex.workflow_task
+WHERE customer_id = ? AND template_key = ? AND writer_id = ?
+ORDER BY created_date DESC;
+
+-- writer의 workflow_form_management authority 보유 확인 (F2)
+SELECT g.title_text, g.title_key, g.status, ag.authority_group_key
+FROM flex_authorization.flex_grant g
+JOIN flex_authorization.flex_grant_subject gs ON gs.grant_id = g.id
+LEFT JOIN flex_authorization.flex_grant_authority_group ag ON ag.grant_id = g.id
+WHERE gs.subject_id = ? AND g.customer_id = ?
+  AND ag.authority_group_key = 'workflow_form_management';
 ```
 
 #### 과거 사례
 - **할일 작성하기 재진입 시 임시저장 초기화**: 사용자가 "할일 > 작성하기"를 다시 선택하면 기존 draft가 초기화됨 — **버그** [CI-4220]
+- **관리자만 보기 양식을 권한 없는 구성원이 상신**: `is_only_visible_for_admin`은 목록 가시성만 제한. URL 공유로 작성되는 것은 의도된 스펙 — **스펙** [CI-4416]
+
+#### 관련 코드 (flex-impact-backend)
+- `approval-document-template/service/.../ApprovalDocumentTemplatePermissionResolveService.kt:74-96` — `filterPermitted()` 가 양식 목록 가시성 필터링 수행. `hasAdminPermission` 판정은 `WORKFLOW_TEMPLATE_READ/UPDATE/DELETE` 중 하나 보유 여부 = `workflow_form_management` authority
+- `approval-document/api/.../ApprovalDocumentDraftController.kt:50-72` — `POST /api/v3/approval-document/approval-documents/draft`. 요청 body의 `assignedBy` 필드가 Todo 기반 작성 요청, 미지정 시 직접 작성
 
 → 상세: [cookbook/flow.md](cookbook/flow.md)
 
