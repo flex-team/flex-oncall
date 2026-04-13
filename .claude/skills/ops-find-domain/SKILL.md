@@ -1,7 +1,7 @@
 ---
 name: find-domain
 description: Use when a problem, question, or inquiry needs domain routing — finds relevant domains, submodules, cookbook sections, and past notes from domain-map.ttl. Triggers include '도메인 찾아줘', '어디 봐야 해', '어떤 repo야', or when starting oncall issue triage before investigation.
-allowed-tools: Read, Grep, Glob, Edit, Agent
+allowed-tools: Read, Grep, Glob, Edit, Agent, Bash
 argument-hint: <문제/질문 텍스트 또는 ticket-id> (예: "세콤 퇴근 정시로 찍혀요", CI-4145)
 ---
 
@@ -37,19 +37,42 @@ domain-router 에이전트를 호출하기 전에, 입력 텍스트에서 이슈
 - 모호하면 Spec으로 시작
 - 분류가 불가능하면 "미분류"로 표시하고 Fallback 전략 안내
 
-### 2. domain-router 에이전트 호출
+### 2. 매칭 엔진 실행
 
-TTL 파싱과 매칭 알고리즘은 **domain-router 에이전트**에 위임한다.
+도메인 매칭은 **Python 스크립트**로 수행한다. TTL 파싱과 2-pass 매칭 알고리즘을 코드로 실행하여 ~100ms 이내에 결과를 반환한다.
+
+```
+Bash("python3 brain/scripts/domain_router.py '{$ARGUMENTS}'")
+```
+
+스크립트는 JSON을 stdout으로 출력한다. `confidence` 필드로 결과 신뢰도를 판단한다:
+
+- **`high`**: 결과를 바로 Step 3(렌더링)으로 진행
+- **`low`**: LLM 폴백 — 스크립트가 반환한 상위 후보를 context로 제공하여 도메인 판단을 요청한다 (아래 참조)
+- **`none`**: 매칭 없음 처리 (아래 "매칭 없음" 섹션)
+
+#### LLM 폴백 (confidence=low)
+
+스크립트 결과의 `score_breakdown` 에서 상위 3개 후보와 입력 텍스트를 LLM에 전달한다:
 
 ```
 Agent(
   subagent_type: "general-purpose",
-  description: "TTL 파싱 및 도메인 라우팅",
-  prompt: ".claude/agents/domain-router.md 의 지시를 읽고 따라라. 입력 텍스트: {$ARGUMENTS}"
+  model: haiku,
+  description: "도메인 라우팅 판단 (폴백)",
+  prompt: "다음 입력에 대해 가장 적합한 도메인을 선택하세요.
+
+입력: {입력 텍스트}
+
+후보:
+{score_breakdown에서 상위 3개 도메인의 이름, 점수, 키워드 요약}
+
+JSON으로 응답: {\"domain\": \":domain-id\"} 또는 모두 부적합하면 {\"domain\": null}"
 )
 ```
 
-에이전트는 compact JSON을 반환한다. TTL 원문은 에이전트 컨텍스트 안에서만 사용되고, 호출자(이 스킬)에게는 결과 JSON만 전달된다.
+이 폴백은 TTL 전체를 읽지 않고 후보 요약만 전달하므로 기존 대비 훨씬 빠르다.
+low confidence이더라도 스크립트가 반환한 primary가 유효하면 그대로 사용해도 된다 — LLM 폴백은 판단이 어려울 때만 활용.
 
 ### 3. 결과 렌더링
 

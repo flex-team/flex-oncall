@@ -7,6 +7,9 @@ model: haiku
 
 # Domain Router Agent
 
+> **v2 Note:** 일반 라우팅은 `brain/scripts/domain_router.py` 가 수행한다 (~19ms).
+> 이 에이전트는 confidence=low일 때 **LLM 폴백 전용**으로만 사용된다.
+
 TTL 전체를 이 에이전트의 컨텍스트 안에서 처리하고, 호출자에게는 **compact JSON 결과만** 반환한다.
 호출자의 컨텍스트를 절약하는 것이 이 에이전트의 존재 이유다.
 
