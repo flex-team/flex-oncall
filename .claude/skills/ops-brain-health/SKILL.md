@@ -21,6 +21,8 @@ metrics/ JSONL 파일을 분석하여 brain 지식 시스템의 건강 상태를
 1. **skill 이벤트** — `skill` 필드가 있고 `type` 필드가 없는 것
 2. **investigation 이벤트** — `type: "investigation"`
 3. **freshness 이벤트** — `type: "freshness"`
+4. **user_feedback 이벤트** — `type: "user_feedback"`
+5. **skill_misuse 이벤트** — `type: "skill_misuse"`
 
 ### 1-2. 시간 윈도우 집계
 
@@ -65,6 +67,29 @@ metrics/ JSONL 파일을 분석하여 brain 지식 시스템의 건강 상태를
 - 도메인별 spec_items, spec_review_needed, api_refs, api_stale
 - 부패율: (spec_review_needed + api_stale) / (spec_items + api_refs)
 
+**해결 시간 (Time to Resolution):**
+- skill 이벤트에서 티켓별 상관분석:
+  - `note_created`: 해당 ticket을 args에 포함하는 최초 `ops-note-issue` 호출 시각
+  - `closed`: 해당 ticket을 args에 포함하는 최초 `ops-close-note` 호출 시각
+  - `elapsed_hours`: (closed - note_created) / 3600, 소수점 1자리
+- close 이벤트가 없는 ticket은 제외 (아직 진행 중)
+- 도메인별 평균 해결 시간 (investigation 이벤트의 domain 필드와 조인)
+- 사용자별 평균 해결 시간
+- 30일 윈도우 기준으로 집계
+
+**User Feedback:**
+- 응답 건수
+- helpful true vs false 비율
+- would_use_again true vs false 비율
+- friction 목록 (자유 서술 원문)
+- 30일 윈도우 기준
+
+**Skill Misuse:**
+- 감지 건수
+- attempted별 분류
+- 사용자별 분류
+- 7일/30일 윈도우 기준
+
 **WoW 비교:**
 | 지표 | 계산 | 방향 |
 |------|------|------|
@@ -76,14 +101,29 @@ metrics/ JSONL 파일을 분석하여 brain 지식 시스템의 건강 상태를
 | context_loaded 비율 | 이번 주 vs 지난 주 | ↑ 좋음 |
 | active 노트 수 | 현재 | 참고 |
 | 부패율 | 최신 | ↓ 좋음 |
+| 평균 해결 시간(h) | 이번 주 vs 지난 주 | ↓ 좋음 |
 
-### 1-4. Note Aging 집계
+### 1-4. Note Aging + 파이프라인 진행도 집계
 
 domain-map.ttl에서 active 노트를 추출한다:
 - `n:` 프리픽스 트리플 중 `d:st "C"`가 없는 것 = active
 - 각 노트의 생성일: `metrics/` JSONL에서 해당 ticket의 최초 skill 호출 시각
 - aging = 오늘 - 생성일 (일 수)
 - verdict 분포: `d:v` 값으로 분류
+
+**파이프라인 진행도:**
+각 active 노트의 마크다운 섹션 헤더(`## `)를 스캔하여 도달 단계를 판별:
+
+| 섹션 헤더 | 파이프라인 단계 | 스킬 |
+|-----------|---------------|------|
+| `## 이슈 요약` | note | ops-note-issue |
+| `## 문제 평가` | assess | ops-assess-issue |
+| `## 원인 분석` | investigate | ops-investigate-issue |
+| `## Verdict` 또는 `d:st "C"` | close | ops-close-note |
+
+- `last_stage`: 가장 마지막으로 도달한 파이프라인 단계
+- **dropout 판정**: aging ≥ 3일 && last_stage ∉ {close} → dropout 신호
+- 단계별 이탈 건수 집계: note에서 이탈, assess에서 이탈, investigate에서 이탈
 
 ## Phase 2: AI 분석
 
@@ -119,7 +159,28 @@ Phase 1의 집계 결과를 바탕으로 다음을 분석:
    - 7일 이상 aging된 노트 경고
    - verdict 분포 해석
 
-5. **구체적 튜닝 권고**
+5. **해결 시간 분석**
+   - 도메인별 해결 시간 편차 (어떤 도메인이 초보에게 특히 어려운가)
+   - 사용자별 해결 시간 비교 (초보 vs 숙련자 격차)
+   - 쿡북 hit 시 vs miss 시의 해결 시간 차이 (쿡북의 시간 절약 효과)
+   - 해결 시간이 극단적으로 긴 케이스 분석
+
+6. **파이프라인 이탈 분석**
+   - 단계별 이탈 건수와 비율 (어떤 단계에서 가장 많이 멈추는가)
+   - 이탈 노트의 도메인 분포 (특정 도메인에서 이탈이 집중되는가)
+   - 이탈 원인 추정: 노트 내용을 읽어 왜 진행이 멈췄는지 분석
+     - assess 이후 이탈 = assess 결과만으로 충분했거나, investigate 진입이 어려웠거나
+     - note 이후 이탈 = assess를 건너뛰거나, 이슈가 자연 해결되었거나
+   - aging이 길수록 dropout 확률이 높으므로, aging 분포와 교차 분석
+
+7. **사용자 경험 종합**
+   - user_feedback의 helpful 비율로 전체 만족도 추적
+   - friction 목록에서 반복되는 마찰점 패턴 추출
+   - skill_misuse 빈도로 스킬 디스커버리 문제 측정
+   - misuse가 많은 스킬 → CLAUDE.md 안내 강화 또는 스킬 이름/트리거 개선 필요
+   - 소표본(N<5) 시 개별 응답 나열, 패턴 추출은 보류
+
+8. **구체적 튜닝 권고**
    - 데이터에 근거한 액션 아이템
    - 소표본일 때 "N=5" 등 표본 크기 명시. 소표본에서의 WoW 변동은 해석에 주의 표시
 
@@ -258,6 +319,31 @@ Phase 1의 집계 결과를 바탕으로 다음을 분석:
   <!-- 데이터 없으면 .no-data -->
 </section>
 
+<!-- 섹션 6-1: 해결 시간 분석 -->
+<section>
+  <h2>⏱️ 해결 시간 분석</h2>
+  <h3>도메인별 평균 해결 시간 (30일)</h3>
+  <!-- 도메인, 건수, 평균(h), 최소, 최대 테이블 -->
+  <h3>사용자별 평균 해결 시간 (30일)</h3>
+  <!-- 사용자, 건수, 평균(h) 테이블 -->
+  <h3>쿡북 효과별 해결 시간</h3>
+  <!-- hit/ref/miss별 평균 해결 시간 비교 -->
+  <!-- 데이터 없으면 .no-data -->
+  <!-- AI 인사이트 (.insight) -->
+</section>
+
+<!-- 섹션 6-2: 파이프라인 이탈 분석 -->
+<section>
+  <h2>🚪 파이프라인 이탈 분석</h2>
+  <h3>단계별 도달/이탈 현황</h3>
+  <!-- 단계(note/assess/investigate/close), 도달 건수, 이탈 건수, 이탈율 테이블 -->
+  <!-- 퍼넬 형태로 시각화: 각 단계 bar 너비 = 도달 비율 -->
+  <h3>이탈 노트 목록</h3>
+  <!-- ticket, 도메인, last_stage, aging(일), 상태 테이블 -->
+  <!-- 데이터 없으면 .no-data "모든 노트가 파이프라인을 정상 진행 중입니다" -->
+  <!-- AI 인사이트 (.insight) -->
+</section>
+
 <!-- 섹션 7: 노트 현황 -->
 <section>
   <h2>📝 노트 현황</h2>
@@ -267,6 +353,21 @@ Phase 1의 집계 결과를 바탕으로 다음을 분석:
   <!-- 7일 이상 aging된 노트 목록 (.warning) -->
   <h3>Verdict 분포</h3>
   <!-- verdict별 건수 테이블 -->
+</section>
+
+<!-- 섹션 7-1: 사용자 경험 분석 -->
+<section>
+  <h2>👤 사용자 경험 분석</h2>
+  <h3>파이프라인 만족도</h3>
+  <!-- helpful true/false 비율, would_use_again 비율 -->
+  <!-- 소표본 시 개별 응답 나열 -->
+  <h3>마찰점 목록</h3>
+  <!-- friction 자유 서술 원문 목록 -->
+  <!-- 반복 패턴이 있으면 .warning으로 하이라이트 -->
+  <h3>스킬 오용 감지</h3>
+  <!-- skill_misuse 건수, attempted/correct_path 매핑 테이블 -->
+  <!-- 데이터 없으면 .no-data -->
+  <!-- AI 인사이트 (.insight) -->
 </section>
 
 <!-- 섹션 8: 튜닝 권고 -->

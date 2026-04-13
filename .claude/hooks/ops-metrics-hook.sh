@@ -65,6 +65,46 @@ jq -nc \
 > 기록 규칙 상세: `.claude/skills/ops-common/metrics-guide.md` 참조
 REMINDER
 
+elif [[ "$SKILL_NAME" == "db:db-query" ]]; then
+  # 안티패턴 감지: ops-db-query-builder 없이 db:db-query 직접 호출
+  REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "$REPO_ROOT" ]; then
+    REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+  fi
+  TODAY=$(date +%Y-%m-%d)
+  METRICS_DIR="$REPO_ROOT/metrics/$USER"
+  METRICS_FILE="$METRICS_DIR/$TODAY.jsonl"
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+
+  # 같은 세션에서 ops-db-query-builder가 먼저 호출됐는지 확인
+  BUILDER_FOUND=false
+  if [ -f "$METRICS_FILE" ] && [ -n "$SESSION_ID" ]; then
+    if grep -q "\"ops-db-query-builder\".*\"$SESSION_ID\"" "$METRICS_FILE" 2>/dev/null; then
+      BUILDER_FOUND=true
+    fi
+  fi
+
+  if [ "$BUILDER_FOUND" = false ]; then
+    # skill_misuse 이벤트 기록
+    mkdir -p "$METRICS_DIR"
+    jq -nc \
+      --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+      --arg user "$USER" \
+      --arg env "$([ -n "$GITHUB_ACTIONS" ] && echo ci || echo local)" \
+      --arg attempted "$SKILL_NAME" \
+      --arg correct_path "ops-db-query-builder" \
+      --arg session "${SESSION_ID:-unknown}" \
+      '{ts:$ts, type:"skill_misuse", user:$user, env:$env, attempted:$attempted, correct_path:$correct_path, session:$session}' \
+      >> "$METRICS_FILE"
+
+    cat <<'WARN'
+⚠️ **db:db-query 직접 호출 감지** — `ops-db-query-builder` 를 먼저 사용하세요.
+Entity 출처 없는 SQL은 실행하지 않습니다. (CLAUDE.md DB 조회 규칙 참조)
+
+> 이 이벤트는 `metrics/{user}/{date}.jsonl` 에 `skill_misuse` 타입으로 자동 기록되었습니다.
+WARN
+  fi
+
 elif [[ "$SKILL_NAME" =~ ^ops- ]]; then
   cat <<'REMINDER'
 📊 **메트릭스 기록** — 이 ops 스킬 실행이 완료되면 아래를 수행한다:

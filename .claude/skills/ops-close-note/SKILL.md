@@ -183,6 +183,10 @@ Phase 1~4 결과를 통합하여 한번에 보고한다.
 - 일치 여부: {일치 | 불일치}
 - triage-signals.md 조정: {제안 내용 | 없음}
 
+### Phase 8: 사용자 피드백
+- {helpful: true/false | 건너뜀}
+- 마찰점: {내용 | 없음}
+
 ### 다음 단계
 - 일괄 아카이브가 필요하면 → `ops:maintain-notes`
 ```
@@ -214,6 +218,43 @@ Phase 1~4 결과를 통합하여 한번에 보고한다.
 | `stale_found` | 조사 중 발견된 부패 | operation-note 또는 routing-misses.md에서 해당 ticket의 correction/stale 기록 확인 |
 
 공통 필드(`ts`, `user`, `model`, `env`, `session`)는 `metrics-guide.md` 수집 규칙을 따른다.
+
+### Phase 8: 사용자 피드백 (선택)
+
+> 이슈가 **완료 상태**이고, 사용자가 직접 조사에 참여한 경우에만 이 Phase를 수행한다.
+> 자동 클로즈(maintain-notes 일괄 처리 등)에서는 건너뛴다.
+
+사용자에게 간단히 질문한다:
+
+> "이 이슈 처리 과정에서 파이프라인(note → assess → investigate)이 도움이 됐나요?
+> 막혔던 부분이 있다면 한 줄로 알려주세요. (건너뛰려면 '패스')"
+
+**사용자가 '패스'라고 답하면** → 이 Phase를 건너뛴다 (JSONL 기록 없음).
+
+**사용자가 응답하면** → JSONL에 기록:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+jq -nc \
+  --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+  --arg user "$USER" \
+  --arg model "<현재모델>" \
+  --arg env "$([ -n "$GITHUB_ACTIONS" ] && echo ci || echo local)" \
+  --arg ticket "<티켓ID>" \
+  --arg domain "<도메인>" \
+  --argjson helpful <true|false> \
+  --arg friction "<마찰점 또는 null>" \
+  --argjson would_use_again <true|false> \
+  --arg session "<세션ID>" \
+  '{ts:$ts, type:"user_feedback", user:$user, model:$model, env:$env, ticket:$ticket, domain:$domain, helpful:$helpful, friction:(if $friction == "null" then null else $friction end), would_use_again:$would_use_again, session:$session}' \
+  >> "$REPO_ROOT/metrics/$USER/$(date +%Y-%m-%d).jsonl"
+```
+
+**응답 해석 규칙:**
+- "도움됐어", "좋았어", "유용했어" → `helpful: true`
+- "별로", "안 도움됐어", "없어도 됐어" → `helpful: false`
+- 마찰점 언급이 있으면 `friction`에 원문 그대로 기록
+- `would_use_again`은 전체 톤에서 판단 (명시적 언급 없으면 `helpful`과 동일하게)
 
 ## Rules
 - Phase 1의 모든 규칙은 `note-issue.md` 를 따른다

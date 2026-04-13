@@ -90,6 +90,45 @@ description: 메트릭스 기록 가이드
 | `api_stale` | 코드에서 사라진 API 수 |
 | `detail` | 리뷰 필요 항목 요약 |
 
+### user_feedback (수동 기록)
+
+- **수집 방식**: `ops-close-note` Phase 8에서 사용자 응답을 Bash로 기록
+- **트리거**: ops-close-note 스킬 완료 직전, 사용자에게 질문 후
+- **스키마**:
+  ```json
+  {"ts":"...","type":"user_feedback","user":"...","model":"...","env":"local|ci","ticket":"CI-XXXX","domain":"time-tracking","helpful":true,"friction":"assess 결과가 너무 길어서 읽기 힘들었음","would_use_again":true,"session":"..."}
+  ```
+- **필드 설명**:
+
+| 필드 | 설명 | 수집 시점 |
+|------|------|----------|
+| `ticket` | 클로즈한 티켓 ID | Phase 1에서 결정 |
+| `domain` | 도메인 ID | operation-note에서 추출 |
+| `helpful` | 파이프라인이 도움이 됐는가 (true/false) | 사용자 응답 |
+| `friction` | 마찰점 자유 서술 (없으면 null) | 사용자 응답 |
+| `would_use_again` | 다음에도 사용하겠는가 (true/false) | 사용자 응답 |
+
+### skill_misuse (자동 감지)
+
+- **수집 방식**: PostToolUse hook (`ops-metrics-hook.sh`)이 안티패턴 감지 시 자동 기록
+- **트리거**: 알려진 안티패턴 호출 감지 시 (예: ops-db-query-builder 없이 db:db-query 직접 호출)
+- **스키마**:
+  ```json
+  {"ts":"...","type":"skill_misuse","user":"...","env":"local|ci","attempted":"db:db-query","correct_path":"ops-db-query-builder","session":"..."}
+  ```
+- **필드 설명**:
+
+| 필드 | 설명 |
+|------|------|
+| `attempted` | 사용자가 시도한 스킬 |
+| `correct_path` | 올바른 진입 경로 |
+
+- **등록된 안티패턴**:
+
+| 감지 조건 | attempted | correct_path |
+|-----------|-----------|-------------|
+| 같은 세션에서 `ops-db-query-builder` 호출 없이 `db:db-query` 호출 | `db:db-query` | `ops-db-query-builder` |
+
 ## 공통 필드 수집 규칙
 
 모든 JSONL 이벤트 타입에 공통으로 포함되는 필드:
@@ -98,6 +137,6 @@ description: 메트릭스 기록 가이드
 |------|----------|
 | `ts` | `date +%Y-%m-%dT%H:%M:%S%z` (KST) |
 | `user` | `$USER` 환경변수 |
-| `model` | 현재 세션의 Claude 모델 ID (예: `claude-opus-4-6`) |
+| `model` | 현재 세션의 Claude 모델 ID (예: `claude-opus-4-6`). hook 자동 수집(skill_misuse 등)에서는 모델 정보 접근 불가하므로 생략 가능 |
 | `env` | `$GITHUB_ACTIONS` 존재 시 `ci`, 아니면 `local` |
 | `session` | Claude Code 세션 ID |
