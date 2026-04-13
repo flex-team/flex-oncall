@@ -1099,5 +1099,124 @@ class TestRoute(unittest.TestCase):
             self.assertIn("apis", p)
 
 
+# ---------------------------------------------------------------------------
+# TestIntegrationWithRealTTL — 실제 domain-map.ttl 기반 end-to-end 검증
+# ---------------------------------------------------------------------------
+
+class TestIntegrationWithRealTTL(unittest.TestCase):
+    """실제 domain-map.ttl로 end-to-end 검증."""
+
+    TTL_PATH = os.path.join(os.path.dirname(__file__), '..', 'domain-map.ttl')
+
+    @classmethod
+    def setUpClass(cls):
+        if not os.path.exists(cls.TTL_PATH):
+            raise unittest.SkipTest('domain-map.ttl not found')
+        cls.data = parse_ttl(cls.TTL_PATH)
+
+    # ------------------------------------------------------------------
+    # 1. Parsing counts
+    # ------------------------------------------------------------------
+
+    def test_parsing_domains_gte_20(self):
+        self.assertGreaterEqual(
+            len(self.data['domains']),
+            20,
+            f"domains={len(self.data['domains'])}, expected >= 20",
+        )
+
+    def test_parsing_glossary_gte_100(self):
+        self.assertGreaterEqual(
+            len(self.data['glossary']),
+            100,
+            f"glossary={len(self.data['glossary'])}, expected >= 100",
+        )
+
+    def test_parsing_notes_gte_200(self):
+        self.assertGreaterEqual(
+            len(self.data['notes']),
+            200,
+            f"notes={len(self.data['notes'])}, expected >= 200",
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Known routing cases
+    # ------------------------------------------------------------------
+
+    def test_route_notification(self):
+        result = route('알림이 안 왔어요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':notification', primary)
+
+    def test_route_time_tracking_attendance(self):
+        result = route('출퇴근 기록이 이상해요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':time-tracking', primary)
+
+    def test_route_annual_promotion(self):
+        result = route('연차촉진 문서가 안 보여요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':annual-promotion', primary)
+
+    def test_route_approval(self):
+        result = route('승인 요청이 안 돼요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':approval', primary)
+
+    def test_route_payroll(self):
+        result = route('급여 명세서가 안 보여요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':payroll', primary)
+
+    def test_route_time_tracking_vacation(self):
+        result = route('휴가가 안 들어갔어요', self.TTL_PATH)
+        primary = [p['domain'] for p in result['primary']]
+        self.assertIn(':time-tracking', primary)
+
+    # ------------------------------------------------------------------
+    # 3. Ticket ID lookup
+    # ------------------------------------------------------------------
+
+    def test_ticket_id_ci_4404_no_match_false(self):
+        result = route('CI-4404', self.TTL_PATH)
+        self.assertFalse(result['no_match'], "CI-4404 is a known ticket, no_match should be False")
+
+    # ------------------------------------------------------------------
+    # 4. Ambiguous input — confidence should be low or none
+    # ------------------------------------------------------------------
+
+    def test_ambiguous_input_low_confidence(self):
+        # '처리'는 여러 도메인에 걸쳐 약하게 분산되어 낮은 confidence를 반환한다
+        result = route('처리', self.TTL_PATH)
+        self.assertIn(
+            result['confidence'],
+            ['low', 'none'],
+            f"'처리' is ambiguous, expected low/none but got: {result['confidence']}",
+        )
+
+    # ------------------------------------------------------------------
+    # 5. Benchmark — 100 calls, avg latency < 200ms
+    # ------------------------------------------------------------------
+
+    def test_benchmark_latency(self):
+        """100회 반복, 평균 latency < 200ms."""
+        import time
+        inputs = [
+            '알림이 안 왔어요',
+            '출퇴근 기록이 이상해요',
+            '연차촉진 문서가 안 보여요',
+            'CI-4404',
+            '승인 요청이 안 돼요',
+        ]
+        start = time.perf_counter()
+        for _ in range(20):
+            for inp in inputs:
+                route(inp, self.TTL_PATH)
+        elapsed = time.perf_counter() - start
+        avg_ms = (elapsed / 100) * 1000
+        print(f'\n  Benchmark: 100 calls, avg={avg_ms:.1f}ms, total={elapsed:.2f}s')
+        self.assertLess(avg_ms, 200)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
