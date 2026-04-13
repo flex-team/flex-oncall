@@ -167,7 +167,8 @@
         "여러날 휴가 등록했는데 게시가 안 돼요" ,
         "교대근무 스케줄이 안 보여요" ,
         "스케줄 삭제 이력 확인해주세요" ,
-        "스케줄이 사라졌어요" ;
+        "스케줄이 사라졌어요" ,
+        "교대근무 감사로그 확인해주세요" ;
   d:x   :time-tracking , :permission , :payroll .
 
 :integration
@@ -208,7 +209,7 @@
   d:mod "flex_grant" , "flex_grant_subject" , "flex_authorization" ,
         "authorization" , "permission" , "authorization-cache" , "pip-service" ;
   d:api "/api/v2/permission" , "/api/v2/auth/tracing" ;
-  d:kw  "권한" , "감사로그" , "audit_log" , "flex_grant_subject" ,
+  d:kw  "권한" , "audit_log" , "flex_grant_subject" ,
         "물리삭제" , "최고관리자" , "자동부여" ,
         "OpenFGA" , "DocumentDB" , "Redis캐시" , "분산락" ,
         "PIP" , "마이그레이션" , "authorization-cache" ,
@@ -246,7 +247,7 @@
         "workspace_customer_mapping" , "account_user_mapping" ,
         "authentication_method" , "verification/identifier" ,
         "문서함" , "UserDocument" , "UserDocumentFile" , "user_document_aud" ,
-        "login_history" , "z_last_login_at" , "감사로그" , "마지막접속" ,
+        "login_history" , "z_last_login_at" , "마지막접속" ,
         "audit_operation" , "감사로그다운로드" , "PersonalInformationType" ,
         "AuditEventCategory" ,
         "문서변경참조" , "CORE_USER_ATTACHMENT_UPDATE" , "CORE_USER_PERSONAL_UPDATE" ,
@@ -461,7 +462,7 @@
   d:repo "flex-digicon-backend" ;
   d:mod "digicon" , "candidate" , "integration" , "kafka-consumer" , "kafka-producer" ;
   d:kw  "전자계약" , "계약서" , "서명" , "digicon" , "SUCCEED" , "IN_PROGRESS" , "IN_REVIEW" ,
-        "서식" , "양식" , "발송" , "삭제" , "감사로그" , "candidate" ,
+        "서식" , "양식" , "발송" , "삭제" , "candidate" ,
         "대량 다운로드" , "bulk-download" , "fileMergeId" ,
         "임시저장" , "선택발송" , "CandidateSet" , "CandidateUnit" ,
         "복제" , "duplicateTemplates" , "duplicate-templates" ,
@@ -478,7 +479,8 @@
         "전자계약 서식 계열사에 복사해달라" ,
         "전자계약 연락처가 공란이에요" ,
         "계약서 발송했는데 필드가 비어있어요" ,
-        "엑셀 업로드로 계약서 보냈는데 데이터가 안 나와요" ;
+        "엑셀 업로드로 계약서 보냈는데 데이터가 안 나와요" ,
+        "전자계약 감사로그 확인해주세요" ;
   d:x   :account , :notification .
 
 :insurance
