@@ -13,6 +13,32 @@
 - **근무유형(`v2_customer_work_rule`)**: 회사별로 정의하는 근무 규칙 단위. 요일별 `DayWorkingType`(근무일/주휴일/휴무일)과 근무시간을 포함한다.
 - **유저-근무유형 매핑(`v2_user_work_rule`)**: time-series 구조. REGISTER/CANCEL 이벤트가 쌓이며, 특정 날짜의 활성 근무유형은 `date_from`/`date_to` 범위로 해석한다. "현재" 근무유형이 아니라 **해당 날짜 시점의** 근무유형이 기준이다.
 - **OpenSearch 문서**: 근무스케줄, 휴일대체 등 조회 성능을 위해 OpenSearch에 비정규화된 문서를 관리한다. 근무를 건드리지 않은 유저는 sync 이벤트가 발생하지 않아 문서 자체가 없을 수 있다.
+
+### OS 문서 동기화 시점 — 3가지 경로
+
+| 경로 | 트리거 | consumer | 빈 문서 생성 | 범위 |
+|------|--------|----------|------------|------|
+| **이벤트 기반** | 근무규칙/휴일/근무기록 변경 | Default | **생성함** | 변경일 ±1개월(realtime), 이후 +2개월(batch) |
+| **월간 Cron** | 매월 1일 05:00 KST | **Future** | **생성 안 함** | 현재 ~ +2개월 말일 |
+| **수동 동기화** | Operation API 호출 | Default | **생성함** | 지정 범위 |
+
+- **Default** (`DefaultSearchWorkScheduleSyncService`): `OsDailyWorkScheduleModelSyncConverter.convert()` 결과를 그대로 반환 — 빈 문서도 저장
+- **Future** (`FutureSearchWorkScheduleSyncService`): `workClockInOutTimes`, `workTimeBlocks`, `restTimeBlocks`, `timeOffTimeBlocks` 중 하나 이상 있어야 저장 (L61-67). 미래 빈 문서 대량 생성 방지 목적
+- **이벤트 기반 범위 제한**: `WorkScheduleEnrichmentDateRangeChunkService` 가 현재 기준 +2개월까지로 제한. 그 이후 미래는 월간 Cron(Future)에만 의존
+- **영향**: 자동근무 미사용(`v2_user_work_plan` RESET) + 근무 미수정 유저는 이벤트 미발생 → 미래 날짜 OS 문서 없음 → 휴일대체 등 OS 기반 화면 미노출 [CI-3949] [CI-4413]
+- **즉시 대응**: `POST /action/operation/v2/time-tracking/sync-os-work-schedule-advanced` (Default consumer 경로)
+
+### 휴일대체 미노출 케이스 (7가지)
+
+| # | 조건 | 핵심 코드 | 유형 |
+|---|------|----------|------|
+| 1 | OS 문서 미생성 (자동근무 미사용 + 근무 미수정) | `FutureSearchWorkScheduleSyncService` L61-67 | 아키텍처 이슈 |
+| 2 | `WEEKLY_UNPAID_HOLIDAY` (휴무일) | `mergeUserHolidayAndWeeklyHolidaysAndFilterExactDate()` L356 | 스펙 |
+| 3 | SHIFT 근무자 주휴일 제외 | `getUserAlternativeHolidayStatus()` L87-92 | 스펙 |
+| 4 | 단시간 근로 규칙 기간 | `filterHolidaysIfShortHoursPartTimeWorkRuleApplied()` | 스펙 |
+| 5 | 노동절 (MAYDAY) | `UserAlternativeHolidayCandidateLookUpService` L65-67 | 스펙 |
+| 6 | 쉬는날-주휴일 경합 (쉬는날 우선) | `mergeUserHolidayAndWeeklyHolidaysAndFilterExactDate()` L344-347 | 스펙 |
+| 7 | 쉬는날 정책 비활성화 | `UserHolidayPolicyLookUpService` | 스펙 |
 - **근무시간 타입**: 법정근로시간(`statutoryWorkingMinutes`), 소정근로시간(`agreedWorkingMinutes`), 필수근로시간(`requiredWorkingMinutes`), 계약근로시간(`usualWorkingMinutes`) — 각각 법적 근거와 계산 기준이 다르다.
 
 ### 주요 흐름
@@ -110,7 +136,8 @@ WHERE user_work_record_event_id = ?;
 
 ## 과거 사례
 
-- **휴일대체 탭 미표기 — OS 문서 미생성**: 근무를 건드리지 않은 유저는 sync 이벤트 미발생 → OS 문서 없음 → 조회 누락. 수동 sync로 즉시 대응 — **버그 (설계 한계)** [CI-3949]
+- **휴일대체 탭 미표기 — OS 문서 미생성**: 근무를 건드리지 않은 유저는 sync 이벤트 미발생 → OS 문서 없음 → 조회 누락. 수동 sync로 즉시 대응 — **버그 (설계 한계)** [CI-3949] [CI-4413 재발]
+  - 추가 발견 (CI-4413): `v2_user_work_plan` 최신 event_type이 `RESET`이면 회사 설정(`auto_conversion_enabled=ON`)과 무관하게 **유저 레벨에서 자동근무 미사용**. 판별 기준은 회사 설정이 아닌 `v2_user_work_plan` 최신 이벤트임
 - **휴일대체 탭 미표기 — holidayProps null**: 문의 날짜 시점의 활성 근무유형에서 해당 요일이 휴무일(`WEEKLY_UNPAID_HOLIDAY`)이면 제외. 근무유형 변경 이력에 주의 (현재 근무유형이 아닌 **해당 날짜 시점** 기준) — **스펙** [CI-3949]
 - **포괄계약 월 중 변경 시 공제 차이**: Range별 독립 관리, 잔여량 이월 없음 — **스펙** [CI-3868]
 - **보상휴가 부여 불가 (10/17 비대칭)**: V3 조회 API와 부여 API의 `forAssign` 모드 차이로 기부여 필터 불일치 — **버그** [CI-3858]

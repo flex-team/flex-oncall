@@ -655,6 +655,11 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
+n:CI-4413
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:s  "휴일대체 탭 4/26 미노출 — OS 문서 미생성 (CI-3949 재발). Future consumer 빈 문서 드랍 + v2_user_work_plan RESET 상태(자동근무 미사용). 수동 sync로 즉시 대응. 와이즐리컴퍼니(1677)" .
+
 n:CI-4404
   d:in :review ;
   d:v  "spec" ;
