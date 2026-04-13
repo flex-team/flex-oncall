@@ -444,6 +444,30 @@ def match_phrases(tokens: list[str], data: dict, breakdowns: dict[str, dict]) ->
             _check(domain_id, q)
 
 
+def apply_unique_kw_bonus(tokens: list[str], data: dict, breakdowns: dict[str, dict]) -> None:
+    """도메인 전용 키워드에 보너스 부여.
+
+    입력 토큰이 정확히 하나의 도메인 d:kw에만 exact-match되면
+    해당 도메인에 보너스를 준다. 범용 키워드(여러 도메인에서 공유)는 보너스 없음.
+    기존 점수를 변경하지 않고 순수 가산만 한다.
+    """
+    BONUS = 8
+
+    for token in tokens:
+        token_lower = token.lower()
+        # 이 토큰이 exact-match하는 도메인의 d:kw를 가진 도메인 목록
+        exact_domains: list[str] = []
+        for domain_id, domain in data["domains"].items():
+            for kw in domain.get("keywords", []):
+                if token_lower == kw.lower():
+                    exact_domains.append(domain_id)
+                    break  # 도메인당 1회만
+
+        if len(exact_domains) == 1 and exact_domains[0] in breakdowns:
+            breakdowns[exact_domains[0]].setdefault("unique_kw", 0)
+            breakdowns[exact_domains[0]]["unique_kw"] += BONUS
+
+
 def calculate_scores(breakdowns: dict[str, dict]) -> dict[str, int]:
     """도메인별 총점 (모든 필드 가중치 + phrase_bonus 합산)."""
     return {
@@ -674,6 +698,169 @@ def build_result(
 
 
 # ---------------------------------------------------------------------------
+# Triage classification
+# ---------------------------------------------------------------------------
+
+def parse_triage_signals(path: str) -> list[dict[str, Any]]:
+    """Parse triage-signals.md and return list of signal definitions.
+    Each entry: {'korean': str, 'english': str, 'keywords': [str], 'first_action': str}
+    """
+    signals: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.rstrip()
+            m = re.match(r'^## (.+?) \((\w+)\)', line)
+            if m:
+                current = {
+                    'korean': m.group(1),
+                    'english': m.group(2),
+                    'keywords': [],
+                    'first_action': '',
+                }
+                signals.append(current)
+                continue
+
+            if current is None:
+                continue
+
+            if line.startswith('- 키워드:'):
+                kw_text = line[len('- 키워드:'):].strip()
+                current['keywords'] = [k.strip() for k in kw_text.split(',')]
+            elif line.startswith('- 첫 번째 액션:'):
+                current['first_action'] = line[len('- 첫 번째 액션:'):].strip()
+
+    return signals
+
+
+_SPEC_FALLBACK: dict[str, Any] = {
+    'korean': '스펙질문형',
+    'english': 'Spec',
+    'keywords': [],
+    'first_action': '도메인 스펙 문서 확인 (서브모듈 CLAUDE.md, Notion, 과거 노트)',
+}
+
+
+def classify_triage(text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
+    """Classify input text against triage signals. Returns best matching signal.
+    Falls back to Spec if no keywords match."""
+    text_lower = text.lower()
+    best: dict[str, Any] | None = None
+    best_count = 0
+
+    for signal in signals:
+        count = sum(1 for kw in signal['keywords'] if kw.lower() in text_lower)
+        if count > best_count:
+            best_count = count
+            best = signal
+
+    if best is None:
+        for signal in signals:
+            if signal['english'] == 'Spec':
+                return signal
+        return _SPEC_FALLBACK
+
+    return best
+
+
+# ---------------------------------------------------------------------------
+# Markdown renderer
+# ---------------------------------------------------------------------------
+
+def render_markdown(
+    result: dict[str, Any],
+    triage: dict[str, Any],
+    ticket_id: str = "",
+) -> str:
+    """Render routing result as markdown. All data comes from result dict only."""
+    lines: list[str] = []
+
+    # Metadata line for callers to parse confidence
+    lines.append(f"<!-- confidence:{result['confidence']} -->")
+    lines.append("")
+
+    if result.get('no_match'):
+        lines.append("## 🔍 Domain Routing Result")
+        lines.append("")
+        lines.append("매칭된 도메인이 없습니다.")
+        lines.append("")
+        lines.append(f"입력: {result.get('input', '')}")
+        return '\n'.join(lines)
+
+    lines.append("## 🔍 Domain Routing Result")
+    lines.append("")
+    lines.append(f"[분류] {triage['korean']} ({triage['english']})")
+    lines.append(f"[첫 번째 액션] {triage['first_action']}")
+    lines.append("")
+
+    # Primary
+    for p in result.get('primary', []):
+        lines.append(f"### Primary: {p['domain']} ({p['name']}) — score: {p['score']}")
+        lines.append(f"- **repo**: {', '.join(p.get('repos', []))}")
+        if p.get('modules'):
+            lines.append(f"- **module**: {', '.join(p['modules'])}")
+        if p.get('cookbook'):
+            lines.append(f"- **cookbook**: \"{p['cookbook']}\"")
+
+        bd = result.get('score_breakdown', {}).get(p['domain'], {})
+        if bd:
+            parts = [f"{k}={v}" for k, v in bd.items() if v > 0]
+            lines.append(f"- **score breakdown**: {', '.join(parts)}")
+        lines.append("")
+
+    # APIs
+    apis = result['primary'][0].get('apis', []) if result.get('primary') else []
+    if apis:
+        lines.append("### 관련 API 패턴")
+        for api in apis:
+            lines.append(f"- `{api}`")
+        lines.append("  → access log 검색 시 `request_uri` 필터로 활용 가능")
+        lines.append("")
+
+    # Related
+    if result.get('related'):
+        lines.append("### Related")
+        for r in result['related']:
+            lines.append(f"- {r['domain']} ({r['name']}) — {r['reason']}")
+            lines.append(f"  - repo: {', '.join(r.get('repos', []))}")
+        lines.append("")
+
+    # Glossary Hits
+    if result.get('glossary_hits'):
+        lines.append("### Glossary Hits")
+        lines.append("| ID | 사용자 표현 | 시스템 용어 |")
+        lines.append("|----|------------|-----------|")
+        for g in result['glossary_hits']:
+            lines.append(f"| {g['id']} | {g.get('question', '')} | {g.get('answer', '')} |")
+        lines.append("")
+
+    # Related Notes
+    if result.get('related_notes'):
+        lines.append("### Related Notes")
+        lines.append("| ID | 요약 | verdict | 위치 |")
+        lines.append("|----|------|---------|------|")
+        for n in result['related_notes']:
+            lines.append(f"| {n['id']} | {n.get('summary', '')} | {n.get('verdict', '')} | {n.get('location', '')} |")
+        lines.append("")
+
+    # 다음 단계
+    if ticket_id:
+        cookbook = result['primary'][0].get('cookbook', '') if result.get('primary') else ''
+        first_repo = result['primary'][0]['repos'][0] if result.get('primary') and result['primary'][0].get('repos') else ''
+        lines.append("### 다음 단계")
+        lines.append(f"- 📝 노트: `/ops-note-issue {ticket_id}`")
+        lines.append(f"- 📋 평가: `/ops-assess-issue {ticket_id}`")
+        lines.append(f"- 🔍 조사: `/ops-investigate-issue {ticket_id}`")
+        if cookbook:
+            lines.append(f"- 📖 쿡북: `brain/COOKBOOK.md` > \"{cookbook}\"")
+        if first_repo:
+            lines.append(f"- 📂 서브모듈: `git submodule update --init --recursive {first_repo}`")
+
+    return '\n'.join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Main route function
 # ---------------------------------------------------------------------------
 
@@ -713,6 +900,7 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
     tokens = tokenize(input_text)
     breakdowns = match_tokens(tokens, data)
     match_phrases(tokens, data, breakdowns)
+    apply_unique_kw_bonus(tokens, data, breakdowns)
     scores = calculate_scores(breakdowns)
     confidence = calculate_confidence(scores)
     primary_ids, related_ids = determine_primary_related(scores, breakdowns, data)
@@ -734,20 +922,30 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
 # ---------------------------------------------------------------------------
 
 def main():
-    """CLI: python domain_router.py "input text"
+    """CLI: python domain_router.py [--markdown] [--ticket=ID] "input text"
     Reads brain/domain-map.ttl relative to script location (brain/scripts/ → brain/).
-    Outputs JSON to stdout."""
-    if len(sys.argv) < 2:
-        print("Usage: python domain_router.py \"input text\"", file=sys.stderr)
-        sys.exit(1)
+    Outputs JSON (default) or markdown to stdout."""
+    import argparse
 
-    input_text = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Domain router for oncall triage")
+    parser.add_argument("input", help="Input text for routing")
+    parser.add_argument("--markdown", action="store_true", help="Output as markdown instead of JSON")
+    parser.add_argument("--ticket", default="", help="Ticket ID for next-steps section (markdown only)")
+    args = parser.parse_args()
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     brain_dir = os.path.dirname(script_dir)  # brain/scripts → brain
     ttl_path = os.path.join(brain_dir, "domain-map.ttl")
 
-    result = route(input_text, ttl_path, brain_dir)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    result = route(args.input, ttl_path, brain_dir)
+
+    if args.markdown:
+        signals_path = os.path.join(brain_dir, "triage-signals.md")
+        signals = parse_triage_signals(signals_path)
+        triage = classify_triage(args.input, signals)
+        print(render_markdown(result, triage, args.ticket))
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
