@@ -36,25 +36,42 @@ $ARGUMENTS
 
 ### 2. 매칭 엔진 실행
 
-Python 스크립트가 도메인 매칭 + triage 분류 + 마크다운 렌더링을 모두 수행한다.
+Python 스크립트가 JSON으로 매칭 결과를 반환한다.
 티켓 ID가 있으면 `--ticket` 으로 전달한다.
 
 ```
-Bash("python3 brain/scripts/domain_router.py --markdown --ticket={ticket-id} '{라우팅 텍스트}'")
+Bash("python3 brain/scripts/domain_router.py --ticket={ticket-id} '{라우팅 텍스트}'")
 ```
 
-스크립트 stdout의 첫 줄에서 confidence를 확인한다:
-- `<!-- confidence:high -->` → **결과를 그대로 출력한다.** LLM 처리 불필요.
-- `<!-- confidence:low -->` → haiku 서브에이전트 폴백 (아래 참조)
-- `<!-- confidence:none -->` → 매칭 없음 처리 (아래 참조)
+### 3. 결과 처리
 
-### 3. 결과 출력
+JSON 응답의 `confidence` 필드로 분기한다:
 
-스크립트 출력을 **그대로** 사용자에게 출력한다. 추가 가공하지 않는다.
+- `"high"` 또는 `"low"` → 렌더링 단계로 진행
+- `"low"` → 추가로 haiku 폴백 실행 (아래 참조) 후 렌더링
+- `"none"` → 매칭 없음 처리 (아래 참조)
+
+### 4. 렌더링
+
+JSON 데이터를 기반으로 상황에 맞게 마크다운으로 렌더링한다.
+
+**항상 포함:**
+- triage 분류 (`[분류]`, `[첫 번째 액션]`)
+- primary 도메인: 도메인 ID, 이름, repo, module, cookbook
+- related 도메인: 도메인 ID, 이름, repo
+
+**선택 포함 (데이터가 있을 때):**
+- glossary_hits — 상위 3개
+- related_notes — 상위 5개
+- API 패턴 (primary의 `apis` 필드)
+- 다음 단계 안내 (ticket ID가 있을 때)
+
+**생략:**
+- score_breakdown (내부 디버깅용, 사용자에게 불필요)
 
 ### confidence=low 폴백
 
-스크립트를 `--markdown` 없이 재실행하여 JSON을 받고, `score_breakdown` 상위 3개 후보를 haiku 서브에이전트에 전달한다:
+JSON의 `score_breakdown`에서 상위 3개 후보를 haiku 서브에이전트에 전달한다:
 
 ```
 Agent(
@@ -72,13 +89,13 @@ JSON으로 응답: {\"domain\": \":domain-id\"} 또는 모두 부적합하면 {\
 )
 ```
 
-판단 결과를 반영하여 스크립트의 마크다운 출력을 그대로 사용하되, Primary 도메인만 교체한다.
+판단 결과를 반영하여 primary 도메인을 교체한 뒤 렌더링한다.
 low confidence이더라도 스크립트가 반환한 primary가 유효하면 그대로 사용해도 된다.
 
 ### 매칭 없음
 
-스크립트 출력이 "매칭된 도메인이 없습니다"이면:
-1. 출력을 그대로 표시
+JSON의 `no_match`가 true이면:
+1. "매칭된 도메인이 없습니다" + 입력 텍스트 출력
 2. `brain/routing-misses.md` 의 `## 로그` 테이블에 miss 행 추가:
    `| {YYYY-MM-DD} | miss | {라우팅 텍스트} | | {실패 사유} |`
 
