@@ -662,6 +662,13 @@ n:CI-4404
   d:ca "2026-04-13" ;
   d:s  "평가 등급 산출 오류 — 상태 변경 경합으로 factor grade 미생성. 작성 마감 후 18초 이내 평가 마감 시 결과 산출 스케줄러가 CLOSED 체크에 의해 skip. 프롭티어(176018)" .
 
+n:CI-4413
+  d:in :time-tracking ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-13" ;
+  d:s  "휴일대체 탭 2026-04-26(일) 미노출 — CI-3949 이슈 A 재현. 근본 원인: v2_user_work_plan RESET(2026-02-01~) 유저는 회사 설정 auto_conversion_enabled=ON이어도 실질 자동근무 미사용 → sync 이벤트 미발생 → OS 문서 미생성. 즉시대응: Operation API sync-os-work-schedule-advanced 수동 실행으로 OS 문서 생성 + UI 복구 완료. 와이즐리 1677/nypark 875779" .
+
 n:CI-4399
   d:in :payroll ;
   d:v  "ops" ;

@@ -3,6 +3,7 @@
 > ops-compact 스킬이 자동으로 기록한다. 오판 발견 시 git revert로 복원 가능.
 
 | 날짜 | 티켓 | 기준 | 흡수된 신호 | 사유 |
+| 2026-04-13 | (전체) | ops-compact | 농축 0건, 퇴출 0건, COOKBOOK 강등 0건, 승격 0건 | Step 2: archive 신규 스캔 시 ttl 미등록 9건 탐지(CI-4165/4172/4181/4186/4197/4199/4200/4208/QNA-2004) — 전수 확인 결과 **이미 2026-03-29~04-03 기간에 R1/R3 retire 완료된 항목**. 재추가 방지 주의. Step 3: R2 90일 경과 노트 없음(최고령 d:ca 2026-03-24). Step 4: 히트 0 플로우(F-pay-2 CI-4240 d:ca 2026-04-03, F7 CI-4314, F5 CI-4312) 모두 추가일 60일 미경과로 강등 대상 아님. Tier-2→Tier-1 승격 후보 없음. Step 6: 신선도 검증 생략(직전 실행 2026-04-08 유지) |
 | 2026-04-11 | CI-4342,CI-4345,CI-4353,CI-4371,CI-4372,CI-4374,CI-4375,CI-4376,CI-4379,CI-4384 | maintain+compact | 농축 10건 d:st "C" | maintain-notes: 10건 아카이브. CI-4342(ops 승인정책교체), CI-4345(wontfix 전자계약), CI-4353(ops 캡스역순수신), CI-4371(ops Matrix재색인), CI-4372(spec 위젯설정), CI-4374(ops 연장근무), CI-4375(bug 퇴사자노출), CI-4376(code-fix 평가빈박스), CI-4379(spec 샘플근무유형), CI-4384(known-issue 대시보드불일치). COOKBOOK 추가 스킵 — 대부분 기존 패턴 또는 code-fix |
 | 2026-04-08 | (전체) | ops-compact | 농축 0건, 퇴출 0건, COOKBOOK 강등 0건, 승격 0건 | Step 2: archive 노트 전체 d:st "C" 완료 상태. Step 3: R2 90일 경과 노트 없음(최고령 d:ca 2026-03-24), R1/R3 이전 컴팩션에서 처리됨. Step 4: 히트 0인 F-pay-2는 추가일 2026-03-30 기준 60일 미경과로 강등 대상 아님. Tier-2→Tier-1 승격 대상 없음. |
 | 2026-04-07 | CI-4335, CI-4338 | maintain+compact | COOKBOOK review 질문수정 S3+S7, account 알림 스펙 d:st C | maintain-notes: 2건 아카이브. CI-4338 구리뷰 질문 텍스트 수정 DML 패턴 COOKBOOK 추가 + cookbook/review.md SQL 템플릿. CI-4335 Not a Bug 확정 |
