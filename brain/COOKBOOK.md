@@ -405,6 +405,7 @@
 15. 캡스 기기 변경 후 동기화 불량 → 캡스 프로그램 근태처리옵션 계정 재설정 여부 확인. 원본선택 항목이 가이드와 다르면 캡스 버전 차이일 수 있음 (캡스 담당자에게 확인) [CI-4249]
 16. **세콘 `syntax error at or near "DUPLICATE"` 오류** → 세콘 프로그램 내부 쿼리 오류 (flex 책임 아님). 세콘 프로그램 쿼리 관리 화면에서 기존 쿼리와 새 쿼리가 중복 입력된 것이 원인. 대응: "저희가 가이드하는 쿼리가 아닌 것으로 보입니다. 세콘 쿼리 관리에서 확인 필요" 안내 [CI-3953]
 17. **캡스 수동 전송 중복 데이터 무시** → 캡스 수동 전송 시 이미 flex에서 처리한 START 데이터는 중복으로 무시됨 — 스펙. 재처리가 필요하면 `external_provider_event` 테이블에서 상태 변경 필요 [CI-3965]
+18. **캡스/세콤 데이터 전체 수신 중단 (특정 날짜 이후)** → **PXteam 에스컬레이션 필요**. 단일 회사·단일 유저가 아닌 전체 데이터 수신이 끊긴 경우, flex 앱 내부 문제가 아닌 work-event-transmitter/인프라 이슈. `@jungchoon`(PXteam) 멘션으로 에스컬레이션. 에스컬레이션 채널: #customer-issue 또는 #internal. 조치 완료 후 누락 기간 소급 적용 여부 별도 확인 필요 [CI-4409]
 
 #### 조사 플로우
 
@@ -867,11 +868,16 @@
 #### 진단 체크리스트 (추가)
 문의: "승인 완료된 문서가 진행중으로 보여요" / "기안서 승인했는데 승인 필요로 남아있어요"
 1. `workflow_task` 테이블에서 해당 문서번호의 상태 확인 → `SELECT * FROM flex.workflow_task WHERE code = '{문서번호}' AND customer_id = ?`
-2. `approval_process` 테이블에서 해당 문서의 승인 상태 확인 → APPROVED인데 workflow_task가 ONGOING이면 동기화 실패
+2. `approval_process` 테이블에서 해당 문서의 승인 상태 확인
+   - `approval_process.status = APPROVED` + `workflow_task = IN_PROGRESS` → 동기화 실패 → **3번**으로
+   - `approval_process.status = ONGOING` → 승인 미완료 → **4번**으로
 3. 대응: sync-with-approval Operation API 호출로 보정 [CI-4385]
    - v3: `POST /proxy/impact/api/operation/v3/impact/customers/{customerId}/approval-documents/{targetUid}/approval-process/sync?actorUserId={actorUserId}&dryRun=false&dataOnly=false`
-4. 보정 후 문서함에서 정상 표시 확인
-5. **근본 원인**: 승인 act API 타임아웃(`FlexRemoteUnknownStateException: InterruptedIOException: timeout`)으로 상태 전이 실패 — 광범위 오류 시 동일 패턴 다건 발생 가능 [CI-4385]
+   - ⚠️ `actorUserId`: 기안자가 아닌 승인라인에 실제 등재된 **단독 actor** userId. `approval_line_actor` 테이블에서 조회. step에 2명 이상(동시 승인 구조)이면 "multiple actors found" 에러 → 단독 actor인 다른 step 선택 [CI-4407]
+4. `approval_process.status = ONGOING`인 경우: `approval_line_actor`에서 PENDING 승인자 확인
+   - offboarded 사용자(퇴직/삭제, `view_user.status` 확인)가 승인자이면 → **F1 플로우** (bulk-approve-for-user) [CI-4407]
+5. 보정 후 문서함에서 정상 표시 확인
+6. **근본 원인**: 승인 act API 타임아웃(`FlexRemoteUnknownStateException: InterruptedIOException: timeout`)으로 상태 전이 실패 — 광범위 오류 시 동일 패턴 다건 발생 가능 [CI-4385]
 
 문의: "승인했는데 승인 버튼이 계속 활성화돼요" / "승인라인에 포함되지 않은 사용자에요"
 1. `approval_line_actor`에서 해당 사용자의 actor status 확인 — APPROVED이면 이미 승인 완료 [CI-4362]
@@ -913,7 +919,7 @@
 
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 
-**F1: 비활성 사용자(삭제/휴직/퇴직) 승인건 강제 승인** · 타입: Data · 히트: 4 · [CI-4228] [CI-3769] [CI-4266] [CI-4286] [CI-4397]
+**F1: 비활성 사용자(삭제/휴직/퇴직) 승인건 강제 승인** · 타입: Data · 히트: 5 · [CI-4228] [CI-3769] [CI-4266] [CI-4286] [CI-4397] [CI-4407]
 > 트리거: "삭제된 구성원이 승인 라인에 있어 승인 불가" / "삭제한 사람 승인건 처리" / "휴직자 승인건 처리" / "퇴사자 미승인건 처리" / "대결 요청"
 
 ```
@@ -1026,6 +1032,14 @@
    - 요청자가 **조직장이 아니면** `departmentObjectives`는 항상 empty
    - ⚠️ **최대 500건** 내부 제약 — 500건 초과 시 기획적 논의 필요
 2. 구성원 목표 탭은 **동일 API를 클라이언트에서 병렬 호출**하여 화면 구성
+3. **목표 생성 직후 미표시** → matrix authorization 인덱싱 비동기 특성 [CI-4414]
+   - 상세 조회(목표 클릭): DB 직접 → 즉시 반영
+   - 목록 조회(내목표 탭): matrix authorization 인덱스 기반 → 비동기 갱신 (수 초~수분 지연)
+   - 먼저 **새로고침** 안내. 해소 안 되면 `relation_action` 토픽 밀림 여부 확인 (인가 컨슈머 에러)
+   - 토픽 밀림 해소 후 강제 동기화 필요 시:
+     ```
+     POST /api/operation/v2/matrix/authorization/resolved-auth/from/{customerId}/to/{customerId}/batch-index
+     ```
 
 문의: "전체 목표에서 조직 선택하면 다르게 보여요" / "조직 목표가 안 나와요"
 1. **전체 탭 — 전체 옵션**: Root Objectives API (pagination 적용)
@@ -1818,7 +1832,25 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 
 #### 조사 플로우
 
-**F1: 엑셀 인사발령 기능 오픈 (Flagsmith)** · 타입: Spec · 히트: 2 · [CI-4313] [CI-4352]
+**F1: 인사발령 엑셀 데이터 추출** · 타입: Ops · 히트: 1 · [CI-4417]
+> 트리거: "인사발령 엑셀 데이터 뽑아주세요" / "조직변경/인사발령 내역을 다운받고 싶어요"
+
+```
+① 워크플로우 승인 여부 확인
+   Linear 이슈 또는 CS 코멘트에서 구글폼/워크플로우 승인 링크 확인
+   ├─ 승인 완료 → ②로
+   └─ 미승인 → 워크플로우 작성 안내 (`고객사의 개인정보 접근 및 처리를 위한 검토 및 승인 요청`)
+   ↓
+② Operation API 호출
+   POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel
+   (body 없이 호출)
+   ├─ 200 OK → ③으로
+   └─ 타임아웃 → user id 기준으로 분할 호출 후 엑셀 병합
+   ↓
+③ 추출 파일 DM으로 전달 + 수신 확인
+```
+
+**F2: 엑셀 인사발령 기능 오픈 (Flagsmith)** · 타입: Spec · 히트: 2 · [CI-4313] [CI-4352]
 > 트리거: "엑셀 인사발령 기능 오픈해주세요" / "엑셀로 인사발령 사용 요청"
 
 ```

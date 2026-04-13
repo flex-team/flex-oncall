@@ -198,7 +198,8 @@
         "PC랑 모바일 근무 표시가 달라요" ,
         "세콘 연동 오류가 나요" ,
         "세콘에서 쿼리 오류가 나요" ,
-        "캡스 수동 전송해도 반영이 안 돼요" ;
+        "캡스 수동 전송해도 반영이 안 돼요" ,
+        "타각한 출근 기록이 남지 않아요" ;
   d:x   :time-tracking , :account , :work-event-transmitter .
 
 :permission
@@ -319,12 +320,14 @@
         "user_position_time_series_segment" , "personnel-appointment" ,
         "발령취소" , "예약발령" ,
         "대표직무" , "직무순서" , "displayOrder" , "복수직무" ,
-        "Flagsmith" , "인사발령_엑셀업로드_우선_오픈_고객사" , "엑셀인사발령" ;
+        "Flagsmith" , "인사발령_엑셀업로드_우선_오픈_고객사" , "엑셀인사발령" ,
+        "조직발령내역" , "조직변경" ;
   d:syn "인사발령 엑셀 데이터 뽑아주세요" ,
         "특정 시점의 조직 정보 추출해주세요" ,
         "인사발령 후 대표 직무가 사람마다 다르게 표시돼요" ,
         "엑셀 인사발령 기능 오픈해주세요" ,
-        "엑셀로 발령 기능 사용하고 싶어요" ;
+        "엑셀로 발령 기능 사용하고 싶어요" ,
+        "조직변경/인사발령 내역을 다운받고 싶어요" ;
   d:x   :department , :account .
 
 :checklist
@@ -405,7 +408,8 @@
         "ancestorObjectiveIds" , "companyObjectives" , "departmentObjectives" ,
         "personalObjectives" , "memberObjectives" , "hasChild" , "detail" ,
         "500건" , "5000건" , "내목표탭" , "전체목표탭" , "구성원목표탭" ,
-        "엑셀업로드" , "담당주체" , "시계열" , "인사기준일" ;
+        "엑셀업로드" , "담당주체" , "시계열" , "인사기준일" ,
+        "relation_action" , "matrix-authorization" , "batch-index" , "인가컨슈머" ;
   d:syn "다른 연도 목표가 보여요" , "회색 목표가 뭐예요?" ,
         "내 목표가 안 보여요" , "목표 검색 결과가 다르게 나와요" ,
         "목표가 너무 많아서 안 나와요" ,
@@ -659,6 +663,35 @@ n:CI-4413
   d:in :time-tracking ;
   d:v  "bug" ;
   d:s  "휴일대체 탭 4/26 미노출 — OS 문서 미생성 (CI-3949 재발). Future consumer 빈 문서 드랍 + v2_user_work_plan RESET 상태(자동근무 미사용). 수동 sync로 즉시 대응. 와이즐리컴퍼니(1677)" .
+
+n:CI-4417
+  d:in :personnel-appointment ;
+  d:v  "ops" ;
+  d:st "C" ;
+  d:ca "2026-04-13" ;
+  d:s  "조직발령 내역 엑셀 파일 전달 요청 — 워크플로우 승인 후 Operation API export. 카카오헬스케어(65869)" .
+
+n:CI-4414
+  d:in :goal ;
+  d:v  "ops" ;
+  d:s  "개인 목표 생성 후 내목표 탭 미표시 — relation_action Kafka 토픽 밀림으로 matrix authorization 인덱싱 지연. batch-index API로 강제 동기화. INNIT ENTERTAINMENT(195210)" .
+
+n:CI-4412
+  d:in :personnel-appointment ;
+  d:v  "spec" ;
+  d:s  "인사발령 재발령 시 이전/신규 Set 모두 표시 — 취소 발령 재등록('재발령' 버튼)은 새 Set 생성 의도 설계. HistoryList 전체 Set 목록 표시. 단순 메모 수정과 다른 경로. 마이리테일(223894)" .
+
+n:CI-4410
+  d:in :account ;
+  d:v  "bug" ;
+  d:s  "기본정보 일괄 변경 템플릿 필드 오류 — 정적 xlsx(v1.0.9) 드롭다운이 BankCode/UserPersonalCountry enum과 미동기화. SC제일은행(CODE_023) 및 국적 영문 항목 누락. 전체 고객사 영향. 이도에코제주(224479)" .
+
+n:CI-4409
+  d:in :integration ;
+  d:v  "operational" ;
+  d:st "C" ;
+  d:ca "2026-04-13" ;
+  d:s  "캡스 타각 출근 기록 미반영 — 2026-04-11 이후 데이터 수신 중단, PXteam 조치 완료, 상세 원인 미기록. EP Div.(flex 내부)" .
 
 n:CI-4404
   d:in :review ;
@@ -1175,6 +1208,13 @@ n:CI-4204
   d:ca "2026-03-31" .
 
 # retired: CI-4197 (R1 — FE 핫픽스 완료, COOKBOOK 미등록, 재현 불가)
+
+n:CI-4407
+  d:in :approval ;
+  d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-13" ;
+  d:s  "승인 완료 문서가 진행중 문서함에 표시 — 3건 동기화 실패(sync-with-approval v3 보정), 4건 offboarded 승인자(userId 930246) 잔류로 ONGOING(bulk-approve-for-user 강제 승인)" .
 
 n:CI-4182
   d:in :approval ;
@@ -3019,6 +3059,11 @@ g:intg-06
   d:in :integration ;
   d:q  "flex IP 주소 알려주세요" ;
   d:a  "IP 제공 불가 — 도메인 기반 예외처리 안내" .
+
+g:intg-07
+  d:in :integration ;
+  d:q  "타각한 출근 기록이 남지 않아요" , "특정 날짜 이후 데이터가 안 들어와요" ;
+  d:a  "전체 수신 중단 → PXteam 에스컬레이션 (@jungchoon). 단일 회사 아닌 전체 중단이면 transmitter/인프라 이슈" .
 
 # ============================================================
 # Glossary — GLOSSARY.md migration (account)

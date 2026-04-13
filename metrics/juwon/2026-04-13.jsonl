@@ -1,0 +1,21 @@
+{"ts":"2026-04-13T10:48:16+0900","epoch":1776044896,"date":"2026-04-13","user":"juwon","skill":"ops-note-issue","args":"","session":"cd294a4a-1b59-46aa-a06a-defea4b8eca7"}
+{"ts":"2026-04-13T11:06:50+0900","epoch":1776046010,"date":"2026-04-13","user":"juwon","skill":"ops-close-note","args":"CI-4409","session":"cd294a4a-1b59-46aa-a06a-defea4b8eca7"}
+{"ts":"2026-04-13T11:13:01+0900","epoch":1776046381,"date":"2026-04-13","user":"juwon","skill":"ops-investigate-issue","args":"CI-4410","session":"ae9386cc-9aaf-4963-82f1-f0e578776993"}
+{"ts":"2026-04-13T11:13:32+0900","epoch":1776046412,"date":"2026-04-13","user":"juwon","skill":"ops-note-issue","args":"CI-4410","session":"ae9386cc-9aaf-4963-82f1-f0e578776993"}
+{"ts":"2026-04-13T11:15:45+0900","epoch":1776046545,"date":"2026-04-13","user":"juwon","skill":"ops-investigate-resolve","args":"CI-4407","session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T11:15:48+0900","epoch":1776046548,"date":"2026-04-13","user":"juwon","skill":"preflight-check","args":"","session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T11:16:17+0900","epoch":1776046577,"date":"2026-04-13","user":"juwon","skill":"ops-find-domain","args":"워크플로우 승인 완료 진행중 문서 상태 불일치","session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T11:17:11+0900","epoch":1776046631,"date":"2026-04-13","user":"juwon","skill":"ops-assess-issue","args":"CI-4410","session":"ae9386cc-9aaf-4963-82f1-f0e578776993"}
+{"ts":"2026-04-13T11:44:59+0900","epoch":1776048299,"date":"2026-04-13","user":"juwon","skill":"opensearch:os-query-log","args":"index: flex-app.be-* / 시간: 2026-04-13 11:35~11:45 KST / 필터: approval-process/sync OR db24b37b01124923a3560fbbe2856ed4 OR a70f950ca699464ab8ff92a7de385b94 OR 7f058b6abb784fdda2456ca2747706f5 / 목적: sync-with-approval 500 에러 원인 파악","session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T14:14:08+0900","epoch":1776057248,"date":"2026-04-13","user":"juwon","skill":"ops-note-issue","args":"CI-4412","session":"85a0a790-4227-4acb-87c2-39fd7731dcce"}
+{"ts":"2026-04-13T14:16:29+0900","epoch":1776057389,"date":"2026-04-13","user":"juwon","skill":"ops-investigate-issue","args":"CI-4412","session":"85a0a790-4227-4acb-87c2-39fd7731dcce"}
+{"ts":"2026-04-13T14:16:40+0900","epoch":1776057400,"date":"2026-04-13","user":"juwon","skill":"ops-assess-issue","args":"CI-4412","session":"85a0a790-4227-4acb-87c2-39fd7731dcce"}
+{"ts":"2026-04-13T15:06:37+0900","epoch":1776060397,"date":"2026-04-13","user":"juwon","skill":"ops-investigate-resolve","args":"CI-4414","session":"010953be-ef5d-4a8e-a455-3719013f51ce"}
+{"ts":"2026-04-13T15:06:43+0900","epoch":1776060403,"date":"2026-04-13","user":"juwon","skill":"preflight-check","args":"","session":"010953be-ef5d-4a8e-a455-3719013f51ce"}
+{"ts":"2026-04-13T15:06:51+0900","epoch":1776060411,"date":"2026-04-13","user":"juwon","skill":"ops-note-issue","args":"CI-4414","session":"010953be-ef5d-4a8e-a455-3719013f51ce"}
+{"ts":"2026-04-13T15:41:32+0900","epoch":1776062492,"date":"2026-04-13","user":"juwon","skill":"ops-close-note","args":"CI-4407","session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T15:42:53+0900","epoch":1776062573,"date":"2026-04-13","user":"juwon","skill":"ops-close-note","args":"CI-4414","session":"010953be-ef5d-4a8e-a455-3719013f51ce"}
+{"ts":"2026-04-13T15:45:16+0900","epoch":1776062716,"date":"2026-04-13","user":"juwon","skill":"ops-learn","args":"brain/notes/CI-4414.md","session":"010953be-ef5d-4a8e-a455-3719013f51ce"}
+{"ts":"2026-04-13T15:45:46+0900","epoch":1776062746,"date":"2026-04-13","type":"investigation","user":"juwon","model":"claude-sonnet-4-6","env":"local","ticket":"CI-4407","domain":"approval","context_loaded":true,"steps":2,"wrong_hypotheses":1,"stale_found":null,"session":"1402994c-b758-4bb5-ab58-46ef3edda223"}
+{"ts":"2026-04-13T16:26:10+0900","epoch":1776065170,"date":"2026-04-13","user":"juwon","skill":"ops-note-issue","args":"","session":"2539f16e-9d9e-4ef8-a29c-c2d73066d451"}
+{"ts":"2026-04-13T16:28:19+0900","epoch":1776065299,"date":"2026-04-13","user":"juwon","skill":"ops-close-note","args":"CI-4417","session":"2539f16e-9d9e-4ef8-a29c-c2d73066d451"}
