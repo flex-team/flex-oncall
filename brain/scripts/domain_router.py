@@ -765,102 +765,6 @@ def classify_triage(text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Markdown renderer
-# ---------------------------------------------------------------------------
-
-def render_markdown(
-    result: dict[str, Any],
-    triage: dict[str, Any],
-    ticket_id: str = "",
-) -> str:
-    """Render routing result as markdown. All data comes from result dict only."""
-    lines: list[str] = []
-
-    # Metadata line for callers to parse confidence
-    lines.append(f"<!-- confidence:{result['confidence']} -->")
-    lines.append("")
-
-    if result.get('no_match'):
-        lines.append("## 🔍 Domain Routing Result")
-        lines.append("")
-        lines.append("매칭된 도메인이 없습니다.")
-        lines.append("")
-        lines.append(f"입력: {result.get('input', '')}")
-        return '\n'.join(lines)
-
-    lines.append("## 🔍 Domain Routing Result")
-    lines.append("")
-    lines.append(f"[분류] {triage['korean']} ({triage['english']})")
-    lines.append(f"[첫 번째 액션] {triage['first_action']}")
-    lines.append("")
-
-    # Primary
-    for p in result.get('primary', []):
-        lines.append(f"### Primary: {p['domain']} ({p['name']}) — score: {p['score']}")
-        lines.append(f"- **repo**: {', '.join(p.get('repos', []))}")
-        if p.get('modules'):
-            lines.append(f"- **module**: {', '.join(p['modules'])}")
-        if p.get('cookbook'):
-            lines.append(f"- **cookbook**: \"{p['cookbook']}\"")
-
-        bd = result.get('score_breakdown', {}).get(p['domain'], {})
-        if bd:
-            parts = [f"{k}={v}" for k, v in bd.items() if v > 0]
-            lines.append(f"- **score breakdown**: {', '.join(parts)}")
-        lines.append("")
-
-    # APIs
-    apis = result['primary'][0].get('apis', []) if result.get('primary') else []
-    if apis:
-        lines.append("### 관련 API 패턴")
-        for api in apis:
-            lines.append(f"- `{api}`")
-        lines.append("  → access log 검색 시 `request_uri` 필터로 활용 가능")
-        lines.append("")
-
-    # Related
-    if result.get('related'):
-        lines.append("### Related")
-        for r in result['related']:
-            lines.append(f"- {r['domain']} ({r['name']}) — {r['reason']}")
-            lines.append(f"  - repo: {', '.join(r.get('repos', []))}")
-        lines.append("")
-
-    # Glossary Hits
-    if result.get('glossary_hits'):
-        lines.append("### Glossary Hits")
-        lines.append("| ID | 사용자 표현 | 시스템 용어 |")
-        lines.append("|----|------------|-----------|")
-        for g in result['glossary_hits']:
-            lines.append(f"| {g['id']} | {g.get('question', '')} | {g.get('answer', '')} |")
-        lines.append("")
-
-    # Related Notes
-    if result.get('related_notes'):
-        lines.append("### Related Notes")
-        lines.append("| ID | 요약 | verdict | 위치 |")
-        lines.append("|----|------|---------|------|")
-        for n in result['related_notes']:
-            lines.append(f"| {n['id']} | {n.get('summary', '')} | {n.get('verdict', '')} | {n.get('location', '')} |")
-        lines.append("")
-
-    # 다음 단계
-    if ticket_id:
-        cookbook = result['primary'][0].get('cookbook', '') if result.get('primary') else ''
-        first_repo = result['primary'][0]['repos'][0] if result.get('primary') and result['primary'][0].get('repos') else ''
-        lines.append("### 다음 단계")
-        lines.append(f"- 📝 노트: `/ops-note-issue {ticket_id}`")
-        lines.append(f"- 📋 평가: `/ops-assess-issue {ticket_id}`")
-        lines.append(f"- 🔍 조사: `/ops-investigate-issue {ticket_id}`")
-        if cookbook:
-            lines.append(f"- 📖 쿡북: `brain/COOKBOOK.md` > \"{cookbook}\"")
-        if first_repo:
-            lines.append(f"- 📂 서브모듈: `git submodule update --init --recursive {first_repo}`")
-
-    return '\n'.join(lines)
-
-
-# ---------------------------------------------------------------------------
 # Main route function
 # ---------------------------------------------------------------------------
 
@@ -885,7 +789,7 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
             # Build minimal breakdowns/scores for the result
             breakdowns: dict[str, dict] = {}
             scores: dict[str, int] = {}
-            return build_result(
+            result = build_result(
                 input_text=input_text,
                 primary_ids=primary_ids,
                 related_ids=related_ids,
@@ -895,6 +799,8 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
                 data=data,
                 brain_dir=brain_dir,
             )
+            result["triage"] = _classify_triage(input_text, brain_dir)
+            return result
 
     # Normal matching path
     tokens = tokenize(input_text)
@@ -905,7 +811,7 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
     confidence = calculate_confidence(scores)
     primary_ids, related_ids = determine_primary_related(scores, breakdowns, data)
 
-    return build_result(
+    result = build_result(
         input_text=input_text,
         primary_ids=primary_ids,
         related_ids=related_ids,
@@ -915,6 +821,17 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
         data=data,
         brain_dir=brain_dir,
     )
+    result["triage"] = _classify_triage(input_text, brain_dir)
+    return result
+
+
+def _classify_triage(text: str, brain_dir: str) -> dict[str, Any]:
+    """Classify input text against triage-signals.md and return the result."""
+    signals_path = os.path.join(brain_dir, "triage-signals.md") if brain_dir else ""
+    if signals_path and os.path.exists(signals_path):
+        signals = parse_triage_signals(signals_path)
+        return classify_triage(text, signals)
+    return _SPEC_FALLBACK
 
 
 # ---------------------------------------------------------------------------
@@ -922,15 +839,14 @@ def route(input_text: str, ttl_path: str, brain_dir: str = "") -> dict:
 # ---------------------------------------------------------------------------
 
 def main():
-    """CLI: python domain_router.py [--markdown] [--ticket=ID] "input text"
+    """CLI: python domain_router.py [--ticket=ID] "input text"
     Reads brain/domain-map.ttl relative to script location (brain/scripts/ → brain/).
-    Outputs JSON (default) or markdown to stdout."""
+    Outputs JSON to stdout."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Domain router for oncall triage")
     parser.add_argument("input", help="Input text for routing")
-    parser.add_argument("--markdown", action="store_true", help="Output as markdown instead of JSON")
-    parser.add_argument("--ticket", default="", help="Ticket ID for next-steps section (markdown only)")
+    parser.add_argument("--ticket", default="", help="Ticket ID (included in output for reference)")
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -938,14 +854,7 @@ def main():
     ttl_path = os.path.join(brain_dir, "domain-map.ttl")
 
     result = route(args.input, ttl_path, brain_dir)
-
-    if args.markdown:
-        signals_path = os.path.join(brain_dir, "triage-signals.md")
-        signals = parse_triage_signals(signals_path)
-        triage = classify_triage(args.input, signals)
-        print(render_markdown(result, triage, args.ticket))
-    else:
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

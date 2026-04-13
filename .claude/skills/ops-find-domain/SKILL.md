@@ -53,18 +53,45 @@ JSON 응답의 `confidence` 필드로 분기한다:
 
 ### 4. 렌더링
 
-JSON 데이터를 기반으로 상황에 맞게 마크다운으로 렌더링한다.
+JSON 데이터를 아래 템플릿에 따라 마크다운으로 렌더링한다.
 
-**항상 포함:**
-- triage 분류 (`[분류]`, `[첫 번째 액션]`)
-- primary 도메인: 도메인 ID, 이름, repo, module, cookbook
-- related 도메인: 도메인 ID, 이름, repo
+```markdown
+## 🔍 Domain Routing Result
 
-**선택 포함 (데이터가 있을 때):**
-- glossary_hits — 상위 3개
-- related_notes — 상위 5개
-- API 패턴 (primary의 `apis` 필드)
-- 다음 단계 안내 (ticket ID가 있을 때)
+[분류] {triage.korean} ({triage.english})
+[첫 번째 액션] {triage.first_action}
+
+### Primary: {domain} ({name})
+- **repo**: {repos 쉼표 구분}
+- **module**: {modules 쉼표 구분}  ← modules가 있을 때만
+- **cookbook**: "{cookbook}"  ← cookbook이 있을 때만
+
+### 관련 API 패턴  ← apis가 있을 때만
+- `{api}`
+  → access log 검색 시 `request_uri` 필터로 활용 가능
+
+### Related  ← related가 있을 때만
+| 도메인 | repo |
+|--------|------|
+| {domain} ({name}) | {repos} |
+
+### Glossary Hits  ← glossary_hits 상위 3개
+| 사용자 표현 | 시스템 용어 |
+|------------|-----------|
+| {question} | {answer} |
+
+### Related Notes  ← related_notes 상위 5개
+| ID | 요약 | verdict | 위치 |
+|----|------|---------|------|
+| {id} | {summary} | {verdict} | {location} |
+
+### 다음 단계  ← ticket ID가 있을 때만
+- 📝 노트: `/ops-note-issue {ticket-id}`
+- 📋 평가: `/ops-assess-issue {ticket-id}`
+- 🔍 조사: `/ops-investigate-issue {ticket-id}`
+- 📖 쿡북: `brain/COOKBOOK.md` > "{cookbook}"  ← cookbook이 있을 때만
+- 📂 서브모듈: `git submodule update --init --recursive {first_repo}`  ← repo가 있을 때만
+```
 
 **생략:**
 - score_breakdown (내부 디버깅용, 사용자에게 불필요)
