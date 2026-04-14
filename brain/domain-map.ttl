@@ -667,11 +667,6 @@
 # Notes — active (brain/notes/)
 # ============================================================
 
-n:CI-4413
-  d:in :time-tracking ;
-  d:v  "bug" ;
-  d:s  "휴일대체 탭 4/26 미노출 — OS 문서 미생성 (CI-3949 재발). Future consumer 빈 문서 드랍 + v2_user_work_plan RESET 상태(자동근무 미사용). 수동 sync로 즉시 대응. 와이즐리컴퍼니(1677)" .
-
 n:CI-4417
   d:in :personnel-appointment ;
   d:v  "ops" ;
@@ -687,6 +682,8 @@ n:CI-4414
 n:CI-4412
   d:in :personnel-appointment ;
   d:v  "spec" ;
+  d:st "C" ;
+  d:ca "2026-04-14" ;
   d:s  "인사발령 재발령 시 이전/신규 Set 모두 표시 — 취소 발령 재등록('재발령' 버튼)은 새 Set 생성 의도 설계. HistoryList 전체 Set 목록 표시. 단순 메모 수정과 다른 경로. 마이리테일(223894)" .
 
 n:CI-4410
@@ -3369,4 +3366,6 @@ n:CI-4400
   d:in :approval ;
   d:x  :time-tracking ;
   d:v  "bug" ;
+  d:st "C" ;
+  d:ca "2026-04-14" ;
   d:s  "외근 승인 요청 클릭 시 알 수 없는 오류 — FE에서 삭제된 workForm 매핑 실패 시 error throw. 체리픽 핫픽스 PR#2470. 하이컨시(216339)" .

@@ -198,7 +198,7 @@
 > 비슷한 문의가 들어오면 아래 플로우를 **히트율 순으로** 시도한다.
 > 여러 플로우가 후보이면 병렬로 실행하여 히트 여부를 빠르게 판별.
 
-**F1: 휴일대체 탭 미표기** · 타입: Data · 히트: 1 · [CI-3949]
+**F1: 휴일대체 탭 미표기** · 타입: Data · 히트: 2 · [CI-3949] [CI-4413]
 > 트리거: "휴일대체 탭에 날짜가 안 보여요"
 
 ```
@@ -1813,8 +1813,9 @@ WHERE customer_id = ? AND evaluation_id = ? AND id = ?;
 > 출처: [코어 온콜 런북](https://www.notion.so/19d0592a4a928051956ec7773e47ef2d) — Core Squad
 
 #### 진단 체크리스트
-문의: "인사발령 엑셀 데이터 뽑아주세요" / "특정 시점의 조직 정보 추출해주세요"
+문의: "인사발령 엑셀 데이터 뽑아주세요" / "특정 시점의 조직 정보 추출해주세요" / "메모 수정 시 이전 내용도 보여요"
 1. **인사발령 엑셀 데이터 요청** → 반드시 워크플로우(`고객사의 개인정보 접근 및 처리를 위한 검토 및 승인 요청`) 먼저 작성. 고객사 사전 동의 첨부 권장
+2. **발령 수정 시 이전/신규 두 개 표시됨** → 취소된 발령을 "재발령" 버튼으로 재등록하면 새 Set이 생성되며, HistoryList에 이전 Set + 신규 Set 모두 표시됨. **의도된 감사 추적 설계** (스펙). "메모 수정하기"(MemoUpdateModal)와 달리 "재발령"은 새 Set 생성 경로 [CI-4412]
    - Operation API: `POST /action/operation/v2/core/personnel-appointment/customers/{customerId}/export/excel`
    - 전체 요청 시 body 없이 요청
    - 타임아웃 발생 시 → user id 기준으로 적절히 나눠서 여러 번 호출 후 엑셀 병합
@@ -2852,6 +2853,8 @@ WHERE gs.subject_id = ? AND g.customer_id = ?
 
 | 날짜 | 이슈 | 변경 내용 |
 |------|------|----------|
+| 2026-04-14 | CI-4413 | 근태/휴가: F1(휴일대체 탭 미표기) 히트 +1, CI-3949 재현 패턴 확인. Operation API sync로 즉시 대응, v2_user_work_plan RESET 상태(실질 자동근무 미사용) 판별 기준 확립 |
+| 2026-04-14 | CI-4412 | 인사발령: 체크리스트 추가(재발령 시 이전/신규 Set 모두 표시 — 의도된 감사 추적 설계 스펙) |
 | 2026-04-10 | CI-4376 | 평가: 선택형 문항 MULTI→SINGLE 변경 시 elements 초기화 버그 — 체크리스트 추가 (PR#5251 수정 완료). 인과 타임라인 재구성 패턴 적용 사례 |
 | 2026-04-09 | CI-4342 | 승인: 승인 정책 승인권자 교체 체크리스트 + Operation API(`replace-user-to-user`) + SQL 템플릿 추가 |
 | 2026-04-10 | CI-4391 | 승인: WORK_RECORD 이벤트 소비자 실패 체크리스트 + F3 플로우 신설. WORK_RECORD→workflow_task 미사용, produce-event-to-operation-topic 보정. d:syn 추가 |
